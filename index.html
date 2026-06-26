@@ -465,10 +465,13 @@ tr:hover td{background:var(--bg2)}
       <div class="form-row"><label>Plazo legal automático</label>
         <select id="d_plazo" onchange="calcDeadline()">
           <option value="">Sin plazo</option>
-          <option value="15">15 días hábiles — Derecho de petición</option>
-          <option value="10">10 días hábiles — Urgente</option>
-          <option value="30">30 días hábiles — Judicial</option>
+          <option value="2">2 días hábiles</option>
+          <option value="3">3 días hábiles</option>
           <option value="5">5 días hábiles — Recurso</option>
+          <option value="10">10 días hábiles — Urgente</option>
+          <option value="15">15 días hábiles — Derecho de petición</option>
+          <option value="30">30 días hábiles — Judicial</option>
+          <option value="manual">Manual — escribe la fecha directamente</option>
         </select>
       </div>
       <div class="form-row"><label>Fecha de vencimiento</label><input type="date" id="d_vence"></div>
@@ -1376,11 +1379,19 @@ function renderProcesos(){
 
 // ===== SAVE FUNCTIONS =====
 function calcDeadline(){
-  const pl=document.getElementById('d_plazo').value,fr=document.getElementById('d_fechaRad').value;
+  const pl=document.getElementById('d_plazo').value;
+  const fr=document.getElementById('d_fechaRad').value;
+  const venceField=document.getElementById('d_vence');
+  if(pl==='manual'){
+    // Dejar que el usuario escriba la fecha manualmente
+    venceField.value='';
+    venceField.focus();
+    return;
+  }
   if(!pl||!fr)return;
   let d=new Date(fr+'T00:00:00'),added=0;
   while(added<parseInt(pl)){d.setDate(d.getDate()+1);const wd=d.getDay();if(wd!==0&&wd!==6)added++;}
-  document.getElementById('d_vence').value=d.toISOString().split('T')[0];
+  venceField.value=d.toISOString().split('T')[0];
 }
 async function saveEvent(){
   const t=document.getElementById('ev_title').value.trim(),d=document.getElementById('ev_date').value;
