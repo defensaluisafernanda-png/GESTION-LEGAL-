@@ -836,30 +836,68 @@ function applyPermissions(permisos){
 
 // ===== DATA =====
 async function loadData(){
-  // Si es dueña, carga sus propios datos
-  // Si es usuario compartido, carga los datos del dueño
-  const targetId=isOwner()?currentUser.id:ownerId;
-  const{data}=await sb.from('expediente').select('*').eq('user_id',targetId).single();
-  if(data){db=data.data;dbRowId=data.id;if(!db.uploads)db.uploads=[];}
-  else if(isOwner()){seedData();await saveData();}
+  try{
+    const targetId=isOwner()?currentUser.id:ownerId;
+    // Buscar fila existente
+    const{data,error}=await sb.from('expediente').select('*').eq('user_id',targetId);
+    if(error){console.error('Error cargando:',error.message);setSyncStatus('⚠ Error al cargar');}
+    if(data&&data.length>0){
+      // Fila encontrada — cargar datos
+      db=data[0].data;
+      dbRowId=data[0].id;
+      if(!db.uploads)db.uploads=[];
+      if(!db.docs)db.docs=[];
+      if(!db.events)db.events=[];
+      if(!db.alerts)db.alerts=[];
+      if(!db.pending)db.pending=[];
+      if(!db.fallos)db.fallos=[];
+      if(!db.procesos)db.procesos=[];
+    }else if(isOwner()){
+      // Primera vez — NO cargar seed, empezar vacío y guardar
+      db={docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[]};
+      dbRowId=null;
+      await saveData();
+    }
+  }catch(e){
+    console.error('Error en loadData:',e);
+    setSyncStatus('⚠ Error al cargar datos');
+  }
 }
 
 async function saveData(){
-  if(!isOwner()&&currentPerfil?.rol==='lectura')return; // solo lectura no puede guardar
+  if(!isOwner()&&currentPerfil?.rol==='lectura')return;
   setSyncStatus('Guardando...');
   const bar=document.getElementById('syncBar');bar.classList.add('syncing');
   try{
     const targetId=isOwner()?currentUser.id:ownerId;
+    const payload={data:db,updated_at:new Date().toISOString()};
+
     if(dbRowId){
-      await sb.from('expediente').update({data:db,updated_at:new Date().toISOString()}).eq('id',dbRowId);
+      // Actualizar fila existente
+      const{error}=await sb.from('expediente').update(payload).eq('id',dbRowId).eq('user_id',targetId);
+      if(error)throw new Error(error.message);
     }else{
-      const{data}=await sb.from('expediente').insert({user_id:targetId,data:db}).select().single();
-      if(data)dbRowId=data.id;
+      // Verificar una vez más que no exista antes de insertar
+      const{data:existing}=await sb.from('expediente').select('id').eq('user_id',targetId);
+      if(existing&&existing.length>0){
+        dbRowId=existing[0].id;
+        const{error}=await sb.from('expediente').update(payload).eq('id',dbRowId);
+        if(error)throw new Error(error.message);
+      }else{
+        // Insertar nueva fila
+        const{data:inserted,error}=await sb.from('expediente').insert({user_id:targetId,...payload}).select().single();
+        if(error)throw new Error(error.message);
+        if(inserted)dbRowId=inserted.id;
+      }
     }
     bar.classList.remove('syncing');bar.classList.add('done');
     setTimeout(()=>bar.classList.remove('done'),600);
     setSyncStatus('Sincronizado ✓');
-  }catch(e){setSyncStatus('⚠ Error al guardar');bar.classList.remove('syncing');}
+  }catch(e){
+    console.error('Error guardando:',e);
+    setSyncStatus('⚠ Error: '+e.message);
+    bar.classList.remove('syncing');
+  }
   refreshAll();
 }
 function setSyncStatus(msg){const el=document.getElementById('syncStatusText');if(el)el.textContent=msg;}
