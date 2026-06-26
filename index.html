@@ -753,7 +753,7 @@ async function doReset(){
   const email=document.getElementById('a_email').value.trim();
   if(!email){showAuthErr('Ingresa tu correo');return;}
   const btn=document.querySelector('.auth-btn');btn.disabled=true;btn.textContent='Enviando...';
-  const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
+  const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:'https://defensaluisafernanda-png.github.io/GESTION-LEGAL-/'});
   if(error){showAuthErr(error.message);btn.disabled=false;return;}
   showAuthOk('✓ Correo enviado a '+email+'. Revisa tu bandeja de entrada y sigue el enlace.');
   btn.disabled=false;
