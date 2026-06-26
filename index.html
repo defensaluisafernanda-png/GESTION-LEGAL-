@@ -303,6 +303,7 @@ tr:hover td{background:var(--bg2)}
       <div id="userRoleBadge" style="margin-bottom:8px"></div>
       <div class="sync-status"><span class="sync-dot"></span><span id="syncStatusText">Sincronizado</span></div>
       <button class="btn-footer neutral" onclick="manualLock()">🔒 Bloquear sesión</button>
+      <button class="btn-footer neutral" onclick="openModal('changePwdModal')">🔑 Cambiar contraseña</button>
       <button class="btn-footer red" onclick="doLogout()">← Cerrar sesión</button>
     </div>
   </div>
@@ -656,6 +657,21 @@ tr:hover td{background:var(--bg2)}
 
 <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
 
+<!-- MODAL CAMBIAR CONTRASEÑA -->
+<div class="overlay" id="changePwdModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">🔑 Cambiar contraseña</div>
+    <div class="form-row"><label>Nueva contraseña <span class="req">*</span></label><input type="password" id="cp_new" placeholder="Mín. 8 caracteres"></div>
+    <div class="form-row"><label>Confirmar nueva contraseña <span class="req">*</span></label><input type="password" id="cp_confirm" placeholder="Repite la contraseña"></div>
+    <div style="display:none;background:var(--dangerbg);border:0.5px solid var(--dangerborder);color:var(--dangertext);padding:9px 12px;border-radius:var(--radius);font-size:13px;margin-top:8px" id="cp_error"></div>
+    <div style="display:none;background:var(--successbg);border:0.5px solid var(--successborder);color:var(--successtext);padding:9px 12px;border-radius:var(--radius);font-size:13px;margin-top:8px" id="cp_ok"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('changePwdModal')">Cancelar</button>
+      <button class="btn primary" onclick="doChangePwd()">✓ Cambiar contraseña</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ===== CONFIG =====
 const SUPA_URL='https://mxglrdkokdbpygczlcgo.supabase.co';
@@ -758,6 +774,23 @@ async function doReset(){
   showAuthOk('✓ Correo enviado a '+email+'. Revisa tu bandeja de entrada y sigue el enlace.');
   btn.disabled=false;
 }
+async function doChangePwd(){
+  const nw=document.getElementById('cp_new').value;
+  const conf=document.getElementById('cp_confirm').value;
+  const err=document.getElementById('cp_error');
+  const ok=document.getElementById('cp_ok');
+  err.style.display='none'; ok.style.display='none';
+  if(nw.length<8){err.textContent='La contraseña debe tener al menos 8 caracteres';err.style.display='block';return;}
+  if(nw!==conf){err.textContent='Las contraseñas no coinciden';err.style.display='block';return;}
+  const{error}=await sb.auth.updateUser({password:nw});
+  if(error){err.textContent='Error: '+error.message;err.style.display='block';return;}
+  ok.textContent='✓ Contraseña cambiada correctamente. Guárdala en un lugar seguro.';
+  ok.style.display='block';
+  document.getElementById('cp_new').value='';
+  document.getElementById('cp_confirm').value='';
+  setTimeout(()=>closeModal('changePwdModal'),3000);
+}
+
 async function doLogout(){
   clearTimeout(inactTimer);
   await sb.auth.signOut();
@@ -1004,11 +1037,14 @@ async function saveDoc(){
     const editId=document.getElementById('d_id').value;
     const isEdit=editId!=='';
 
+    const vence=document.getElementById('d_vence').value;
+
     if(isEdit){
-      // ✅ EDITAR documento existente
+      // EDITAR documento existente
       const idx=db.docs.findIndex(d=>d.id==editId);
       if(idx>=0){
         const existing=db.docs[idx];
+        const oldVence=existing.vence;
         db.docs[idx]={
           ...existing,
           fecha:f,
@@ -1020,17 +1056,32 @@ async function saveDoc(){
           radicado:document.getElementById('d_radicado').value.trim(),
           resumen:document.getElementById('d_resumen').value.trim(),
           ubicacion:document.getElementById('d_ubicacion').value.trim(),
-          vence:document.getElementById('d_vence').value,
+          vence:vence,
           notas:document.getElementById('d_notas').value.trim(),
-          // Solo actualizar archivo si se subió uno nuevo
           ...(filePath?{filePath,fileName}:{})
         };
+        // Si cambió la fecha de vencimiento, actualizar evento en calendario
+        if(vence && vence!==oldVence){
+          // Borrar evento anterior si existía
+          db.events=db.events.filter(e=>!(e.type==='deadline'&&e.docId==editId));
+          // Agregar nuevo evento
+          db.events.push({id:Date.now()+2,title:'📅 Vence: '+n,date:vence,time:'',type:'deadline',lugar:'',rad:'',notes:'Vencimiento automático del documento: '+n,docId:editId});
+          // Actualizar alerta
+          db.alerts=db.alerts.filter(a=>a.docId!=editId);
+          db.alerts.push({id:Date.now()+3,title:'Vencimiento: '+n,date:vence,level:'warning',consequence:'Revisar acción requerida.',action:'',docId:editId});
+        }
       }
     }else{
-      // ✅ CREAR nuevo documento
-      const doc={id:Date.now(),fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:document.getElementById('d_vence').value,notas:document.getElementById('d_notas').value.trim(),filePath,fileName};
+      // CREAR nuevo documento
+      const docId=Date.now();
+      const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),filePath,fileName};
       db.docs.push(doc);
-      if(doc.vence)db.alerts.push({id:Date.now()+1,title:'Vencimiento: '+doc.nombre,date:doc.vence,level:'warning',consequence:'Revisar acción requerida.',action:''});
+      if(vence){
+        // Agregar automáticamente al calendario como vencimiento
+        db.events.push({id:docId+1,title:'📅 Vence: '+n,date:vence,time:'',type:'deadline',lugar:'',rad:'',notes:'Vencimiento automático del documento: '+n,docId:docId});
+        // Agregar alerta
+        db.alerts.push({id:docId+2,title:'Vencimiento: '+n,date:vence,level:'warning',consequence:'Revisar acción requerida.',action:'',docId:docId});
+      }
     }
 
     await saveData();
