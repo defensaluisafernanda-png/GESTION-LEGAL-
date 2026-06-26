@@ -8,8 +8,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#ffffff;--bg2:#f7f6f3;--bg3:#f0ede8;
-  --text:#1a1a1a;--text2:#5c5c5c;--text3:#8a8a8a;
+  --bg:#fff;--bg2:#f7f6f3;--bg3:#f0ede8;--text:#1a1a1a;--text2:#5c5c5c;--text3:#8a8a8a;
   --border:#e0ddd8;--border2:#c8c5c0;
   --accent:#6B2D1A;--accent2:#8B3A22;--accentbg:#FDF0EC;--accenttext:#4A1B0C;
   --danger:#c0392b;--dangerbg:#fdf2f2;--dangertext:#7b1a1a;--dangerborder:#f0b8b8;
@@ -17,14 +16,11 @@
   --success:#1a7a4a;--successbg:#f0faf5;--successtext:#0d4a2a;--successborder:#a8e0c0;
   --info:#1a5c8a;--infobg:#f0f7fd;--infotext:#0d3a5c;--infoborder:#a8d0f0;
   --purple:#3d2d8a;--purplebg:#f5f0ff;--purpletext:#2a1a6a;--purpleborder:#c8b8f0;
-  --radius:8px;--radius-lg:12px;
-  --shadow:0 1px 4px rgba(0,0,0,.08),0 0 0 0.5px rgba(0,0,0,.06);
+  --radius:8px;--radius-lg:12px;--shadow:0 1px 4px rgba(0,0,0,.08),0 0 0 0.5px rgba(0,0,0,.06);
 }
 @media(prefers-color-scheme:dark){:root{
-  --bg:#1c1c1c;--bg2:#242424;--bg3:#2c2c2c;
-  --text:#e8e8e8;--text2:#a8a8a8;--text3:#707070;
-  --border:#3a3a3a;--border2:#505050;
-  --accent:#c47a5a;--accent2:#d4896a;--accentbg:#2a1a12;--accenttext:#f0c0a0;
+  --bg:#1c1c1c;--bg2:#242424;--bg3:#2c2c2c;--text:#e8e8e8;--text2:#a8a8a8;--text3:#707070;
+  --border:#3a3a3a;--border2:#505050;--accent:#c47a5a;--accent2:#d4896a;--accentbg:#2a1a12;--accenttext:#f0c0a0;
   --danger:#e05050;--dangerbg:#2a1818;--dangertext:#f0a0a0;--dangerborder:#5a2828;
   --warning:#e09040;--warningbg:#2a2010;--warningtext:#f0c080;--warningborder:#5a4020;
   --success:#40b070;--successbg:#102818;--successtext:#80e0b0;--successborder:#205838;
@@ -39,7 +35,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 textarea{resize:vertical;min-height:72px;line-height:1.5}
 select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23888' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:28px}
 
-/* AUTH SCREEN */
+/* AUTH */
 #authScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:var(--bg3)}
 .auth-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:36px 32px;width:100%;max-width:420px;box-shadow:var(--shadow)}
 .auth-logo{font-size:40px;text-align:center;margin-bottom:12px}
@@ -50,35 +46,29 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .auth-tab.active{background:var(--accent);color:#fff}
 .form-row{margin-bottom:13px}
 .form-row label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px}
+.req{color:var(--danger)}
 .auth-btn{width:100%;padding:11px;font-size:14px;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);margin-top:4px;transition:background .15s;cursor:pointer}
 .auth-btn:hover{background:var(--accent2)}
 .auth-btn:disabled{opacity:.5;cursor:not-allowed}
 .auth-error{background:var(--dangerbg);border:0.5px solid var(--dangerborder);color:var(--dangertext);padding:9px 12px;border-radius:var(--radius);font-size:13px;margin-top:10px;display:none}
 .auth-success{background:var(--successbg);border:0.5px solid var(--successborder);color:var(--successtext);padding:9px 12px;border-radius:var(--radius);font-size:13px;margin-top:10px;display:none}
 .auth-link{font-size:12px;color:var(--accent);cursor:pointer;text-align:center;margin-top:14px;display:block}
-.auth-hint{font-size:11px;color:var(--text3);margin-top:10px;text-align:center;line-height:1.6}
 
 /* INACTIVITY */
 #inactivityOverlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center}
 #inactivityOverlay.show{display:flex}
 .inact-card{background:var(--bg);border-radius:var(--radius-lg);padding:32px;text-align:center;max-width:360px;width:90%}
-.inact-icon{font-size:40px;margin-bottom:12px}
-.inact-title{font-size:16px;font-weight:700;margin-bottom:6px}
-.inact-sub{font-size:13px;color:var(--text3);margin-bottom:20px}
-.inact-btn{width:100%;padding:10px;font-size:14px;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer}
 
-/* SYNC STATUS */
+/* SYNC */
 #syncBar{position:fixed;top:0;left:0;right:0;height:3px;background:var(--accent);z-index:9999;transform:scaleX(0);transform-origin:left;transition:transform .3s}
 #syncBar.syncing{transform:scaleX(0.7)}
 #syncBar.done{transform:scaleX(1);transition:transform .1s}
-#syncToast{position:fixed;bottom:20px;right:20px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 16px;font-size:13px;box-shadow:var(--shadow);z-index:9000;display:none;align-items:center;gap:8px}
-#syncToast.show{display:flex}
 
-/* APP SHELL */
+/* APP */
 #appShell{display:none}
 #appShell.visible{display:flex}
 .app-shell{display:flex;height:100vh;overflow:hidden;width:100%}
-.sidebar{width:220px;min-width:220px;background:var(--bg);border-right:0.5px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.sidebar{width:225px;min-width:225px;background:var(--bg);border-right:0.5px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
 .main{flex:1;overflow-y:auto}
 .sidebar-header{padding:16px 14px 12px;border-bottom:0.5px solid var(--border)}
 .sidebar-logo{display:flex;align-items:center;gap:9px;margin-bottom:4px}
@@ -96,19 +86,19 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .nav-badge.warn{background:var(--warning)}
 .nav-badge.show{display:block}
 .sidebar-footer{padding:10px 12px;border-top:0.5px solid var(--border)}
-.user-info{font-size:11px;color:var(--text3);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-info{font-size:11px;color:var(--text3);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-role{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-bottom:8px}
 .sync-status{font-size:11px;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:5px}
 .sync-dot{width:6px;height:6px;background:var(--success);border-radius:50%;flex-shrink:0}
-.btn-logout{width:100%;padding:6px;font-size:12px;background:var(--bg2);color:var(--text2);border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:5px;cursor:pointer}
-.btn-lock{width:100%;padding:6px;font-size:12px;background:var(--dangerbg);color:var(--dangertext);border:0.5px solid var(--dangerborder);border-radius:var(--radius);cursor:pointer}
+.btn-footer{width:100%;padding:6px;font-size:12px;border-radius:var(--radius);margin-bottom:4px;cursor:pointer;border:0.5px solid var(--border)}
+.btn-footer.neutral{background:var(--bg2);color:var(--text2)}
+.btn-footer.red{background:var(--dangerbg);color:var(--dangertext);border-color:var(--dangerborder)}
 
 /* PAGE */
 .page-header{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
 .page-title{font-size:18px;font-weight:600}
 .page-sub{font-size:12px;color:var(--text3);margin-top:2px}
 .page-content{padding:0 24px 24px}
-
-/* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
 .stat{background:var(--bg);border-radius:var(--radius-lg);padding:14px 16px;border:0.5px solid var(--border);box-shadow:var(--shadow)}
 .stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
@@ -118,8 +108,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .stat.warning .stat-value{color:var(--warning)}
 .stat.success .stat-value{color:var(--success)}
 .stat.info .stat-value{color:var(--info)}
-
-/* ALERTS */
 .alert-banner{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:var(--radius);border:0.5px solid;margin-bottom:8px;font-size:13px}
 .alert-banner.danger{background:var(--dangerbg);border-color:var(--dangerborder);color:var(--dangertext)}
 .alert-banner.warning{background:var(--warningbg);border-color:var(--warningborder);color:var(--warningtext)}
@@ -135,7 +123,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn.primary:hover{background:var(--accent2)}
 .btn.danger{background:var(--dangerbg);color:var(--dangertext);border-color:var(--dangerborder)}
-.btn.sm{padding:4px 9px;font-size:12px}
+.btn.success{background:var(--successbg);color:var(--successtext);border-color:var(--successborder)}
+.btn.sm{padding:4px 8px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
 
 /* TABLE */
 .table-wrap{overflow-x:auto;border-radius:var(--radius-lg);border:0.5px solid var(--border);background:var(--bg);box-shadow:var(--shadow)}
@@ -145,7 +135,7 @@ td{padding:10px 12px;border-bottom:0.5px solid var(--border);color:var(--text);v
 tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--bg2)}
 .td-name{font-weight:500;font-size:13px;margin-bottom:3px}
-.td-sub{font-size:11px;color:var(--text3);line-height:1.4;max-width:260px}
+.td-sub{font-size:11px;color:var(--text3);line-height:1.4;max-width:240px}
 
 /* BADGES */
 .badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;border:0.5px solid transparent}
@@ -171,7 +161,7 @@ tr:hover td{background:var(--bg2)}
 .pending-item.priority-Alta{border-left:3px solid var(--warning)}
 .pending-item.done{opacity:.5}
 .pending-item.done .pi-title{text-decoration:line-through}
-.pi-check{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:2px;background:var(--bg);transition:all .15s}
+.pi-check{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:2px;background:var(--bg)}
 .pending-item.done .pi-check{background:var(--success);border-color:var(--success);color:#fff}
 .pi-title{font-size:13px;font-weight:500}
 .pi-meta{font-size:12px;color:var(--text3);margin-top:3px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
@@ -202,26 +192,32 @@ tr:hover td{background:var(--bg2)}
 /* FILES */
 .file-upload-area{border:2px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:all .15s;margin-top:8px}
 .file-upload-area:hover,.file-upload-area.drag{border-color:var(--accent);background:var(--accentbg)}
-.file-upload-area p{font-size:13px;color:var(--text3);margin-top:6px}
 .file-chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:4px 10px;font-size:12px;margin:3px}
-.file-chip button{background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;line-height:1;padding:0}
+
+/* USERS */
+.user-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow);margin-bottom:10px}
+.user-card-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.user-avatar{width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;flex-shrink:0}
+.perm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-top:10px}
+.perm-item{display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;background:var(--bg2);border-radius:var(--radius);border:0.5px solid var(--border)}
+.perm-toggle{width:32px;height:18px;border-radius:9px;border:none;cursor:pointer;position:relative;flex-shrink:0;transition:background .2s}
+.perm-toggle.on{background:var(--success)}
+.perm-toggle.off{background:var(--border2)}
+.perm-toggle::after{content:'';position:absolute;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.perm-toggle.on::after{left:16px}
+.perm-toggle.off::after{left:2px}
 
 /* MODAL */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
 .overlay.open{display:flex}
 .modal{background:var(--bg);border-radius:var(--radius-lg);border:0.5px solid var(--border);width:100%;max-width:580px;padding:24px;margin:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
 .modal-title{font-size:16px;font-weight:600;margin-bottom:18px}
-.form-row{margin-bottom:13px}
-.form-row label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px}
-.req{color:var(--danger)}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:0.5px solid var(--border)}
 
 /* SECTIONS */
 .section{display:none}
 .section.active{display:block}
-
-/* EMPTY */
 .empty{text-align:center;padding:48px 20px;color:var(--text3)}
 .empty-icon{font-size:36px;margin-bottom:10px;display:block;opacity:.4}
 
@@ -245,16 +241,14 @@ tr:hover td{background:var(--bg2)}
 </style>
 </head>
 <body>
-
 <div id="syncBar"></div>
-<div id="syncToast"></div>
 
-<!-- AUTH SCREEN -->
+<!-- AUTH -->
 <div id="authScreen">
   <div class="auth-card">
     <div class="auth-logo">⚖️</div>
     <div class="auth-title">Expediente Legal</div>
-    <div class="auth-sub" id="authSub">Luisa Fernanda Garcés García — C.C. 1.036.602.429</div>
+    <div class="auth-sub">Luisa Fernanda Garcés García — C.C. 1.036.602.429</div>
     <div class="auth-tabs" id="authTabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Entrar</button>
       <button class="auth-tab" onclick="switchAuthTab('register')">Crear cuenta</button>
@@ -268,16 +262,16 @@ tr:hover td{background:var(--bg2)}
 <!-- INACTIVITY -->
 <div id="inactivityOverlay">
   <div class="inact-card">
-    <div class="inact-icon">🔒</div>
-    <div class="inact-title">Sesión bloqueada por inactividad</div>
-    <div class="inact-sub">Ingresa tu contraseña de Supabase para continuar.</div>
+    <div style="font-size:40px;margin-bottom:12px">🔒</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px">Sesión bloqueada</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Ingresa tu contraseña para continuar</div>
     <input type="password" id="inactPwd" placeholder="Contraseña..." style="margin-bottom:10px" onkeydown="if(event.key==='Enter')unlockInactivity()">
-    <button class="inact-btn" onclick="unlockInactivity()">🔓 Desbloquear</button>
+    <button class="auth-btn" onclick="unlockInactivity()">🔓 Desbloquear</button>
     <div style="font-size:12px;color:var(--dangertext);margin-top:8px;display:none" id="inactErr">Contraseña incorrecta</div>
   </div>
 </div>
 
-<!-- APP SHELL -->
+<!-- APP -->
 <div id="appShell">
 <div class="app-shell">
   <div class="sidebar" id="sidebar">
@@ -285,31 +279,31 @@ tr:hover td{background:var(--bg2)}
       <div>
         <div class="sidebar-logo">
           <div class="logo-icon">⚖️</div>
-          <div>
-            <div class="sidebar-title">Expediente Legal</div>
-            <div class="sidebar-sub">LFGG — C.C. 1.036.602.429</div>
-          </div>
+          <div><div class="sidebar-title">Expediente Legal</div><div class="sidebar-sub">LFGG — C.C. 1.036.602.429</div></div>
         </div>
       </div>
       <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
     </div>
-    <nav class="nav">
+    <nav class="nav" id="sideNav">
       <div class="nav-section">Principal</div>
       <button class="nav-item active" onclick="navigate('dashboard')"><span class="icon">🏠</span>Resumen <span class="nav-badge danger" id="nbAlerts"></span></button>
-      <button class="nav-item" onclick="navigate('documentos')"><span class="icon">📄</span>Documentos <span class="nav-badge" id="nbDocs" style="background:var(--text3)"></span></button>
-      <button class="nav-item" onclick="navigate('archivos')"><span class="icon">📎</span>Archivos adjuntos</button>
-      <button class="nav-item" onclick="navigate('alertas')"><span class="icon">🔔</span>Alertas <span class="nav-badge warn" id="nbWarn"></span></button>
-      <button class="nav-item" onclick="navigate('calendario')"><span class="icon">📅</span>Calendario</button>
+      <button class="nav-item" id="nav-documentos" onclick="navigate('documentos')"><span class="icon">📄</span>Documentos <span class="nav-badge" id="nbDocs" style="background:var(--text3)"></span></button>
+      <button class="nav-item" id="nav-archivos" onclick="navigate('archivos')"><span class="icon">📎</span>Archivos adjuntos</button>
+      <button class="nav-item" id="nav-alertas" onclick="navigate('alertas')"><span class="icon">🔔</span>Alertas <span class="nav-badge warn" id="nbWarn"></span></button>
+      <button class="nav-item" id="nav-calendario" onclick="navigate('calendario')"><span class="icon">📅</span>Calendario</button>
       <div class="nav-section">Gestión</div>
-      <button class="nav-item" onclick="navigate('pendientes')"><span class="icon">✅</span>Pendientes <span class="nav-badge warn" id="nbPend"></span></button>
-      <button class="nav-item" onclick="navigate('fallos')"><span class="icon">⚖️</span>Fallos / Resoluciones</button>
-      <button class="nav-item" onclick="navigate('procesos')"><span class="icon">🗂️</span>Procesos activos</button>
+      <button class="nav-item" id="nav-pendientes" onclick="navigate('pendientes')"><span class="icon">✅</span>Pendientes <span class="nav-badge warn" id="nbPend"></span></button>
+      <button class="nav-item" id="nav-fallos" onclick="navigate('fallos')"><span class="icon">⚖️</span>Fallos / Resoluciones</button>
+      <button class="nav-item" id="nav-procesos" onclick="navigate('procesos')"><span class="icon">🗂️</span>Procesos activos</button>
+      <div class="nav-section" id="adminSection" style="display:none">Administración</div>
+      <button class="nav-item" id="nav-usuarios" onclick="navigate('usuarios')" style="display:none"><span class="icon">👥</span>Usuarios</button>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info" id="userEmail"></div>
+      <div id="userRoleBadge" style="margin-bottom:8px"></div>
       <div class="sync-status"><span class="sync-dot"></span><span id="syncStatusText">Sincronizado</span></div>
-      <button class="btn-logout" onclick="manualLock()">🔒 Bloquear sesión</button>
-      <button class="btn-logout" onclick="doLogout()">← Cerrar sesión</button>
+      <button class="btn-footer neutral" onclick="manualLock()">🔒 Bloquear sesión</button>
+      <button class="btn-footer red" onclick="doLogout()">← Cerrar sesión</button>
     </div>
   </div>
 
@@ -318,7 +312,7 @@ tr:hover td{background:var(--bg2)}
     <div id="view-dashboard" class="section active">
       <div class="page-header">
         <div><div class="page-title">Resumen general</div><div class="page-sub" id="todayDate"></div></div>
-        <button class="btn primary" onclick="openModal('docModal')">+ Nuevo documento</button>
+        <button class="btn primary" id="btnNewDoc" onclick="openDocModal()">+ Nuevo documento</button>
       </div>
       <div class="page-content">
         <div id="dashBanners" style="margin-bottom:12px"></div>
@@ -334,7 +328,7 @@ tr:hover td{background:var(--bg2)}
     <div id="view-documentos" class="section">
       <div class="page-header">
         <div><div class="page-title">Documentos</div><div class="page-sub">Registro completo del expediente</div></div>
-        <button class="btn primary" onclick="openModal('docModal')">+ Nuevo documento</button>
+        <button class="btn primary" id="btnNewDoc2" onclick="openDocModal()">+ Nuevo documento</button>
       </div>
       <div class="page-content">
         <div class="toolbar">
@@ -352,7 +346,7 @@ tr:hover td{background:var(--bg2)}
           </select>
         </div>
         <div class="table-wrap"><table><thead><tr>
-          <th>Fecha</th><th>Documento</th><th>Categoría</th><th>Entidad</th><th>Radicado</th><th>Estado</th><th>Vence</th><th>Archivo</th><th></th>
+          <th>Fecha</th><th>Documento</th><th>Categoría</th><th>Entidad</th><th>Radicado</th><th>Estado</th><th>Vence</th><th>Archivo</th><th>Acciones</th>
         </tr></thead><tbody id="docsTable"></tbody></table></div>
       </div>
     </div>
@@ -360,7 +354,7 @@ tr:hover td{background:var(--bg2)}
     <!-- ARCHIVOS -->
     <div id="view-archivos" class="section">
       <div class="page-header">
-        <div><div class="page-title">Archivos adjuntos</div><div class="page-sub">PDFs, documentos Word e imágenes del expediente</div></div>
+        <div><div class="page-title">Archivos adjuntos</div><div class="page-sub">PDFs, Word e imágenes del expediente</div></div>
         <button class="btn primary" onclick="openModal('uploadModal')">+ Subir archivo</button>
       </div>
       <div class="page-content" id="archivosContent"></div>
@@ -370,7 +364,7 @@ tr:hover td{background:var(--bg2)}
     <div id="view-alertas" class="section">
       <div class="page-header">
         <div><div class="page-title">Alertas de vencimiento</div><div class="page-sub">Plazos legales activos</div></div>
-        <button class="btn primary" onclick="openModal('alertModal')">+ Nueva alerta</button>
+        <button class="btn primary" id="btnNewAlert" onclick="openModal('alertModal')">+ Nueva alerta</button>
       </div>
       <div class="page-content" id="alertsContent"></div>
     </div>
@@ -379,7 +373,7 @@ tr:hover td{background:var(--bg2)}
     <div id="view-calendario" class="section">
       <div class="page-header">
         <div><div class="page-title">Calendario legal</div><div class="page-sub">Audiencias, vencimientos y citas</div></div>
-        <button class="btn primary" onclick="openModal('eventModal')">+ Agregar evento</button>
+        <button class="btn primary" id="btnNewEvent" onclick="openModal('eventModal')">+ Agregar evento</button>
       </div>
       <div class="page-content">
         <div class="cal-nav">
@@ -392,11 +386,6 @@ tr:hover td{background:var(--bg2)}
           <div class="cal-dname">Mié</div><div class="cal-dname">Jue</div><div class="cal-dname">Vie</div><div class="cal-dname">Sáb</div>
         </div>
         <div class="cal-grid" id="calGrid"></div>
-        <div style="margin-top:6px;display:flex;gap:10px;font-size:11px;flex-wrap:wrap">
-          <span style="background:var(--warningbg);padding:2px 8px;border-radius:4px;color:var(--warningtext)">● Audiencia</span>
-          <span style="background:var(--dangerbg);padding:2px 8px;border-radius:4px;color:var(--dangertext)">● Vencimiento</span>
-          <span style="background:var(--successbg);padding:2px 8px;border-radius:4px;color:var(--successtext)">● Cita/reunión</span>
-        </div>
         <div id="upcomingList" style="margin-top:16px"></div>
       </div>
     </div>
@@ -405,11 +394,11 @@ tr:hover td{background:var(--bg2)}
     <div id="view-pendientes" class="section">
       <div class="page-header">
         <div><div class="page-title">Tareas pendientes</div><div class="page-sub">Acciones legales por realizar</div></div>
-        <button class="btn primary" onclick="openModal('pendModal')">+ Nueva tarea</button>
+        <button class="btn primary" id="btnNewPend" onclick="openModal('pendModal')">+ Nueva tarea</button>
       </div>
       <div class="page-content">
         <div class="toolbar">
-          <select id="pendPri" onchange="renderPending()"><option value="">Todas las prioridades</option><option>Urgente</option><option>Alta</option><option>Normal</option></select>
+          <select id="pendPri" onchange="renderPending()"><option value="">Todas</option><option>Urgente</option><option>Alta</option><option>Normal</option></select>
           <select id="pendType" onchange="renderPending()"><option value="">Todos los tipos</option><option>Llamada</option><option>Correo</option><option>Visita</option><option>Documento</option><option>Legal</option></select>
           <select id="pendDone" onchange="renderPending()"><option value="">Todas</option><option value="false">Por hacer</option><option value="true">Completadas</option></select>
         </div>
@@ -421,7 +410,7 @@ tr:hover td{background:var(--bg2)}
     <div id="view-fallos" class="section">
       <div class="page-header">
         <div><div class="page-title">Fallos y resoluciones</div><div class="page-sub">Decisiones judiciales y administrativas</div></div>
-        <button class="btn primary" onclick="openModal('falloModal')">+ Registrar fallo</button>
+        <button class="btn primary" id="btnNewFallo" onclick="openModal('falloModal')">+ Registrar fallo</button>
       </div>
       <div class="page-content" id="fallosContent"></div>
     </div>
@@ -430,18 +419,28 @@ tr:hover td{background:var(--bg2)}
     <div id="view-procesos" class="section">
       <div class="page-header">
         <div><div class="page-title">Procesos activos</div><div class="page-sub">Seguimiento por radicado</div></div>
-        <button class="btn primary" onclick="openModal('procesoModal')">+ Nuevo proceso</button>
+        <button class="btn primary" id="btnNewProceso" onclick="openModal('procesoModal')">+ Nuevo proceso</button>
       </div>
       <div class="page-content" id="procesosContent"></div>
+    </div>
+
+    <!-- USUARIOS -->
+    <div id="view-usuarios" class="section">
+      <div class="page-header">
+        <div><div class="page-title">Gestión de usuarios</div><div class="page-sub">Crea y administra accesos a tu expediente</div></div>
+        <button class="btn primary" onclick="openModal('userModal')">+ Crear usuario</button>
+      </div>
+      <div class="page-content" id="usuariosContent"></div>
     </div>
   </div>
 </div>
 </div>
 
-<!-- MODALES -->
+<!-- MODAL DOCUMENTO (crear y editar) -->
 <div class="overlay" id="docModal">
   <div class="modal">
-    <div class="modal-title">📄 Registrar documento</div>
+    <div class="modal-title" id="docModalTitle">📄 Registrar documento</div>
+    <input type="hidden" id="d_id">
     <div class="form-grid">
       <div class="form-row"><label>Fecha del documento <span class="req">*</span></label><input type="date" id="d_fecha"></div>
       <div class="form-row"><label>Fecha radicación / envío</label><input type="date" id="d_fechaRad"></div>
@@ -459,8 +458,8 @@ tr:hover td{background:var(--bg2)}
       <div class="form-row"><label>Entidad</label><input type="text" id="d_entidad" placeholder="Ej: Fiscalía 011 Local Envigado"></div>
       <div class="form-row"><label>Radicado</label><input type="text" id="d_radicado"></div>
     </div>
-    <div class="form-row"><label>Resumen / relevancia legal</label><textarea id="d_resumen" placeholder="Contenido e importancia jurídica del documento..."></textarea></div>
-    <div class="form-row"><label>Ubicación física / digital</label><input type="text" id="d_ubicacion" placeholder="Ej: Carpeta roja / Google Drive/Pruebas/..."></div>
+    <div class="form-row"><label>Resumen / relevancia legal</label><textarea id="d_resumen" placeholder="Contenido e importancia jurídica..."></textarea></div>
+    <div class="form-row"><label>Ubicación física / digital</label><input type="text" id="d_ubicacion" placeholder="Ej: Carpeta roja / Google Drive/Pruebas/"></div>
     <div class="form-grid">
       <div class="form-row"><label>Plazo legal automático</label>
         <select id="d_plazo" onchange="calcDeadline()">
@@ -476,11 +475,12 @@ tr:hover td{background:var(--bg2)}
     <div class="form-row"><label>📎 Adjuntar archivo (PDF, Word, imagen — máx. 50MB)</label>
       <div class="file-upload-area" id="dropZoneDoc" onclick="document.getElementById('d_file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'d_file')">
         <div style="font-size:28px">📂</div>
-        <p>Arrastra tu archivo aquí o haz clic para seleccionar</p>
-        <p style="font-size:11px;margin-top:4px">PDF, Word (.doc/.docx), imágenes (JPG, PNG, HEIC)</p>
+        <p style="font-size:13px;color:var(--text3);margin-top:6px">Arrastra aquí o haz clic para seleccionar</p>
+        <p style="font-size:11px;color:var(--text3);margin-top:4px">PDF · Word (.doc/.docx) · JPG · PNG · HEIC</p>
       </div>
       <input type="file" id="d_file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic,.webp" onchange="showSelectedFile(this,'filePreviewDoc')">
       <div id="filePreviewDoc" style="margin-top:6px"></div>
+      <div id="existingFileInfo" style="display:none;margin-top:6px;padding:8px 12px;background:var(--successbg);border-radius:var(--radius);font-size:12px;color:var(--successtext)"></div>
     </div>
     <div class="form-row"><label>Notas adicionales</label><textarea id="d_notas" placeholder="Observaciones, conexiones con otros documentos..."></textarea></div>
     <div class="modal-footer">
@@ -490,8 +490,9 @@ tr:hover td{background:var(--bg2)}
   </div>
 </div>
 
+<!-- MODAL SUBIR ARCHIVO -->
 <div class="overlay" id="uploadModal">
-  <div class="modal" style="max-width:480px">
+  <div class="modal" style="max-width:460px">
     <div class="modal-title">📎 Subir archivo independiente</div>
     <div class="form-row"><label>Nombre / descripción <span class="req">*</span></label><input type="text" id="up_nombre" placeholder="Ej: Video del ascensor — feb 2020"></div>
     <div class="form-row"><label>Categoría</label>
@@ -500,8 +501,8 @@ tr:hover td{background:var(--bg2)}
     <div class="form-row"><label>Archivo (máx. 50MB)</label>
       <div class="file-upload-area" onclick="document.getElementById('up_file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'up_file')">
         <div style="font-size:28px">📂</div>
-        <p>Arrastra aquí o haz clic para seleccionar</p>
-        <p style="font-size:11px;margin-top:4px">PDF, Word, imágenes, videos</p>
+        <p style="font-size:13px;color:var(--text3);margin-top:6px">Arrastra aquí o haz clic</p>
+        <p style="font-size:11px;color:var(--text3);margin-top:4px">PDF · Word · Imágenes · Videos</p>
       </div>
       <input type="file" id="up_file" style="display:none" onchange="showSelectedFile(this,'filePreviewUp')">
       <div id="filePreviewUp" style="margin-top:6px"></div>
@@ -509,15 +510,16 @@ tr:hover td{background:var(--bg2)}
     <div class="form-row"><label>Notas</label><textarea id="up_notas" placeholder="Contexto o relevancia del archivo..."></textarea></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('uploadModal')">Cancelar</button>
-      <button class="btn primary" id="upSaveBtn" onclick="saveUpload()">⬆ Subir archivo</button>
+      <button class="btn primary" id="upSaveBtn" onclick="saveUpload()">⬆ Subir</button>
     </div>
   </div>
 </div>
 
+<!-- MODAL EVENTO -->
 <div class="overlay" id="eventModal">
   <div class="modal">
     <div class="modal-title">📅 Agregar evento</div>
-    <div class="form-row"><label>Título <span class="req">*</span></label><input type="text" id="ev_title" placeholder="Ej: Audiencia de fallo — Comisaría 16 Belén"></div>
+    <div class="form-row"><label>Título <span class="req">*</span></label><input type="text" id="ev_title"></div>
     <div class="form-grid">
       <div class="form-row"><label>Fecha <span class="req">*</span></label><input type="date" id="ev_date"></div>
       <div class="form-row"><label>Hora</label><input type="time" id="ev_time" value="08:00"></div>
@@ -535,15 +537,16 @@ tr:hover td{background:var(--bg2)}
   </div>
 </div>
 
+<!-- MODAL ALERTA -->
 <div class="overlay" id="alertModal">
   <div class="modal">
     <div class="modal-title">🔔 Nueva alerta</div>
-    <div class="form-row"><label>Descripción <span class="req">*</span></label><input type="text" id="al_title" placeholder="Ej: Vence plazo D. Petición — Fiscalía 011"></div>
+    <div class="form-row"><label>Descripción <span class="req">*</span></label><input type="text" id="al_title"></div>
     <div class="form-grid">
       <div class="form-row"><label>Fecha de vencimiento <span class="req">*</span></label><input type="date" id="al_date"></div>
       <div class="form-row"><label>Nivel</label><select id="al_level"><option value="danger">🔴 Crítico</option><option value="warning">🟡 Importante</option><option value="info">🔵 Informativo</option></select></div>
     </div>
-    <div class="form-row"><label>Consecuencia legal</label><textarea id="al_consequence" placeholder="¿Qué pasa si vence sin acción?"></textarea></div>
+    <div class="form-row"><label>Consecuencia legal</label><textarea id="al_consequence"></textarea></div>
     <div class="form-row"><label>Acción a tomar</label><input type="text" id="al_action"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('alertModal')">Cancelar</button>
@@ -552,10 +555,11 @@ tr:hover td{background:var(--bg2)}
   </div>
 </div>
 
+<!-- MODAL PENDIENTE -->
 <div class="overlay" id="pendModal">
   <div class="modal">
     <div class="modal-title">✅ Nueva tarea pendiente</div>
-    <div class="form-row"><label>Descripción <span class="req">*</span></label><input type="text" id="p_title" placeholder="Ej: Llamar al Juzgado — verificar estado recurso apelación"></div>
+    <div class="form-row"><label>Descripción <span class="req">*</span></label><input type="text" id="p_title"></div>
     <div class="form-grid">
       <div class="form-row"><label>Tipo</label><select id="p_type"><option>Llamada</option><option>Correo</option><option>Visita</option><option>Documento</option><option>Legal</option></select></div>
       <div class="form-row"><label>Prioridad</label><select id="p_priority"><option>Urgente</option><option>Alta</option><option>Normal</option></select></div>
@@ -572,10 +576,11 @@ tr:hover td{background:var(--bg2)}
   </div>
 </div>
 
+<!-- MODAL FALLO -->
 <div class="overlay" id="falloModal">
   <div class="modal">
     <div class="modal-title">⚖️ Registrar fallo / resolución</div>
-    <div class="form-row"><label>Título <span class="req">*</span></label><input type="text" id="f_title" placeholder="Ej: Resolución 344 — Reincidencia JELP"></div>
+    <div class="form-row"><label>Título <span class="req">*</span></label><input type="text" id="f_title"></div>
     <div class="form-grid">
       <div class="form-row"><label>Fecha <span class="req">*</span></label><input type="date" id="f_date"></div>
       <div class="form-row"><label>Autoridad</label><input type="text" id="f_auth"></div>
@@ -598,6 +603,7 @@ tr:hover td{background:var(--bg2)}
   </div>
 </div>
 
+<!-- MODAL PROCESO -->
 <div class="overlay" id="procesoModal">
   <div class="modal">
     <div class="modal-title">🗂️ Registrar proceso activo</div>
@@ -621,129 +627,165 @@ tr:hover td{background:var(--bg2)}
   </div>
 </div>
 
+<!-- MODAL USUARIO -->
+<div class="overlay" id="userModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title">👤 Crear nuevo usuario</div>
+    <div class="form-row"><label>Nombre completo <span class="req">*</span></label><input type="text" id="u_nombre" placeholder="Ej: Dra. María López"></div>
+    <div class="form-row"><label>Correo electrónico <span class="req">*</span></label><input type="email" id="u_email" placeholder="correo@gmail.com"></div>
+    <div class="form-row"><label>Contraseña temporal <span class="req">*</span></label><input type="text" id="u_pwd" placeholder="Mín. 8 caracteres — se la envías tú por otro medio"></div>
+    <div class="form-row"><label>Rol</label>
+      <select id="u_rol">
+        <option value="abogado">⚖️ Abogado — ve todo, puede agregar pero no borrar</option>
+        <option value="colaborador">🤝 Colaborador — ve lo que le asignes, puede agregar</option>
+        <option value="lectura">👁️ Solo lectura — ve lo que le asignes, no puede cambiar nada</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Secciones que puede ver</label>
+      <div class="perm-grid" id="permGrid"></div>
+    </div>
+    <div style="margin-top:10px;padding:10px;background:var(--warningbg);border-radius:var(--radius);font-size:12px;color:var(--warningtext)">
+      ⚠️ <strong>Importante:</strong> La contraseña temporal se la debes enviar tú directamente al usuario por WhatsApp o correo. Esta app no la envía automáticamente.
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('userModal')">Cancelar</button>
+      <button class="btn primary" id="userSaveBtn" onclick="createUser()">✓ Crear usuario</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
+
 <script>
-// ===== SUPABASE CONFIG =====
-const SUPA_URL = 'https://mxglrdkokdbpygczlcgo.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14Z2xyZGtva2RicHlnY3psY2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjA5NjgsImV4cCI6MjA5Nzk5Njk2OH0.0GIVFMzU4pBQMSXmVZ_mrnG-jhnjadaashBT5XcaScg';
-const { createClient } = supabase;
-const sb = createClient(SUPA_URL, SUPA_KEY);
+// ===== CONFIG =====
+const SUPA_URL='https://mxglrdkokdbpygczlcgo.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14Z2xyZGtva2RicHlnY3psY2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjA5NjgsImV4cCI6MjA5Nzk5Njk2OH0.0GIVFMzU4pBQMSXmVZ_mrnG-jhnjadaashBT5XcaScg';
+const OWNER_EMAIL='defensaluisafernanda@gmail.com';
+const {createClient}=supabase;
+const sb=createClient(SUPA_URL,SUPA_KEY);
 
 // ===== STATE =====
-let db = {docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[]};
-let currentUser = null;
-let dbRowId = null;
-let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
-let inactTimer = null;
-const INACT_MIN = 10;
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const DAYS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+let db={docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[]};
+let currentUser=null, currentPerfil=null, dbRowId=null, ownerId=null;
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
+let inactTimer=null;
+const INACT_MIN=10;
+const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const SECCIONES={documentos:'📄 Documentos',archivos:'📎 Archivos',alertas:'🔔 Alertas',calendario:'📅 Calendario',pendientes:'✅ Pendientes',fallos:'⚖️ Fallos',procesos:'🗂️ Procesos'};
+
+// ===== HELPERS =====
+const fmt=s=>{if(!s)return'—';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;};
+const daysLeft=s=>{if(!s)return null;const t=new Date();t.setHours(0,0,0,0);return Math.ceil((new Date(s+'T00:00:00')-t)/86400000);};
+function deadlineBadge(s){
+  if(!s)return'';const d=daysLeft(s);
+  if(d<0)return`<span class="badge danger">Vencido ${Math.abs(d)}d</span>`;
+  if(d===0)return`<span class="badge danger">🔴 HOY</span>`;
+  if(d<=5)return`<span class="badge danger">⚠️ ${d}d</span>`;
+  if(d<=15)return`<span class="badge warning">${d} días</span>`;
+  return`<span class="badge neutral">${fmt(s)}</span>`;
+}
+// ✅ FIX: limpiar nombre de archivo para Supabase Storage
+function sanitizeFileName(name){
+  return name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]/g,'_').replace(/_+/g,'_').substring(0,100);
+}
+const CAT_BADGE={Pruebas:'info',Fallos:'purple','Medidas de protección':'warning','Derecho de petición':'danger','Actuaciones penales':'neutral','Documentos patrimoniales':'success','Clínico/pericial':'info','Actas y conciliaciones':'success',Comunicaciones:'neutral',Otro:'neutral'};
+const STATUS_BADGE={Vigente:'success','Pendiente respuesta':'warning',Respondido:'info',Vencido:'danger',Archivado:'neutral'};
+const COMP_BADGE={Cumplido:'success','Parcialmente cumplido':'warning',Incumplido:'danger','Pendiente de ejecución':'neutral'};
+
+function isOwner(){return currentUser?.email===OWNER_EMAIL;}
+function canEdit(){return isOwner()||(currentPerfil?.rol==='abogado'||currentPerfil?.rol==='colaborador');}
+function canDelete(){return isOwner();}
+function canSeeSection(sec){
+  if(isOwner())return true;
+  if(!currentPerfil)return false;
+  return currentPerfil.permisos?.[sec]===true;
+}
 
 // ===== AUTH =====
-let authMode = 'login';
-
+let authMode='login';
 function switchAuthTab(mode){
-  authMode = mode;
+  authMode=mode;
   document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&mode==='login')||(i===1&&mode==='register')));
   document.getElementById('authError').style.display='none';
   document.getElementById('authSuccess').style.display='none';
+  if(mode!=='reset')document.getElementById('authTabs').style.display='flex';
   renderAuthForm();
 }
-
 function renderAuthForm(){
-  const f = document.getElementById('authForm');
+  const f=document.getElementById('authForm');
   if(authMode==='login'){
-    f.innerHTML=`
-      <div class="form-row"><label>Correo electrónico</label><input type="email" id="a_email" value="defensaluisafernanda@gmail.com" placeholder="correo@gmail.com"></div>
-      <div class="form-row"><label>Contraseña</label><input type="password" id="a_pwd" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <button class="auth-btn" onclick="doLogin()">🔓 Entrar</button>
-      <span class="auth-link" onclick="switchAuthTab('reset')">¿Olvidaste tu contraseña? Recuperar por correo</span>
-    `;
-  } else if(authMode==='register'){
-    f.innerHTML=`
-      <div class="form-row"><label>Correo electrónico</label><input type="email" id="a_email" value="defensaluisafernanda@gmail.com"></div>
-      <div class="form-row"><label>Contraseña (mín. 8 caracteres)</label><input type="password" id="a_pwd" placeholder="Crea una contraseña segura"></div>
-      <div class="form-row"><label>Confirmar contraseña</label><input type="password" id="a_pwd2" placeholder="Repite la contraseña" onkeydown="if(event.key==='Enter')doRegister()"></div>
-      <button class="auth-btn" onclick="doRegister()">✓ Crear cuenta</button>
-    `;
-  } else {
-    f.innerHTML=`
-      <div class="form-row"><label>Correo electrónico</label><input type="email" id="a_email" value="defensaluisafernanda@gmail.com"></div>
-      <button class="auth-btn" onclick="doReset()">📧 Enviar correo de recuperación</button>
-      <span class="auth-link" onclick="switchAuthTab('login')">← Volver a iniciar sesión</span>
-    `;
+    f.innerHTML=`<div class="form-row"><label>Correo electrónico</label><input type="email" id="a_email" placeholder="correo@gmail.com" value="${OWNER_EMAIL}"></div><div class="form-row"><label>Contraseña</label><input type="password" id="a_pwd" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')doLogin()"></div><button class="auth-btn" onclick="doLogin()">🔓 Entrar</button><span class="auth-link" onclick="switchAuthTab('reset')">¿Olvidaste tu contraseña? Recupérala por correo</span>`;
+  }else if(authMode==='register'){
+    f.innerHTML=`<div class="form-row"><label>Correo electrónico</label><input type="email" id="a_email" value="${OWNER_EMAIL}"></div><div class="form-row"><label>Contraseña (mín. 8 caracteres)</label><input type="password" id="a_pwd" placeholder="Contraseña segura"></div><div class="form-row"><label>Confirmar contraseña</label><input type="password" id="a_pwd2" onkeydown="if(event.key==='Enter')doRegister()"></div><button class="auth-btn" onclick="doRegister()">✓ Crear cuenta</button>`;
+  }else{
     document.getElementById('authTabs').style.display='none';
+    f.innerHTML=`<div class="form-row"><label>Tu correo electrónico</label><input type="email" id="a_email" value="${OWNER_EMAIL}"></div><button class="auth-btn" onclick="doReset()">📧 Enviar correo de recuperación</button><span class="auth-link" onclick="switchAuthTab('login')">← Volver</span>`;
   }
 }
-
-function showAuthError(msg){ const e=document.getElementById('authError'); e.textContent=msg; e.style.display='block'; }
-function showAuthSuccess(msg){ const e=document.getElementById('authSuccess'); e.textContent=msg; e.style.display='block'; }
+function showAuthErr(m){const e=document.getElementById('authError');e.textContent=m;e.style.display='block';}
+function showAuthOk(m){const e=document.getElementById('authSuccess');e.textContent=m;e.style.display='block';}
 
 async function doLogin(){
   const email=document.getElementById('a_email').value.trim();
   const pwd=document.getElementById('a_pwd').value;
-  if(!email||!pwd){ showAuthError('Completa todos los campos'); return; }
-  const btn=document.querySelector('.auth-btn'); btn.disabled=true; btn.textContent='Entrando...';
-  const {data,error}=await sb.auth.signInWithPassword({email,password:pwd});
-  if(error){ showAuthError(error.message==='Invalid login credentials'?'Correo o contraseña incorrectos':error.message); btn.disabled=false; btn.textContent='🔓 Entrar'; return; }
+  if(!email||!pwd){showAuthErr('Completa todos los campos');return;}
+  const btn=document.querySelector('.auth-btn');btn.disabled=true;btn.textContent='Entrando...';
+  const{data,error}=await sb.auth.signInWithPassword({email,password:pwd});
+  if(error){showAuthErr(error.message==='Invalid login credentials'?'Correo o contraseña incorrectos':error.message);btn.disabled=false;btn.textContent='🔓 Entrar';return;}
   await enterApp(data.user);
 }
-
 async function doRegister(){
   const email=document.getElementById('a_email').value.trim();
   const pwd=document.getElementById('a_pwd').value;
   const pwd2=document.getElementById('a_pwd2').value;
-  if(!email||!pwd||!pwd2){ showAuthError('Completa todos los campos'); return; }
-  if(pwd.length<8){ showAuthError('La contraseña debe tener al menos 8 caracteres'); return; }
-  if(pwd!==pwd2){ showAuthError('Las contraseñas no coinciden'); return; }
-  const btn=document.querySelector('.auth-btn'); btn.disabled=true; btn.textContent='Creando cuenta...';
-  const {data,error}=await sb.auth.signUp({email,password:pwd});
-  if(error){ showAuthError(error.message); btn.disabled=false; btn.textContent='✓ Crear cuenta'; return; }
-  showAuthSuccess('✓ Cuenta creada. Revisa tu correo defensaluisafernanda@gmail.com para verificar tu cuenta, luego inicia sesión.');
-  btn.disabled=false; btn.textContent='✓ Crear cuenta';
+  if(!email||!pwd||!pwd2){showAuthErr('Completa todos los campos');return;}
+  if(pwd.length<8){showAuthErr('Contraseña mínimo 8 caracteres');return;}
+  if(pwd!==pwd2){showAuthErr('Las contraseñas no coinciden');return;}
+  const btn=document.querySelector('.auth-btn');btn.disabled=true;btn.textContent='Creando...';
+  const{error}=await sb.auth.signUp({email,password:pwd});
+  if(error){showAuthErr(error.message);btn.disabled=false;btn.textContent='✓ Crear cuenta';return;}
+  showAuthOk('✓ Cuenta creada. Revisa '+email+' para verificar tu cuenta, luego inicia sesión.');
+  btn.disabled=false;btn.textContent='✓ Crear cuenta';
   setTimeout(()=>switchAuthTab('login'),3000);
 }
-
 async function doReset(){
   const email=document.getElementById('a_email').value.trim();
-  if(!email){ showAuthError('Ingresa tu correo'); return; }
-  const btn=document.querySelector('.auth-btn'); btn.disabled=true; btn.textContent='Enviando...';
-  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
-  if(error){ showAuthError(error.message); btn.disabled=false; btn.textContent='📧 Enviar correo de recuperación'; return; }
-  showAuthSuccess('✓ Correo enviado a '+email+'. Revisa tu bandeja de entrada y sigue el enlace para crear una nueva contraseña.');
+  if(!email){showAuthErr('Ingresa tu correo');return;}
+  const btn=document.querySelector('.auth-btn');btn.disabled=true;btn.textContent='Enviando...';
+  const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
+  if(error){showAuthErr(error.message);btn.disabled=false;return;}
+  showAuthOk('✓ Correo enviado a '+email+'. Revisa tu bandeja de entrada y sigue el enlace.');
   btn.disabled=false;
 }
-
 async function doLogout(){
+  clearTimeout(inactTimer);
   await sb.auth.signOut();
-  currentUser=null; db={docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[]}; dbRowId=null;
+  currentUser=null;currentPerfil=null;db={docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[]};dbRowId=null;ownerId=null;
   document.getElementById('appShell').style.display='none';
   document.getElementById('authScreen').style.display='flex';
   document.getElementById('authTabs').style.display='flex';
   switchAuthTab('login');
 }
-
 function manualLock(){
   clearTimeout(inactTimer);
   document.getElementById('inactivityOverlay').classList.add('show');
   document.getElementById('inactPwd').value='';
 }
-
 async function unlockInactivity(){
   const pwd=document.getElementById('inactPwd').value;
-  const email=currentUser?.email||'defensaluisafernanda@gmail.com';
-  const {error}=await sb.auth.signInWithPassword({email,password:pwd});
-  if(error){ document.getElementById('inactErr').style.display='block'; return; }
+  const email=currentUser?.email||OWNER_EMAIL;
+  const{error}=await sb.auth.signInWithPassword({email,password:pwd});
+  if(error){document.getElementById('inactErr').style.display='block';return;}
   document.getElementById('inactivityOverlay').classList.remove('show');
   document.getElementById('inactErr').style.display='none';
   resetInactTimer();
 }
-
 function resetInactTimer(){
   clearTimeout(inactTimer);
-  inactTimer=setTimeout(()=>{ document.getElementById('inactivityOverlay').classList.add('show'); document.getElementById('inactPwd').value=''; }, INACT_MIN*60*1000);
+  inactTimer=setTimeout(()=>{document.getElementById('inactivityOverlay').classList.add('show');document.getElementById('inactPwd').value='';},INACT_MIN*60*1000);
 }
-
-['mousemove','keydown','touchstart','click'].forEach(e=>document.addEventListener(e,()=>{ if(currentUser) resetInactTimer(); }));
+['mousemove','keydown','touchstart','click'].forEach(e=>document.addEventListener(e,()=>{if(currentUser)resetInactTimer();}));
 
 // ===== ENTER APP =====
 async function enterApp(user){
@@ -753,197 +795,367 @@ async function enterApp(user){
   document.getElementById('userEmail').textContent=user.email;
   document.getElementById('todayDate').textContent=new Date().toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   setSyncStatus('Cargando...');
+
+  // Determinar si es dueña o usuario compartido
+  if(isOwner()){
+    currentPerfil=null;
+    ownerId=user.id;
+    document.getElementById('userRoleBadge').innerHTML='<span class="badge success">👑 Administradora</span>';
+    document.getElementById('adminSection').style.display='block';
+    document.getElementById('nav-usuarios').style.display='flex';
+  }else{
+    // Buscar perfil en tabla perfiles
+    const{data:perfil}=await sb.from('perfiles').select('*').eq('user_id',user.id).single();
+    if(!perfil||!perfil.activo){alert('Tu acceso no está activo. Contacta a la administradora.');await doLogout();return;}
+    currentPerfil=perfil;
+    ownerId=perfil.owner_id;
+    const rolLabels={abogado:'⚖️ Abogado',colaborador:'🤝 Colaborador',lectura:'👁️ Solo lectura'};
+    document.getElementById('userRoleBadge').innerHTML=`<span class="badge info">${rolLabels[perfil.rol]||perfil.rol}</span>`;
+    applyPermissions(perfil.permisos);
+  }
+
   await loadData();
   resetInactTimer();
   refreshAll();
   setSyncStatus('Sincronizado ✓');
 }
 
+function applyPermissions(permisos){
+  // Ocultar secciones según permisos
+  Object.keys(SECCIONES).forEach(sec=>{
+    const navEl=document.getElementById('nav-'+sec);
+    if(navEl) navEl.style.display=permisos?.[sec]?'flex':'none';
+  });
+  // Ocultar botones de agregar si es solo lectura
+  if(currentPerfil?.rol==='lectura'){
+    ['btnNewDoc','btnNewDoc2','btnNewAlert','btnNewEvent','btnNewPend','btnNewFallo','btnNewProceso'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.style.display='none';
+    });
+  }
+}
+
 // ===== DATA =====
 async function loadData(){
-  const {data,error}=await sb.from('expediente').select('*').eq('user_id',currentUser.id).single();
-  if(data){ db=data.data; dbRowId=data.id; if(!db.uploads) db.uploads=[]; }
-  else { seedData(); await saveData(); }
+  // Si es dueña, carga sus propios datos
+  // Si es usuario compartido, carga los datos del dueño
+  const targetId=isOwner()?currentUser.id:ownerId;
+  const{data}=await sb.from('expediente').select('*').eq('user_id',targetId).single();
+  if(data){db=data.data;dbRowId=data.id;if(!db.uploads)db.uploads=[];}
+  else if(isOwner()){seedData();await saveData();}
 }
 
 async function saveData(){
+  if(!isOwner()&&currentPerfil?.rol==='lectura')return; // solo lectura no puede guardar
   setSyncStatus('Guardando...');
-  const bar=document.getElementById('syncBar');
-  bar.classList.add('syncing');
+  const bar=document.getElementById('syncBar');bar.classList.add('syncing');
   try{
+    const targetId=isOwner()?currentUser.id:ownerId;
     if(dbRowId){
       await sb.from('expediente').update({data:db,updated_at:new Date().toISOString()}).eq('id',dbRowId);
-    } else {
-      const {data}=await sb.from('expediente').insert({user_id:currentUser.id,data:db}).select().single();
-      if(data) dbRowId=data.id;
+    }else{
+      const{data}=await sb.from('expediente').insert({user_id:targetId,data:db}).select().single();
+      if(data)dbRowId=data.id;
     }
-    bar.classList.remove('syncing'); bar.classList.add('done');
+    bar.classList.remove('syncing');bar.classList.add('done');
     setTimeout(()=>bar.classList.remove('done'),600);
     setSyncStatus('Sincronizado ✓');
-  }catch(e){
-    setSyncStatus('⚠ Error al guardar');
-    bar.classList.remove('syncing');
-  }
+  }catch(e){setSyncStatus('⚠ Error al guardar');bar.classList.remove('syncing');}
   refreshAll();
 }
-
-function setSyncStatus(msg){ const el=document.getElementById('syncStatusText'); if(el) el.textContent=msg; }
+function setSyncStatus(msg){const el=document.getElementById('syncStatusText');if(el)el.textContent=msg;}
 
 // ===== FILE UPLOAD =====
 function handleDrop(event,inputId){
-  event.preventDefault();
-  event.currentTarget.classList.remove('drag');
-  const file=event.dataTransfer.files[0];
-  if(!file) return;
+  event.preventDefault();event.currentTarget.classList.remove('drag');
+  const file=event.dataTransfer.files[0];if(!file)return;
   const input=document.getElementById(inputId);
-  const dt=new DataTransfer(); dt.items.add(file); input.files=dt.files;
-  showSelectedFile(input, inputId==='d_file'?'filePreviewDoc':'filePreviewUp');
+  const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
+  showSelectedFile(input,inputId==='d_file'?'filePreviewDoc':'filePreviewUp');
 }
-
 function showSelectedFile(input,previewId){
-  const el=document.getElementById(previewId); if(!el) return;
-  if(!input.files||!input.files[0]){ el.innerHTML=''; return; }
+  const el=document.getElementById(previewId);if(!el)return;
+  if(!input.files||!input.files[0]){el.innerHTML='';return;}
   const f=input.files[0];
   const size=(f.size/1024/1024).toFixed(1);
   const icon=f.type.includes('pdf')?'📄':f.type.includes('word')||f.name.endsWith('.doc')||f.name.endsWith('.docx')?'📝':f.type.includes('image')?'🖼️':'📎';
   el.innerHTML=`<div class="file-chip">${icon} ${f.name} <span style="color:var(--text3)">(${size}MB)</span></div>`;
 }
 
-async function uploadFileToSupabase(file, folder){
-  const ext=file.name.split('.').pop();
-  const path=`${currentUser.id}/${folder}/${Date.now()}_${file.name}`;
-  const {data,error}=await sb.storage.from('documentos').upload(path,file,{cacheControl:'3600',upsert:false});
-  if(error) throw new Error('Error subiendo archivo: '+error.message);
+async function uploadFileToSupabase(file,folder){
+  const cleanName=sanitizeFileName(file.name); // ✅ FIX nombre de archivo
+  const uid=isOwner()?currentUser.id:ownerId;
+  const path=`${uid}/${folder}/${Date.now()}_${cleanName}`;
+  const{data,error}=await sb.storage.from('documentos').upload(path,file,{cacheControl:'3600',upsert:false});
+  if(error)throw new Error('Error subiendo archivo: '+error.message);
   return path;
 }
-
 async function getFileUrl(path){
-  const {data}=await sb.storage.from('documentos').createSignedUrl(path,3600);
+  const{data}=await sb.storage.from('documentos').createSignedUrl(path,3600);
   return data?.signedUrl||null;
+}
+async function openFile(path){
+  try{const url=await getFileUrl(path);if(url)window.open(url,'_blank');else alert('No se pudo obtener el archivo.');}
+  catch(e){alert('Error: '+e.message);}
+}
+async function deleteFile(path,collection,id){
+  if(!canDelete()){alert('No tienes permisos para eliminar archivos.');return;}
+  if(!confirm('¿Eliminar este archivo?'))return;
+  try{
+    await sb.storage.from('documentos').remove([path]);
+    if(collection==='docs'){const doc=db.docs.find(d=>d.id===id);if(doc){doc.filePath=null;doc.fileName=null;}}
+    else{db.uploads=db.uploads.filter(u=>u.id!==id);}
+    await saveData();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+// ===== DOC MODAL (crear + editar) =====
+function openDocModal(editId=null){
+  const isEdit=editId!==null;
+  document.getElementById('docModalTitle').textContent=isEdit?'✏️ Editar documento':'📄 Registrar documento';
+  document.getElementById('docSaveBtn').textContent=isEdit?'✓ Guardar cambios':'✓ Guardar';
+  document.getElementById('d_id').value=editId||'';
+  document.getElementById('filePreviewDoc').innerHTML='';
+  document.getElementById('d_file').value='';
+
+  if(isEdit){
+    const doc=db.docs.find(d=>d.id===editId);
+    if(!doc)return;
+    document.getElementById('d_fecha').value=doc.fecha||'';
+    document.getElementById('d_fechaRad').value=doc.fechaRad||'';
+    document.getElementById('d_nombre').value=doc.nombre||'';
+    document.getElementById('d_cat').value=doc.cat||'Pruebas';
+    document.getElementById('d_status').value=doc.status||'Vigente';
+    document.getElementById('d_entidad').value=doc.entidad||'';
+    document.getElementById('d_radicado').value=doc.radicado||'';
+    document.getElementById('d_resumen').value=doc.resumen||'';
+    document.getElementById('d_ubicacion').value=doc.ubicacion||'';
+    document.getElementById('d_vence').value=doc.vence||'';
+    document.getElementById('d_notas').value=doc.notas||'';
+    document.getElementById('d_plazo').value='';
+    // Mostrar archivo existente si tiene
+    const existInfo=document.getElementById('existingFileInfo');
+    if(doc.fileName){
+      existInfo.style.display='block';
+      existInfo.innerHTML=`📎 Archivo actual: <strong>${doc.fileName}</strong> — <button class="btn sm" onclick="openFile('${doc.filePath}')">Ver</button> <span style="color:var(--text3)">(Si subes uno nuevo, reemplazará al actual)</span>`;
+    }else{existInfo.style.display='none';}
+  }else{
+    ['d_fecha','d_fechaRad','d_nombre','d_entidad','d_radicado','d_resumen','d_ubicacion','d_vence','d_notas'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('d_cat').value='Pruebas';
+    document.getElementById('d_status').value='Vigente';
+    document.getElementById('d_plazo').value='';
+    document.getElementById('existingFileInfo').style.display='none';
+  }
+  openModal('docModal');
 }
 
 async function saveDoc(){
   const n=document.getElementById('d_nombre').value.trim();
   const f=document.getElementById('d_fecha').value;
-  if(!n||!f){ alert('Nombre y fecha son obligatorios'); return; }
+  if(!n||!f){alert('Nombre y fecha son obligatorios');return;}
   const btn=document.getElementById('docSaveBtn');
-  btn.disabled=true; btn.textContent='Guardando...';
+  btn.disabled=true;btn.textContent='Guardando...';
   try{
-    let filePath=null, fileName=null;
+    let filePath=null,fileName=null;
     const fileInput=document.getElementById('d_file');
     if(fileInput.files&&fileInput.files[0]){
       const file=fileInput.files[0];
-      if(file.size>50*1024*1024){ alert('El archivo no puede superar 50MB'); btn.disabled=false; btn.textContent='✓ Guardar'; return; }
+      if(file.size>50*1024*1024){alert('El archivo no puede superar 50MB');btn.disabled=false;btn.textContent='✓ Guardar';return;}
       filePath=await uploadFileToSupabase(file,'docs');
       fileName=file.name;
     }
-    const doc={id:Date.now(),fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:document.getElementById('d_vence').value,notas:document.getElementById('d_notas').value.trim(),filePath,fileName};
-    db.docs.push(doc);
-    if(doc.vence) db.alerts.push({id:Date.now()+1,title:'Vencimiento: '+doc.nombre,date:doc.vence,level:'warning',consequence:'Revisar acción requerida.',action:''});
+    const editId=document.getElementById('d_id').value;
+    const isEdit=editId!=='';
+
+    if(isEdit){
+      // ✅ EDITAR documento existente
+      const idx=db.docs.findIndex(d=>d.id==editId);
+      if(idx>=0){
+        const existing=db.docs[idx];
+        db.docs[idx]={
+          ...existing,
+          fecha:f,
+          fechaRad:document.getElementById('d_fechaRad').value,
+          nombre:n,
+          cat:document.getElementById('d_cat').value,
+          status:document.getElementById('d_status').value,
+          entidad:document.getElementById('d_entidad').value.trim(),
+          radicado:document.getElementById('d_radicado').value.trim(),
+          resumen:document.getElementById('d_resumen').value.trim(),
+          ubicacion:document.getElementById('d_ubicacion').value.trim(),
+          vence:document.getElementById('d_vence').value,
+          notas:document.getElementById('d_notas').value.trim(),
+          // Solo actualizar archivo si se subió uno nuevo
+          ...(filePath?{filePath,fileName}:{})
+        };
+      }
+    }else{
+      // ✅ CREAR nuevo documento
+      const doc={id:Date.now(),fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:document.getElementById('d_vence').value,notas:document.getElementById('d_notas').value.trim(),filePath,fileName};
+      db.docs.push(doc);
+      if(doc.vence)db.alerts.push({id:Date.now()+1,title:'Vencimiento: '+doc.nombre,date:doc.vence,level:'warning',consequence:'Revisar acción requerida.',action:''});
+    }
+
     await saveData();
     closeModal('docModal');
-    ['d_fecha','d_fechaRad','d_nombre','d_entidad','d_radicado','d_resumen','d_ubicacion','d_vence','d_notas'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('d_plazo').value=''; document.getElementById('d_file').value=''; document.getElementById('filePreviewDoc').innerHTML='';
-  }catch(e){ alert('Error: '+e.message); }
-  btn.disabled=false; btn.textContent='✓ Guardar';
+  }catch(e){alert('Error: '+e.message);}
+  btn.disabled=false;btn.textContent='✓ Guardar';
 }
 
 async function saveUpload(){
   const n=document.getElementById('up_nombre').value.trim();
   const fileInput=document.getElementById('up_file');
-  if(!n||!fileInput.files||!fileInput.files[0]){ alert('Nombre y archivo son obligatorios'); return; }
-  const btn=document.getElementById('upSaveBtn');
-  btn.disabled=true; btn.textContent='Subiendo...';
+  if(!n||!fileInput.files||!fileInput.files[0]){alert('Nombre y archivo son obligatorios');return;}
+  const btn=document.getElementById('upSaveBtn');btn.disabled=true;btn.textContent='Subiendo...';
   try{
     const file=fileInput.files[0];
-    if(file.size>50*1024*1024){ alert('El archivo no puede superar 50MB'); btn.disabled=false; btn.textContent='⬆ Subir archivo'; return; }
+    if(file.size>50*1024*1024){alert('El archivo no puede superar 50MB');btn.disabled=false;btn.textContent='⬆ Subir';return;}
     const filePath=await uploadFileToSupabase(file,'uploads');
     db.uploads.push({id:Date.now(),nombre:n,cat:document.getElementById('up_cat').value,notas:document.getElementById('up_notas').value.trim(),filePath,fileName:file.name,fileSize:file.size,date:new Date().toISOString().split('T')[0]});
-    await saveData();
-    closeModal('uploadModal');
+    await saveData();closeModal('uploadModal');
     ['up_nombre','up_notas'].forEach(id=>document.getElementById(id).value='');
-    fileInput.value=''; document.getElementById('filePreviewUp').innerHTML='';
+    fileInput.value='';document.getElementById('filePreviewUp').innerHTML='';
     navigate('archivos');
-  }catch(e){ alert('Error: '+e.message); }
-  btn.disabled=false; btn.textContent='⬆ Subir archivo';
+  }catch(e){alert('Error: '+e.message);}
+  btn.disabled=false;btn.textContent='⬆ Subir';
 }
 
-async function openFile(path){
-  try{ const url=await getFileUrl(path); if(url) window.open(url,'_blank'); else alert('No se pudo obtener el archivo.'); }
-  catch(e){ alert('Error: '+e.message); }
+// ===== USUARIOS =====
+function renderPermGrid(){
+  const grid=document.getElementById('permGrid');if(!grid)return;
+  grid.innerHTML=Object.entries(SECCIONES).map(([k,v])=>`
+    <div class="perm-item">
+      <button class="perm-toggle on" id="perm_${k}" onclick="togglePerm('${k}')"></button>
+      <span>${v}</span>
+    </div>
+  `).join('');
+}
+function togglePerm(k){
+  const btn=document.getElementById('perm_'+k);
+  btn.classList.toggle('on');btn.classList.toggle('off');
+}
+function getPerms(){
+  const perms={};
+  Object.keys(SECCIONES).forEach(k=>{
+    perms[k]=document.getElementById('perm_'+k)?.classList.contains('on')??true;
+  });
+  return perms;
 }
 
-async function deleteFile(path, collection, id){
-  if(!confirm('¿Eliminar este archivo?')) return;
+async function createUser(){
+  const nombre=document.getElementById('u_nombre').value.trim();
+  const email=document.getElementById('u_email').value.trim();
+  const pwd=document.getElementById('u_pwd').value;
+  const rol=document.getElementById('u_rol').value;
+  if(!nombre||!email||!pwd){alert('Nombre, correo y contraseña son obligatorios');return;}
+  if(pwd.length<8){alert('La contraseña debe tener al menos 8 caracteres');return;}
+  const btn=document.getElementById('userSaveBtn');btn.disabled=true;btn.textContent='Creando...';
   try{
-    await sb.storage.from('documentos').remove([path]);
-    if(collection==='docs'){ const doc=db.docs.find(d=>d.id===id); if(doc){doc.filePath=null;doc.fileName=null;} }
-    else { db.uploads=db.uploads.filter(u=>u.id!==id); }
-    await saveData();
-  }catch(e){ alert('Error: '+e.message); }
+    // Crear usuario en Supabase Auth
+    const{data,error}=await sb.auth.signUp({email,password:pwd,options:{data:{nombre}}});
+    if(error)throw new Error(error.message);
+    const newUserId=data.user?.id;
+    if(!newUserId)throw new Error('No se pudo obtener el ID del nuevo usuario');
+    const permisos=getPerms();
+    // Insertar perfil
+    const{error:perfilErr}=await sb.from('perfiles').insert({
+      user_id:newUserId,owner_id:currentUser.id,
+      nombre,rol,permisos,
+      puede_agregar:rol!=='lectura',activo:true
+    });
+    if(perfilErr)throw new Error('Usuario creado pero error en perfil: '+perfilErr.message);
+    closeModal('userModal');
+    await renderUsuarios();
+    alert(`✓ Usuario "${nombre}" creado correctamente.\n\nEnvíale por WhatsApp:\n• Correo: ${email}\n• Contraseña temporal: ${pwd}\n• URL de la app: ${window.location.href}`);
+  }catch(e){alert('Error: '+e.message);}
+  btn.disabled=false;btn.textContent='✓ Crear usuario';
+}
+
+async function renderUsuarios(){
+  const el=document.getElementById('usuariosContent');if(!el)return;
+  const{data:perfiles}=await sb.from('perfiles').select('*').eq('owner_id',currentUser.id).order('created_at',{ascending:false});
+  if(!perfiles||perfiles.length===0){
+    el.innerHTML=`<div class="empty"><span class="empty-icon">👥</span><div style="font-weight:500;margin-bottom:6px">No has creado usuarios aún</div><div style="font-size:13px">Usa "+ Crear usuario" para dar acceso a tu abogada, novio u otras personas de confianza.</div></div>`;
+    return;
+  }
+  const rolLabels={abogado:'⚖️ Abogado',colaborador:'🤝 Colaborador',lectura:'👁️ Solo lectura'};
+  el.innerHTML=perfiles.map(p=>`
+    <div class="user-card">
+      <div class="user-card-header">
+        <div class="user-avatar">${p.nombre.charAt(0).toUpperCase()}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600">${p.nombre}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${rolLabels[p.rol]||p.rol}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="badge ${p.activo?'success':'danger'}">${p.activo?'Activo':'Desactivado'}</span>
+          <button class="btn sm ${p.activo?'danger':'success'}" onclick="toggleUserActive('${p.id}',${p.activo})">${p.activo?'Desactivar':'Activar'}</button>
+          <button class="btn sm danger" onclick="deleteUser('${p.id}')">🗑</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Creado: ${fmt(p.created_at?.split('T')[0])}</div>
+      <div style="font-size:12px;font-weight:500;margin-bottom:6px">Secciones con acceso:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${Object.entries(SECCIONES).map(([k,v])=>`<span class="badge ${p.permisos?.[k]?'success':'neutral'}" style="font-size:10px">${v}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggleUserActive(id,current){
+  await sb.from('perfiles').update({activo:!current}).eq('id',id);
+  await renderUsuarios();
+}
+async function deleteUser(id){
+  if(!confirm('¿Eliminar este usuario? Perderá acceso inmediatamente.'))return;
+  await sb.from('perfiles').delete().eq('id',id);
+  await renderUsuarios();
 }
 
 // ===== RENDER =====
 function refreshAll(){
   updateNav();
   const v=document.querySelector('.section.active');
-  if(v) renderView(v.id.replace('view-',''));
+  if(v)renderView(v.id.replace('view-',''));
 }
-
 function renderView(id){
   switch(id){
-    case 'dashboard': renderDashboard(); break;
-    case 'documentos': renderDocs(); break;
-    case 'archivos': renderArchivos(); break;
-    case 'alertas': renderAlerts(); break;
-    case 'calendario': renderCalendar(); break;
-    case 'pendientes': renderPending(); break;
-    case 'fallos': renderFallos(); break;
-    case 'procesos': renderProcesos(); break;
+    case 'dashboard':renderDashboard();break;
+    case 'documentos':renderDocs();break;
+    case 'archivos':renderArchivos();break;
+    case 'alertas':renderAlerts();break;
+    case 'calendario':renderCalendar();break;
+    case 'pendientes':renderPending();break;
+    case 'fallos':renderFallos();break;
+    case 'procesos':renderProcesos();break;
+    case 'usuarios':renderUsuarios();break;
   }
 }
-
 function navigate(id){
+  if(!canSeeSection(id)&&!isOwner()&&id!=='dashboard'&&id!=='usuarios'){alert('No tienes acceso a esta sección.');return;}
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('view-'+id).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n=>{ if(n.getAttribute('onclick')?.includes("'"+id+"'")) n.classList.add('active'); });
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   renderView(id);
-  if(window.innerWidth<=700) document.getElementById('sidebar').classList.remove('open');
+  if(window.innerWidth<=700)document.getElementById('sidebar').classList.remove('open');
 }
-function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
 
 function updateNav(){
-  const today=new Date(); today.setHours(0,0,0,0);
-  const in5=new Date(today); in5.setDate(in5.getDate()+5);
-  const crit=db.alerts.filter(a=>{ const d=new Date(a.date+'T00:00:00'); return d>=today&&d<=in5&&a.level==='danger'; }).length;
-  const warn=db.alerts.filter(a=>{ const d=new Date(a.date+'T00:00:00'); return d>=today&&d<=in5&&a.level==='warning'; }).length;
+  const today=new Date();today.setHours(0,0,0,0);
+  const in5=new Date(today);in5.setDate(in5.getDate()+5);
+  const crit=db.alerts.filter(a=>{const d=new Date(a.date+'T00:00:00');return d>=today&&d<=in5&&a.level==='danger';}).length;
+  const warn=db.alerts.filter(a=>{const d=new Date(a.date+'T00:00:00');return d>=today&&d<=in5&&a.level==='warning';}).length;
   const pend=db.pending.filter(p=>!p.done).length;
-  const setNb=(id,val,cls)=>{ const el=document.getElementById(id); if(!el) return; el.textContent=val||''; el.className='nav-badge'+(cls?' '+cls:'')+(val?' show':''); };
-  setNb('nbAlerts',crit,'danger'); setNb('nbWarn',warn,'warn'); setNb('nbPend',pend,'warn');
-  const nd=document.getElementById('nbDocs'); if(nd){ nd.textContent=db.docs.length; nd.className='nav-badge'+(db.docs.length?' show':''); nd.style.background='var(--text3)'; }
+  const setNb=(id,val,cls)=>{const el=document.getElementById(id);if(!el)return;el.textContent=val||'';el.className='nav-badge'+(cls?' '+cls:'')+(val?' show':'');};
+  setNb('nbAlerts',crit,'danger');setNb('nbWarn',warn,'warn');setNb('nbPend',pend,'warn');
+  const nd=document.getElementById('nbDocs');if(nd){nd.textContent=db.docs.length;nd.className='nav-badge'+(db.docs.length?' show':'');nd.style.background='var(--text3)';}
 }
-
-const fmt=s=>{ if(!s) return '—'; const[y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
-const daysLeft=s=>{ if(!s) return null; const t=new Date(); t.setHours(0,0,0,0); return Math.ceil((new Date(s+'T00:00:00')-t)/86400000); };
-function deadlineBadge(s){
-  if(!s) return '';
-  const d=daysLeft(s);
-  if(d<0) return `<span class="badge danger">Vencido ${Math.abs(d)}d</span>`;
-  if(d===0) return `<span class="badge danger">🔴 HOY</span>`;
-  if(d<=5) return `<span class="badge danger">⚠️ ${d}d</span>`;
-  if(d<=15) return `<span class="badge warning">${d} días</span>`;
-  return `<span class="badge neutral">${fmt(s)}</span>`;
-}
-
-const CAT_BADGE={Pruebas:'info',Fallos:'purple','Medidas de protección':'warning','Derecho de petición':'danger','Actuaciones penales':'neutral','Documentos patrimoniales':'success','Clínico/pericial':'info','Actas y conciliaciones':'success',Comunicaciones:'neutral',Otro:'neutral'};
-const STATUS_BADGE={Vigente:'success','Pendiente respuesta':'warning',Respondido:'info',Vencido:'danger',Archivado:'neutral'};
-const COMP_BADGE={Cumplido:'success','Parcialmente cumplido':'warning',Incumplido:'danger','Pendiente de ejecución':'neutral'};
 
 function renderDashboard(){
-  const today=new Date(); today.setHours(0,0,0,0);
-  const in5=new Date(today); in5.setDate(in5.getDate()+5);
-  const crit=db.alerts.filter(a=>{ const d=new Date(a.date+'T00:00:00'); return d>=today&&d<=in5&&a.level==='danger'; });
+  const today=new Date();today.setHours(0,0,0,0);
+  const in5=new Date(today);in5.setDate(in5.getDate()+5);
+  const crit=db.alerts.filter(a=>{const d=new Date(a.date+'T00:00:00');return d>=today&&d<=in5&&a.level==='danger';});
   document.getElementById('dashBanners').innerHTML=crit.map(a=>`<div class="alert-banner danger">🚨 <div><strong>Alerta crítica:</strong> ${a.title} — vence ${fmt(a.date)}<br><small>${a.consequence||''}</small></div></div>`).join('');
   const hearings=db.events.filter(e=>e.type==='hearing'&&new Date(e.date+'T00:00:00')>=today).length;
   document.getElementById('statsRow').innerHTML=`
@@ -955,9 +1167,9 @@ function renderDashboard(){
     <div class="stat success"><div class="stat-label">Archivos subidos</div><div class="stat-value">${db.uploads.length}</div><div class="stat-sub">en la nube</div></div>
   `;
   const deadlines=db.docs.filter(d=>d.vence&&daysLeft(d.vence)>=0).sort((a,b)=>a.vence.localeCompare(b.vence)).slice(0,5);
-  document.getElementById('dashDeadlines').innerHTML=deadlines.length===0?'<div class="empty"><span class="empty-icon">🎉</span>Sin vencimientos próximos</div>':deadlines.map(d=>`<div class="card" style="margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${d.nombre}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>${deadlineBadge(d.vence)}</div></div>`).join('');
+  document.getElementById('dashDeadlines').innerHTML=deadlines.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">🎉</span>Sin vencimientos próximos</div>':deadlines.map(d=>`<div class="card" style="margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${d.nombre}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>${deadlineBadge(d.vence)}</div></div>`).join('');
   const urgent=db.pending.filter(p=>!p.done&&p.priority==='Urgente').slice(0,5);
-  document.getElementById('dashUrgent').innerHTML=urgent.length===0?'<div class="empty"><span class="empty-icon">✅</span>Sin tareas urgentes</div>':urgent.map(p=>`<div class="card" style="border-left:3px solid var(--danger);margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${p.title}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${p.type}${p.due?' · Límite: '+fmt(p.due):''}${p.related?' · '+p.related:''}</div></div>`).join('');
+  document.getElementById('dashUrgent').innerHTML=urgent.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">✅</span>Sin tareas urgentes</div>':urgent.map(p=>`<div class="card" style="border-left:3px solid var(--danger);margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${p.title}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${p.type}${p.due?' · Límite: '+fmt(p.due):''}${p.related?' · '+p.related:''}</div></div>`).join('');
 }
 
 function renderDocs(){
@@ -965,67 +1177,62 @@ function renderDocs(){
   const cat=document.getElementById('docCat')?.value||'';
   const st=document.getElementById('docStatus')?.value||'';
   let docs=[...db.docs].filter(d=>{
-    if(cat&&d.cat!==cat) return false;
-    if(st&&d.status!==st) return false;
-    if(q&&![d.nombre,d.resumen,d.entidad,d.radicado,d.notas].join(' ').toLowerCase().includes(q)) return false;
+    if(cat&&d.cat!==cat)return false;
+    if(st&&d.status!==st)return false;
+    if(q&&![d.nombre,d.resumen,d.entidad,d.radicado,d.notas].join(' ').toLowerCase().includes(q))return false;
     return true;
   }).sort((a,b)=>b.fecha.localeCompare(a.fecha));
-  const tb=document.getElementById('docsTable'); if(!tb) return;
-  tb.innerHTML=docs.length===0?`<tr><td colspan="9"><div class="empty"><span class="empty-icon">📄</span>Sin documentos que coincidan</div></td></tr>`:docs.map(d=>`<tr>
+  const tb=document.getElementById('docsTable');if(!tb)return;
+  const canEd=canEdit();const canDel=canDelete();
+  tb.innerHTML=docs.length===0?`<tr><td colspan="9"><div class="empty"><span class="empty-icon">📄</span>Sin documentos</div></td></tr>`:docs.map(d=>`<tr>
     <td style="white-space:nowrap;font-size:12px;color:var(--text3)">${fmt(d.fecha)}</td>
-    <td style="max-width:240px"><div class="td-name">${d.nombre}</div><div class="td-sub">${(d.resumen||'').substring(0,80)}${(d.resumen||'').length>80?'…':''}</div></td>
+    <td style="max-width:220px"><div class="td-name">${d.nombre}</div><div class="td-sub">${(d.resumen||'').substring(0,70)}${(d.resumen||'').length>70?'…':''}</div></td>
     <td><span class="badge ${CAT_BADGE[d.cat]||'neutral'}">${d.cat}</span></td>
-    <td style="font-size:12px;max-width:120px;color:var(--text2)">${d.entidad||'—'}</td>
-    <td style="font-size:11px;color:var(--text3);font-family:monospace;max-width:120px;overflow:hidden;text-overflow:ellipsis">${d.radicado||'—'}</td>
+    <td style="font-size:12px;max-width:110px;color:var(--text2)">${d.entidad||'—'}</td>
+    <td style="font-size:11px;color:var(--text3);font-family:monospace;max-width:110px;overflow:hidden;text-overflow:ellipsis">${d.radicado||'—'}</td>
     <td><span class="badge ${STATUS_BADGE[d.status]||'neutral'}">${d.status}</span></td>
     <td>${deadlineBadge(d.vence)}</td>
-    <td>${d.filePath?`<button class="btn sm" onclick="openFile('${d.filePath}')" title="Ver archivo">📂 Ver</button>`:''}</td>
-    <td><button class="btn sm danger" onclick="delItem('docs',${d.id})">🗑</button></td>
+    <td>${d.filePath?`<button class="btn sm" onclick="openFile('${d.filePath}')">📂 Ver</button>`:''}</td>
+    <td style="white-space:nowrap">
+      ${canEd?`<button class="btn sm" onclick="openDocModal(${d.id})" title="Editar">✏️</button>`:''}
+      ${canDel?`<button class="btn sm danger" onclick="delItem('docs',${d.id})" title="Eliminar">🗑</button>`:''}
+    </td>
   </tr>`).join('');
 }
 
 function renderArchivos(){
-  const el=document.getElementById('archivosContent'); if(!el) return;
+  const el=document.getElementById('archivosContent');if(!el)return;
   const allFiles=[
     ...db.uploads.map(u=>({...u,source:'upload'})),
     ...db.docs.filter(d=>d.filePath).map(d=>({id:d.id,nombre:d.nombre,cat:d.cat,filePath:d.filePath,fileName:d.fileName,date:d.fecha,notas:d.resumen,source:'doc'}))
   ].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  if(allFiles.length===0){ el.innerHTML=`<div class="empty"><span class="empty-icon">📎</span><div>No hay archivos subidos aún</div><div style="font-size:13px;margin-top:8px">Adjunta archivos al crear documentos o usa el botón "+ Subir archivo"</div></div>`; return; }
-  const fileIcon=name=>{ if(!name) return '📎'; const e=name.split('.').pop().toLowerCase(); if(e==='pdf') return '📄'; if(['doc','docx'].includes(e)) return '📝'; if(['jpg','jpeg','png','heic','webp'].includes(e)) return '🖼️'; return '📎'; };
-  const fileSize=s=>s?`${(s/1024/1024).toFixed(1)}MB`:'';
+  if(allFiles.length===0){el.innerHTML=`<div class="empty"><span class="empty-icon">📎</span><div style="font-weight:500">No hay archivos subidos aún</div><div style="font-size:13px;margin-top:8px">Adjunta archivos al registrar documentos o usa "+ Subir archivo"</div></div>`;return;}
+  const fileIcon=name=>{if(!name)return'📎';const e=name.split('.').pop().toLowerCase();if(e==='pdf')return'📄';if(['doc','docx'].includes(e))return'📝';if(['jpg','jpeg','png','heic','webp'].includes(e))return'🖼️';return'📎';};
   el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">`+allFiles.map(f=>`
     <div class="card" style="padding:14px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="font-size:28px;flex-shrink:0">${fileIcon(f.fileName)}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:500;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.nombre}</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${f.fileName||''} ${fileSize(f.fileSize)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${f.fileName||''}</div>
           <span class="badge ${CAT_BADGE[f.cat]||'neutral'}" style="font-size:10px">${f.cat}</span>
-          <span class="badge neutral" style="font-size:10px;margin-left:4px">${f.source==='doc'?'Adjunto a doc':'Archivo independiente'}</span>
-          ${f.notas?`<div style="font-size:11px;color:var(--text2);margin-top:6px;line-height:1.4">${f.notas.substring(0,80)}${f.notas.length>80?'…':''}</div>`:''}
+          <span class="badge neutral" style="font-size:10px;margin-left:4px">${f.source==='doc'?'Adjunto a doc':'Independiente'}</span>
         </div>
       </div>
       <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
         <button class="btn sm primary" onclick="openFile('${f.filePath}')" style="flex:1">📂 Ver / descargar</button>
-        <button class="btn sm danger" onclick="deleteFile('${f.filePath}','${f.source==='doc'?'docs':'uploads'}',${f.id})">🗑</button>
+        ${canDelete()?`<button class="btn sm danger" onclick="deleteFile('${f.filePath}','${f.source==='doc'?'docs':'uploads'}',${f.id})">🗑</button>`:''}
       </div>
     </div>
   `).join('')+`</div>`;
 }
 
 function renderAlerts(){
-  const el=document.getElementById('alertsContent'); if(!el) return;
+  const el=document.getElementById('alertsContent');if(!el)return;
   const sorted=[...db.alerts].sort((a,b)=>a.date.localeCompare(b.date));
   el.innerHTML=sorted.length===0?`<div class="empty"><span class="empty-icon">🔔</span>Sin alertas</div>`:sorted.map(a=>{
-    const d=daysLeft(a.date); const past=d!==null&&d<0; const lvl=past?'danger':a.level;
-    return `<div class="card" style="border-left:3px solid var(--${lvl})">
-      <div class="card-header">
-        <div><div class="card-title">${a.title}</div><div class="card-meta">Vence ${fmt(a.date)} — ${past?`VENCIDO hace ${Math.abs(d)}d`:d===0?'HOY':`en ${d} día(s)`}</div></div>
-        <div style="display:flex;gap:6px"><span class="badge ${lvl}">${a.level==='danger'?'Crítico':a.level==='warning'?'Importante':'Informativo'}</span><button class="btn sm danger" onclick="delItem('alerts',${a.id})">🗑</button></div>
-      </div>
-      ${a.consequence?`<div class="card-section"><div class="card-section-title">Consecuencia legal</div>${a.consequence}</div>`:''}
-      ${a.action?`<div style="margin-top:8px;font-size:13px"><strong>Acción:</strong> ${a.action}</div>`:''}
-    </div>`;
+    const d=daysLeft(a.date);const past=d!==null&&d<0;const lvl=past?'danger':a.level;
+    return`<div class="card" style="border-left:3px solid var(--${lvl})"><div class="card-header"><div><div class="card-title">${a.title}</div><div class="card-meta">Vence ${fmt(a.date)} — ${past?`VENCIDO hace ${Math.abs(d)}d`:d===0?'HOY':`en ${d} día(s)`}</div></div><div style="display:flex;gap:6px"><span class="badge ${lvl}">${a.level==='danger'?'Crítico':a.level==='warning'?'Importante':'Informativo'}</span>${canDelete()?`<button class="btn sm danger" onclick="delItem('alerts',${a.id})">🗑</button>`:''}</div></div>${a.consequence?`<div class="card-section"><div class="card-section-title">Consecuencia legal</div>${a.consequence}</div>`:''}${a.action?`<div style="margin-top:8px;font-size:13px"><strong>Acción:</strong> ${a.action}</div>`:''}</div>`;
   }).join('');
 }
 
@@ -1033,8 +1240,8 @@ function renderCalendar(){
   const first=new Date(calYear,calMonth,1);
   const last=new Date(calYear,calMonth+1,0);
   document.getElementById('calTitle').textContent=`${MONTHS[calMonth]} ${calYear}`;
-  const today=new Date(); today.setHours(0,0,0,0);
-  const grid=document.getElementById('calGrid'); if(!grid) return;
+  const today=new Date();today.setHours(0,0,0,0);
+  const grid=document.getElementById('calGrid');if(!grid)return;
   const startDay=first.getDay();
   const totalCells=Math.ceil((startDay+last.getDate())/7)*7;
   let html='';
@@ -1047,153 +1254,131 @@ function renderCalendar(){
   grid.innerHTML=html;
   const upc=[...db.events].filter(e=>new Date(e.date+'T00:00:00')>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,8);
   document.getElementById('upcomingList').innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Próximos eventos</div>`+(upc.length===0?'<div class="empty" style="padding:20px">Sin eventos próximos</div>':upc.map(e=>{
-    const d2=new Date(e.date+'T00:00:00'); const dl=daysLeft(e.date);
-    return `<div class="upc-item"><div class="upc-date ${e.type}"><div class="upc-day">${d2.getDate()}</div><div class="upc-dow">${DAYS[d2.getDay()]}</div></div><div style="flex:1"><div style="font-size:13px;font-weight:500">${e.title}</div><div style="font-size:12px;color:var(--text3);margin-top:3px">${e.time||''}${e.lugar?' · '+e.lugar:''} <span class="badge ${e.type==='hearing'?'warning':e.type==='deadline'?'danger':'success'}" style="font-size:10px">${e.type==='hearing'?'Audiencia':e.type==='deadline'?'Vencimiento':'Cita'}</span></div>${e.notes?`<div style="font-size:11px;color:var(--text2);margin-top:3px">${e.notes.substring(0,100)}…</div>`:''}</div><div style="font-size:11px;font-weight:600;color:${dl<=5?'var(--danger)':dl<=15?'var(--warning)':'var(--text3)'};white-space:nowrap">${dl===0?'Hoy':dl===1?'Mañana':'en '+dl+'d'}</div></div>`;
+    const d2=new Date(e.date+'T00:00:00');const dl=daysLeft(e.date);
+    return`<div class="upc-item"><div class="upc-date ${e.type}"><div class="upc-day">${d2.getDate()}</div><div class="upc-dow">${DAYS[d2.getDay()]}</div></div><div style="flex:1"><div style="font-size:13px;font-weight:500">${e.title}</div><div style="font-size:12px;color:var(--text3);margin-top:3px">${e.time||''}${e.lugar?' · '+e.lugar:''} <span class="badge ${e.type==='hearing'?'warning':e.type==='deadline'?'danger':'success'}" style="font-size:10px">${e.type==='hearing'?'Audiencia':e.type==='deadline'?'Vencimiento':'Cita'}</span></div>${e.notes?`<div style="font-size:11px;color:var(--text2);margin-top:3px">${e.notes.substring(0,100)}…</div>`:''}</div><div style="font-size:11px;font-weight:600;color:${dl<=5?'var(--danger)':dl<=15?'var(--warning)':'var(--text3)'};white-space:nowrap">${dl===0?'Hoy':dl===1?'Mañana':'en '+dl+'d'}</div></div>`;
   }).join(''));
 }
-function changeMonth(d){ calMonth+=d; if(calMonth>11){calMonth=0;calYear++;} if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
+function changeMonth(d){calMonth+=d;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
 
 function renderPending(){
   const pri=document.getElementById('pendPri')?.value||'';
   const typ=document.getElementById('pendType')?.value||'';
   const dn=document.getElementById('pendDone')?.value||'';
   const order={Urgente:0,Alta:1,Normal:2};
-  let items=[...db.pending].filter(p=>{ if(pri&&p.priority!==pri) return false; if(typ&&p.type!==typ) return false; if(dn==='false'&&p.done) return false; if(dn==='true'&&!p.done) return false; return true; }).sort((a,b)=>{ if(a.done!==b.done) return a.done?1:-1; return (order[a.priority]||2)-(order[b.priority]||2); });
-  const el=document.getElementById('pendingContent'); if(!el) return;
-  el.innerHTML=items.length===0?`<div class="empty"><span class="empty-icon">✅</span>Sin tareas que coincidan</div>`:items.map(p=>`<div class="pending-item priority-${p.priority}${p.done?' done':''}"><div class="pi-check" onclick="toggleDone(${p.id})">${p.done?'✓':''}</div><div style="flex:1"><div class="pi-title">${p.title}</div><div class="pi-meta"><span class="badge ${p.priority==='Urgente'?'danger':p.priority==='Alta'?'warning':'neutral'}" style="font-size:10px">${p.priority}</span><span class="badge info" style="font-size:10px">${p.type}</span>${p.due?`<span style="font-size:11px;color:var(--text3)">Límite: ${fmt(p.due)}</span>`:''}${p.related?`<span style="font-size:11px;color:var(--text3)">${p.related}</span>`:''}</div>${p.notes?`<div class="pi-notes">${p.notes}</div>`:''}</div><button class="btn sm danger" onclick="delItem('pending',${p.id})">🗑</button></div>`).join('');
+  let items=[...db.pending].filter(p=>{if(pri&&p.priority!==pri)return false;if(typ&&p.type!==typ)return false;if(dn==='false'&&p.done)return false;if(dn==='true'&&!p.done)return false;return true;}).sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;return(order[a.priority]||2)-(order[b.priority]||2);});
+  const el=document.getElementById('pendingContent');if(!el)return;
+  const canEd=canEdit();const canDel=canDelete();
+  el.innerHTML=items.length===0?`<div class="empty"><span class="empty-icon">✅</span>Sin tareas</div>`:items.map(p=>`<div class="pending-item priority-${p.priority}${p.done?' done':''}"><div class="pi-check" onclick="${canEd?`toggleDone(${p.id})`:''}' style="cursor:${canEd?'pointer':'default'}">${p.done?'✓':''}</div><div style="flex:1"><div class="pi-title">${p.title}</div><div class="pi-meta"><span class="badge ${p.priority==='Urgente'?'danger':p.priority==='Alta'?'warning':'neutral'}" style="font-size:10px">${p.priority}</span><span class="badge info" style="font-size:10px">${p.type}</span>${p.due?`<span style="font-size:11px;color:var(--text3)">Límite: ${fmt(p.due)}</span>`:''}${p.related?`<span style="font-size:11px;color:var(--text3)">${p.related}</span>`:''}</div>${p.notes?`<div class="pi-notes">${p.notes}</div>`:''}</div>${canDel?`<button class="btn sm danger" onclick="delItem('pending',${p.id})">🗑</button>`:''}</div>`).join('');
 }
 
 function renderFallos(){
-  const el=document.getElementById('fallosContent'); if(!el) return;
+  const el=document.getElementById('fallosContent');if(!el)return;
   const sorted=[...db.fallos].sort((a,b)=>b.date.localeCompare(a.date));
-  el.innerHTML=sorted.length===0?`<div class="empty"><span class="empty-icon">⚖️</span>Sin fallos registrados</div>`:sorted.map(f=>`<div class="card"><div class="card-header"><div><div class="card-title">⚖️ ${f.title}</div><div class="card-meta">${fmt(f.date)} · ${f.auth||'—'} · Rad: ${f.rad||'—'}</div></div><div style="display:flex;gap:6px"><span class="badge ${COMP_BADGE[f.compliance]||'neutral'}">${f.compliance}</span><span class="badge purple" style="font-size:10px">${f.type||''}</span><button class="btn sm danger" onclick="delItem('fallos',${f.id})">🗑</button></div></div><div class="card-body"><div style="margin-bottom:10px"><strong>Decisión:</strong> ${f.decision||'—'}</div>${f.actions?`<div class="card-section"><div class="card-section-title">⚡ Acciones jurídicas que genera</div>${f.actions}</div>`:''}${f.pending_?`<div style="margin-top:10px;padding:10px;background:var(--warningbg);border-radius:var(--radius);border-left:3px solid var(--warning)"><div style="font-size:10px;font-weight:700;color:var(--warningtext);text-transform:uppercase;margin-bottom:4px">Pendiente de este fallo</div>${f.pending_}</div>`:''}</div></div>`).join('');
+  const canDel=canDelete();
+  el.innerHTML=sorted.length===0?`<div class="empty"><span class="empty-icon">⚖️</span>Sin fallos</div>`:sorted.map(f=>`<div class="card"><div class="card-header"><div><div class="card-title">⚖️ ${f.title}</div><div class="card-meta">${fmt(f.date)} · ${f.auth||'—'} · Rad: ${f.rad||'—'}</div></div><div style="display:flex;gap:6px"><span class="badge ${COMP_BADGE[f.compliance]||'neutral'}">${f.compliance}</span><span class="badge purple" style="font-size:10px">${f.type||''}</span>${canDel?`<button class="btn sm danger" onclick="delItem('fallos',${f.id})">🗑</button>`:''}</div></div><div class="card-body"><div style="margin-bottom:10px"><strong>Decisión:</strong> ${f.decision||'—'}</div>${f.actions?`<div class="card-section"><div class="card-section-title">⚡ Acciones jurídicas</div>${f.actions}</div>`:''}${f.pending_?`<div style="margin-top:10px;padding:10px;background:var(--warningbg);border-radius:var(--radius);border-left:3px solid var(--warning)"><div style="font-size:10px;font-weight:700;color:var(--warningtext);text-transform:uppercase;margin-bottom:4px">Pendiente de este fallo</div>${f.pending_}</div>`:''}</div></div>`).join('');
 }
 
 function renderProcesos(){
-  const el=document.getElementById('procesosContent'); if(!el) return;
+  const el=document.getElementById('procesosContent');if(!el)return;
   const typeColor={'Penal — víctima':'danger','Penal — denunciada':'warning','Civil / familia':'info',Administrativo:'neutral',Disciplinario:'purple'};
-  el.innerHTML=db.procesos.length===0?`<div class="empty"><span class="empty-icon">🗂️</span>Sin procesos registrados</div>`:db.procesos.map(p=>`<div class="card"><div class="card-header"><div><div class="card-title">🗂️ ${p.name}</div><div class="card-meta">Inicio: ${fmt(p.fecha)} · ${p.entidad||''}</div></div><div style="display:flex;gap:6px"><span class="badge ${typeColor[p.type]||'neutral'}" style="font-size:10px">${p.type}</span><button class="btn sm danger" onclick="delItem('procesos',${p.id})">🗑</button></div></div><div class="card-body"><div style="margin-bottom:8px"><strong>Radicado:</strong> <code style="font-size:12px;background:var(--bg2);padding:2px 6px;border-radius:4px">${p.rad}</code></div>${p.estado?`<div style="margin-bottom:8px"><strong>Estado:</strong> ${p.estado}</div>`:''}${p.ultima?`<div style="font-size:12px;color:var(--text3);margin-bottom:6px">Última actuación: ${p.ultima}</div>`:''}${p.contraparte?`<div style="margin-bottom:8px;font-size:12px"><strong>Contraparte:</strong> ${p.contraparte}</div>`:''}${p.next?`<div class="card-section"><div class="card-section-title">📋 Próxima actuación / pendiente</div>${p.next}</div>`:''}</div></div>`).join('');
+  const canDel=canDelete();
+  el.innerHTML=db.procesos.length===0?`<div class="empty"><span class="empty-icon">🗂️</span>Sin procesos</div>`:db.procesos.map(p=>`<div class="card"><div class="card-header"><div><div class="card-title">🗂️ ${p.name}</div><div class="card-meta">Inicio: ${fmt(p.fecha)} · ${p.entidad||''}</div></div><div style="display:flex;gap:6px"><span class="badge ${typeColor[p.type]||'neutral'}" style="font-size:10px">${p.type}</span>${canDel?`<button class="btn sm danger" onclick="delItem('procesos',${p.id})">🗑</button>`:''}</div></div><div class="card-body"><div style="margin-bottom:8px"><strong>Radicado:</strong> <code style="font-size:12px;background:var(--bg2);padding:2px 6px;border-radius:4px">${p.rad}</code></div>${p.estado?`<div style="margin-bottom:8px"><strong>Estado:</strong> ${p.estado}</div>`:''}${p.ultima?`<div style="font-size:12px;color:var(--text3);margin-bottom:6px">Última actuación: ${p.ultima}</div>`:''}${p.contraparte?`<div style="margin-bottom:8px;font-size:12px"><strong>Contraparte:</strong> ${p.contraparte}</div>`:''}${p.next?`<div class="card-section"><div class="card-section-title">📋 Próxima actuación</div>${p.next}</div>`:''}</div></div>`).join('');
 }
 
-// ===== SAVE ACTIONS =====
+// ===== SAVE FUNCTIONS =====
 function calcDeadline(){
-  const pl=document.getElementById('d_plazo').value, fr=document.getElementById('d_fechaRad').value;
-  if(!pl||!fr) return;
-  let d=new Date(fr+'T00:00:00'), added=0;
-  while(added<parseInt(pl)){ d.setDate(d.getDate()+1); const wd=d.getDay(); if(wd!==0&&wd!==6) added++; }
+  const pl=document.getElementById('d_plazo').value,fr=document.getElementById('d_fechaRad').value;
+  if(!pl||!fr)return;
+  let d=new Date(fr+'T00:00:00'),added=0;
+  while(added<parseInt(pl)){d.setDate(d.getDate()+1);const wd=d.getDay();if(wd!==0&&wd!==6)added++;}
   document.getElementById('d_vence').value=d.toISOString().split('T')[0];
 }
-
 async function saveEvent(){
-  const t=document.getElementById('ev_title').value.trim(), d=document.getElementById('ev_date').value;
-  if(!t||!d){ alert('Título y fecha son obligatorios'); return; }
+  const t=document.getElementById('ev_title').value.trim(),d=document.getElementById('ev_date').value;
+  if(!t||!d){alert('Título y fecha son obligatorios');return;}
   db.events.push({id:Date.now(),title:t,date:d,time:document.getElementById('ev_time').value,type:document.getElementById('ev_type').value,lugar:document.getElementById('ev_lugar').value.trim(),rad:document.getElementById('ev_rad').value.trim(),notes:document.getElementById('ev_notes').value.trim()});
-  await saveData(); closeModal('eventModal');
+  await saveData();closeModal('eventModal');
   ['ev_title','ev_date','ev_lugar','ev_rad','ev_notes'].forEach(id=>document.getElementById(id).value='');
 }
-
 async function saveAlert(){
-  const t=document.getElementById('al_title').value.trim(), d=document.getElementById('al_date').value;
-  if(!t||!d){ alert('Título y fecha son obligatorios'); return; }
+  const t=document.getElementById('al_title').value.trim(),d=document.getElementById('al_date').value;
+  if(!t||!d){alert('Título y fecha son obligatorios');return;}
   db.alerts.push({id:Date.now(),title:t,date:d,level:document.getElementById('al_level').value,consequence:document.getElementById('al_consequence').value.trim(),action:document.getElementById('al_action').value.trim()});
-  await saveData(); closeModal('alertModal');
+  await saveData();closeModal('alertModal');
   ['al_title','al_date','al_consequence','al_action'].forEach(id=>document.getElementById(id).value='');
 }
-
 async function savePending(){
-  const t=document.getElementById('p_title').value.trim();
-  if(!t){ alert('La descripción es obligatoria'); return; }
+  const t=document.getElementById('p_title').value.trim();if(!t){alert('La descripción es obligatoria');return;}
   db.pending.push({id:Date.now(),title:t,type:document.getElementById('p_type').value,priority:document.getElementById('p_priority').value,due:document.getElementById('p_due').value,related:document.getElementById('p_related').value.trim(),notes:document.getElementById('p_notes').value.trim(),done:false});
-  await saveData(); closeModal('pendModal');
+  await saveData();closeModal('pendModal');
   ['p_title','p_due','p_related','p_notes'].forEach(id=>document.getElementById(id).value='');
 }
-
 async function saveFallo(){
-  const t=document.getElementById('f_title').value.trim(), d=document.getElementById('f_date').value;
-  if(!t||!d){ alert('Título y fecha son obligatorios'); return; }
+  const t=document.getElementById('f_title').value.trim(),d=document.getElementById('f_date').value;if(!t||!d){alert('Título y fecha son obligatorios');return;}
   db.fallos.push({id:Date.now(),title:t,date:d,auth:document.getElementById('f_auth').value.trim(),rad:document.getElementById('f_rad').value.trim(),type:document.getElementById('f_type').value,decision:document.getElementById('f_decision').value.trim(),actions:document.getElementById('f_actions').value.trim(),pending_:document.getElementById('f_pending').value.trim(),compliance:document.getElementById('f_compliance').value,appeal:document.getElementById('f_appeal').value});
-  await saveData(); closeModal('falloModal');
+  await saveData();closeModal('falloModal');
   ['f_title','f_date','f_auth','f_rad','f_decision','f_actions','f_pending','f_appeal'].forEach(id=>document.getElementById(id).value='');
 }
-
 async function saveProceso(){
-  const n=document.getElementById('pr_name').value.trim(), r=document.getElementById('pr_rad').value.trim();
-  if(!n||!r){ alert('Nombre y radicado son obligatorios'); return; }
+  const n=document.getElementById('pr_name').value.trim(),r=document.getElementById('pr_rad').value.trim();if(!n||!r){alert('Nombre y radicado son obligatorios');return;}
   db.procesos.push({id:Date.now(),name:n,rad:r,type:document.getElementById('pr_type').value,entidad:document.getElementById('pr_entidad').value.trim(),fecha:document.getElementById('pr_fecha').value,estado:document.getElementById('pr_estado').value.trim(),ultima:document.getElementById('pr_ultima').value.trim(),contraparte:document.getElementById('pr_contraparte').value.trim(),next:document.getElementById('pr_next').value.trim()});
-  await saveData(); closeModal('procesoModal');
+  await saveData();closeModal('procesoModal');
   ['pr_name','pr_rad','pr_entidad','pr_fecha','pr_estado','pr_ultima','pr_contraparte','pr_next'].forEach(id=>document.getElementById(id).value='');
 }
+async function toggleDone(id){const p=db.pending.find(x=>x.id===id);if(p&&canEdit()){p.done=!p.done;await saveData();}}
+async function delItem(col,id){if(!canDelete()){alert('No tienes permisos para eliminar');return;}if(confirm('¿Eliminar este elemento?')){db[col]=db[col].filter(x=>x.id!==id);await saveData();}}
 
-async function toggleDone(id){ const p=db.pending.find(x=>x.id===id); if(p){p.done=!p.done; await saveData();} }
-async function delItem(col,id){ if(confirm('¿Eliminar este elemento?')){ db[col]=db[col].filter(x=>x.id!==id); await saveData(); } }
+function openModal(id){
+  if(id==='userModal')renderPermGrid();
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));});
 
-function openModal(id){ document.getElementById(id).classList.add('open'); }
-function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){ if(e.target===this) this.classList.remove('open'); }));
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open')); });
-
-// ===== SEED DATA =====
+// ===== SEED =====
 function seedData(){
-  db={
-    docs:[
-      {id:1,fecha:'2020-02-25',fechaRad:'2022-03-15',nombre:'Historia clínica EPS SURA — trauma costal por agresión física',cat:'Clínico/pericial',status:'Vigente',entidad:'EPS SURA',radicado:'',resumen:'Diagnóstico contusión reja costal izquierda generada en pelea con su esposo (25/02/2020). Prueba de lesión física con origen en violencia doméstica.',ubicacion:'',vence:'',notas:'PRUEBA #1',filePath:null,fileName:null},
-      {id:2,fecha:'2020-09-21',fechaRad:'2020-09-21',nombre:'Acta de Conciliación CONALBOS — mérito ejecutivo',cat:'Actas y conciliaciones',status:'Vigente',entidad:'CONALBOS',radicado:'2020-0047',resumen:'Declara UMH 2015–2020 y sociedad patrimonial. Alimentos $1.000.000/mes. $80.000.000 para LFGG de la venta del inmueble.',ubicacion:'',vence:'',notas:'PRESTA MÉRITO EJECUTIVO. Base demanda ejecutiva alimentos ~$40M.',filePath:null,fileName:null},
-      {id:3,fecha:'2022-03-15',fechaRad:'2022-03-15',nombre:'Auto No. 106 — Comisaría Cuarta de Familia Envigado',cat:'Medidas de protección',status:'Vigente',entidad:'Comisaría Cuarta de Familia Envigado',radicado:'Historia 25671',resumen:'Medida de protección provisional por violencia verbal y psicológica. Ordena a JELP abstenerse de todo acto de violencia.',ubicacion:'',vence:'',notas:'',filePath:null,fileName:null},
-      {id:4,fecha:'2022-04-19',fechaRad:'',nombre:'Informe Pericial Medicina Legal — incapacidad 15 días',cat:'Clínico/pericial',status:'Vigente',entidad:'Instituto Nacional de Medicina Legal',radicado:'UBMEDME-DSAN-05335-2022',resumen:'Lesiones por mecanismo traumático contundente. INCAPACIDAD MÉDICO LEGAL 15 DÍAS. Máximo valor probatorio.',ubicacion:'',vence:'',notas:'PRUEBA DE NIVEL 1.',filePath:null,fileName:null},
-      {id:5,fecha:'2022-11-22',fechaRad:'2022-11-22',nombre:'Resolución 484 — Medida de protección definitiva — Comisaría Belén',cat:'Medidas de protección',status:'Vigente',entidad:'Comisaría de Familia Comuna 16 Belén',radicado:'02-26195-22 M2',resumen:'Medida de protección definitiva. Prohibición de acercamiento, contacto y vinculación del menor TLG en el conflicto parental.',ubicacion:'',vence:'',notas:'',filePath:null,fileName:null},
-      {id:6,fecha:'2023-09-22',fechaRad:'',nombre:'⭐ Auto 1083/2023 — REINCIDENCIA — SENTENCIA EJECUTORIADA',cat:'Fallos',status:'Vigente',entidad:'Juzgado Séptimo de Familia de Oralidad de Medellín — Jueza ANA PAULA PUERTA MEJÍA',radicado:'050013110007-2023-00458-01',resumen:'SENTENCIA EJECUTORIADA. Confirma reincidencia en VIF. Ordena cobro coactivo multa 3 SMLMV. MÁXIMO VALOR PROBATORIO.',ubicacion:'',vence:'',notas:'PRUEBA REINA. Agravante Art. 229 CP. Falta gravísima Art. 48 Ley 1952/2019.',filePath:null,fileName:null},
-      {id:7,fecha:'2025-01-13',fechaRad:'2025-01-13',nombre:'Promesa de compraventa inmueble — $480.000.000',cat:'Documentos patrimoniales',status:'Vigente',entidad:'Rafael Andrés Cardona Patiño / Alejandra Hincapié García',radicado:'',resumen:'Precio $480M. Compradores pagaron $80M. JELP entregó solo $26M. Saldo adeudado $54M. Cláusula penal 10% = $48M.',ubicacion:'',vence:'',notas:'PRESTA MÉRITO EJECUTIVO.',filePath:null,fileName:null},
-      {id:8,fecha:'2026-06-01',fechaRad:'2026-06-01',nombre:'Auto 1217 — Nueva medida de protección — 13 hechos 2026',cat:'Medidas de protección',status:'Vigente',entidad:'Comisaría de Familia Comuna 16 Belén',radicado:'002-15088-26 MESA 1',resumen:'13 hechos documentados. Alejamiento 300m. Prohibición hostigamiento. Audiencia 13/08/2026 8:30am. Descargos JELP 21/07/2026.',ubicacion:'',vence:'',notas:'',filePath:null,fileName:null},
-      {id:9,fecha:'2026-06-23',fechaRad:'2026-06-23',nombre:'Derecho de petición urgente — Fiscalía 011 / Juzgado Envigado',cat:'Derecho de petición',status:'Pendiente respuesta',entidad:'Fiscalía 011 Local Envigado / Juzgado Municipal Penal Despacho 004',radicado:'05001609916620225977701 / 05266600020320225141400',resumen:'Solicita estado radicados, principio de oportunidad, actuaciones desde sept. 2023, razón diferencia celeridad procesal.',ubicacion:'',vence:'2026-07-14',notas:'15 días hábiles (Ley 1755/2015). Sin respuesta → TUTELA inmediata.',filePath:null,fileName:null}
-    ],
-    events:[
-      {id:1,title:'Descargos JELP — Comisaría 16 Belén',date:'2026-07-21',time:'10:30',type:'hearing',lugar:'Comisaría de Familia Comuna 16 Belén — Carrera 84E Nº 9-20',rad:'002-15088-26 MESA 1',notes:'Secretario: IVAN CARLOS CASTAÑEDA — ivan.castaneda@medellin.gov.co'},
-      {id:2,title:'Declaración testigo Marlon Alberto Garcés Román',date:'2026-07-22',time:'10:30',type:'meeting',lugar:'Comisaría de Familia Comuna 16 Belén',rad:'002-15088-26 MESA 1',notes:'Declaración juramentada como testigo.'},
-      {id:3,title:'🔴 Vence D. Petición — Fiscalía 011',date:'2026-07-14',time:'',type:'deadline',lugar:'',rad:'05001609916620225977701',notes:'Sin respuesta → TUTELA inmediata Art. 23 CP.'},
-      {id:4,title:'⭐ Audiencia de fallo — Comisaría 16 Belén',date:'2026-08-13',time:'08:30',type:'hearing',lugar:'Comisaría de Familia Comuna 16 Belén — Carrera 84E Nº 9-20',rad:'002-15088-26 MESA 1',notes:'Abogada del despacho: MARGARETH PAZ. Llevar Auto 1083/2023 (PRUEBA REINA) y todos los anexos.'}
-    ],
-    alerts:[
-      {id:1,title:'Vence plazo D. Petición — Fiscalía 011 y Juzgado Envigado',date:'2026-07-14',level:'danger',consequence:'Interponer ACCIÓN DE TUTELA ante Tribunal Superior de Medellín por vulneración Art. 23 CP y Ley 1755/2015.',action:'Presentar tutela — Tribunal Superior de Medellín Sala Penal'},
-      {id:2,title:'Audiencia de fallo — Comisaría 16 Belén 002-15088-26',date:'2026-08-13',level:'warning',consequence:'Audiencia definitiva. No asistir puede generar deserción. Llevar Auto 1083/2023 y todos los anexos del Auto 1217.',action:'Coordinar con abogada. Confirmar hora y sala.'},
-      {id:3,title:'Verificar estado embargo Anotación 011 — inmueble 001-1145277',date:'2026-07-01',level:'warning',consequence:'$170M del patrimonio de LFGG en riesgo si el embargo sigue activo. Verificar ANTES de firmar cualquier documento.',action:'Solicitar nuevo certificado de tradición y libertad.'}
-    ],
-    pending:[
-      {id:1,title:'Llamar Juzgado Penal Circuito Envigado — estado radicado y principio de oportunidad',type:'Llamada',priority:'Urgente',due:'2026-06-30',related:'05001609916620225977701',notes:'Preguntar: (1) dónde está el expediente, (2) estado del principio de oportunidad suscrito, (3) actuaciones desde sept. 2023.',done:false},
-      {id:2,title:'Verificar si embargo Anotación 011 fue levantado — nuevo certificado de tradición',type:'Legal',priority:'Alta',due:'2026-07-01',related:'Inmueble 001-1145277',notes:'Urgente antes de firmar cualquier documento. Si sigue activo, $170M en riesgo.',done:false},
-      {id:3,title:'Coordinar con abogada proceso ejecutivo de alimentos',type:'Legal',priority:'Alta',due:'2026-07-05',related:'Acta CONALBOS 2020-0047',notes:'Monto ~$40M + intereses moratorios Art. 1617 CC desde 2020.',done:false},
-      {id:4,title:'Solicitar embargo preventivo salario JELP — empleado público ESE',type:'Legal',priority:'Alta',due:'2026-07-10',related:'Proceso ejecutivo alimentos',notes:'Medida cautelar. JELP es Subgerente de ESE.',done:false},
-      {id:5,title:'Preparar queja disciplinaria ante Procuraduría General de la Nación',type:'Legal',priority:'Alta',due:'2026-07-20',related:'Auto 1083/2023 — Reincidencia',notes:'Art. 48 Ley 1952/2019. Adjuntar Auto 1083/2023. Destitución e inhabilidad hasta 20 años.',done:false},
-      {id:6,title:'Guardar comprobante de envío del Derecho de Petición',type:'Documento',priority:'Urgente',due:'2026-06-25',related:'D. Petición — Fiscalía 011',notes:'Marca el inicio del plazo de 15 días hábiles. Sin comprobante no se puede probar el incumplimiento.',done:true}
-    ],
-    fallos:[
-      {id:1,title:'Resolución 029 — Fallo violencia psicológica — Comisaría Cuarta Envigado',date:'2022-04-25',auth:'Comisaría Cuarta de Familia Envigado',rad:'Historia 25671',type:'Resolución administrativa',decision:'Declara a LFGG víctima de violencia verbal y psicológica. Califica actos de JELP como más lesivos y no justificables.',actions:'Prueba documental de violencia psicológica. Fundamento proceso penal Art. 229 CP. Antecedente reincidencia.',pending_:'Incorporar como prueba en proceso penal activo.',compliance:'Incumplido',appeal:''},
-      {id:2,title:'⭐ Auto Interlocutorio 1083/2023 — REINCIDENCIA EJECUTORIADA',date:'2023-09-22',auth:'Juzgado Séptimo de Familia de Oralidad de Medellín — Jueza ANA PAULA PUERTA MEJÍA',rad:'050013110007-2023-00458-01',type:'Auto interlocutorio',decision:'CONFIRMA todas las medidas. DECLARA REINCIDENCIA EN VIOLENCIA INTRAFAMILIAR. Ordena cobro coactivo multa 3 SMLMV.',actions:'PRUEBA REINA: (1) Agravante reincidencia Art. 229 CP — pena cuarto máximo, (2) Falta gravísima Art. 48 Ley 1952/2019 → destitución e inhabilidad 20 años, (3) Base custodia principal, (4) Cobro coactivo multa.',pending_:'Verificar pago multa. Adjuntar a queja Procuraduría. Incorporar en proceso penal y custodia.',compliance:'Incumplido',appeal:''}
-    ],
-    procesos:[
-      {id:1,name:'Proceso penal — LFGG como VÍCTIMA',rad:'05001609916620225977701',type:'Penal — víctima',entidad:'Fiscalía 011 Local Envigado / Juzgado Penal del Circuito de Envigado',fecha:'2022-05-11',estado:'Remitido en apelación al Juzgado Penal del Circuito. SIN actuaciones desde 11/09/2023.',ultima:'11/09/2023 — Remisión recurso de apelación',contraparte:'JUAN ESTEBAN LÓPEZ PALACIO — C.C. 8.103.048',next:'Verificar despacho. Estado principio de oportunidad. Sin respuesta al D. Petición → tutela.'},
-      {id:2,name:'Proceso penal — LFGG como DENUNCIADA',rad:'05266600020320225141400',type:'Penal — denunciada',entidad:'Fiscalía / Juzgado Envigado',fecha:'2022-04-29',estado:'Actuaciones hasta 02/07/2024 — año más de actividad que el proceso donde LFGG es víctima.',ultima:'02/07/2024 — última actuación registrada',contraparte:'JUAN ESTEBAN LÓPEZ PALACIO (denunciante)',next:'Verificar delito imputado. Solicitar explicación diferencia celeridad vs. proceso como víctima.'},
-      {id:3,name:'Proceso VIF — Comisaría 16 Belén — 13 hechos 2026',rad:'002-15088-26 MESA 1',type:'Administrativo',entidad:'Comisaría de Familia Comuna 16 Belén — Comisario Carlos Alberto Velásquez Escobar',fecha:'2026-06-01',estado:'ACTIVO. Medida provisional: alejamiento 300m. Audiencia fallo 13/08/2026.',ultima:'01/06/2026 — Auto 1217',contraparte:'JUAN ESTEBAN LÓPEZ PALACIO — C.C. 8.103.048',next:'21/07 10:30am: Descargos JELP. 22/07 10:30am: Testigo Marlon Garcés. 13/08 8:30am: Audiencia fallo. Llevar Auto 1083/2023.'}
-    ],
-    uploads:[]
-  };
+  db={docs:[
+    {id:1,fecha:'2020-02-25',fechaRad:'2022-03-15',nombre:'Historia clínica EPS SURA — trauma costal por agresión física',cat:'Clínico/pericial',status:'Vigente',entidad:'EPS SURA',radicado:'',resumen:'Diagnóstico contusión reja costal izquierda por agresión (25/02/2020). Prueba de lesión física con origen en violencia doméstica.',ubicacion:'',vence:'',notas:'PRUEBA #1',filePath:null,fileName:null},
+    {id:2,fecha:'2020-09-21',fechaRad:'2020-09-21',nombre:'Acta de Conciliación CONALBOS — mérito ejecutivo',cat:'Actas y conciliaciones',status:'Vigente',entidad:'CONALBOS',radicado:'2020-0047',resumen:'Declara UMH 2015–2020 y sociedad patrimonial. Alimentos $1.000.000/mes. $80.000.000 para LFGG de la venta del inmueble.',ubicacion:'',vence:'',notas:'PRESTA MÉRITO EJECUTIVO.',filePath:null,fileName:null},
+    {id:3,fecha:'2022-04-19',fechaRad:'',nombre:'Informe Pericial Medicina Legal — incapacidad 15 días',cat:'Clínico/pericial',status:'Vigente',entidad:'Instituto Nacional de Medicina Legal',radicado:'UBMEDME-DSAN-05335-2022',resumen:'Incapacidad médico legal 15 días por lesiones contundentes. Máximo valor probatorio.',ubicacion:'',vence:'',notas:'PRUEBA DE NIVEL 1',filePath:null,fileName:null},
+    {id:4,fecha:'2023-09-22',fechaRad:'',nombre:'⭐ Auto 1083/2023 — REINCIDENCIA — SENTENCIA EJECUTORIADA',cat:'Fallos',status:'Vigente',entidad:'Juzgado Séptimo de Familia — Jueza ANA PAULA PUERTA MEJÍA',radicado:'050013110007-2023-00458-01',resumen:'SENTENCIA EJECUTORIADA. Confirma reincidencia en VIF. Ordena cobro coactivo multa 3 SMLMV.',ubicacion:'',vence:'',notas:'PRUEBA REINA. Agravante Art. 229 CP. Falta gravísima Art. 48 Ley 1952/2019.',filePath:null,fileName:null},
+    {id:5,fecha:'2026-06-01',fechaRad:'2026-06-01',nombre:'Auto 1217 — Nueva medida de protección — 13 hechos 2026',cat:'Medidas de protección',status:'Vigente',entidad:'Comisaría de Familia Comuna 16 Belén',radicado:'002-15088-26 MESA 1',resumen:'13 hechos documentados. Alejamiento 300m. Audiencia fallo 13/08/2026 8:30am.',ubicacion:'',vence:'',notas:'',filePath:null,fileName:null},
+    {id:6,fecha:'2026-06-23',fechaRad:'2026-06-23',nombre:'Derecho de petición urgente — Fiscalía 011 / Juzgado Envigado',cat:'Derecho de petición',status:'Pendiente respuesta',entidad:'Fiscalía 011 Local Envigado / Juzgado Municipal Penal Despacho 004',radicado:'05001609916620225977701 / 05266600020320225141400',resumen:'Solicita estado radicados, principio de oportunidad, actuaciones desde sept. 2023.',ubicacion:'',vence:'2026-07-14',notas:'15 días hábiles (Ley 1755/2015). Sin respuesta → TUTELA inmediata.',filePath:null,fileName:null}
+  ],events:[
+    {id:1,title:'Descargos JELP — Comisaría 16 Belén',date:'2026-07-21',time:'10:30',type:'hearing',lugar:'Comisaría de Familia Comuna 16 Belén',rad:'002-15088-26 MESA 1',notes:'Secretario: IVAN CARLOS CASTAÑEDA'},
+    {id:2,title:'🔴 Vence D. Petición — Fiscalía 011',date:'2026-07-14',time:'',type:'deadline',lugar:'',rad:'05001609916620225977701',notes:'Sin respuesta → TUTELA inmediata Art. 23 CP.'},
+    {id:3,title:'⭐ Audiencia de fallo — Comisaría 16 Belén',date:'2026-08-13',time:'08:30',type:'hearing',lugar:'Comisaría de Familia Comuna 16 Belén — Carrera 84E Nº 9-20',rad:'002-15088-26 MESA 1',notes:'Llevar Auto 1083/2023 (PRUEBA REINA) y todos los anexos.'}
+  ],alerts:[
+    {id:1,title:'Vence plazo D. Petición — Fiscalía 011 y Juzgado',date:'2026-07-14',level:'danger',consequence:'Interponer TUTELA ante Tribunal Superior de Medellín por vulneración Art. 23 CP.',action:'Presentar tutela — Tribunal Superior Medellín Sala Penal'},
+    {id:2,title:'Audiencia de fallo — Comisaría 16 Belén',date:'2026-08-13',level:'warning',consequence:'Llevar Auto 1083/2023 y todos los anexos del Auto 1217.',action:'Coordinar con abogada. Confirmar hora y sala.'}
+  ],pending:[
+    {id:1,title:'Llamar Juzgado Penal Circuito Envigado — estado radicado y principio de oportunidad',type:'Llamada',priority:'Urgente',due:'2026-06-30',related:'05001609916620225977701',notes:'Preguntar: dónde está el expediente, estado del principio de oportunidad, actuaciones desde sept. 2023.',done:false},
+    {id:2,title:'Coordinar con abogada proceso ejecutivo de alimentos',type:'Legal',priority:'Alta',due:'2026-07-05',related:'Acta CONALBOS 2020-0047',notes:'Monto ~$40M + intereses moratorios Art. 1617 CC desde 2020.',done:false},
+    {id:3,title:'Preparar queja disciplinaria ante Procuraduría',type:'Legal',priority:'Alta',due:'2026-07-20',related:'Auto 1083/2023 — Reincidencia',notes:'Art. 48 Ley 1952/2019. Adjuntar Auto 1083/2023. Destitución e inhabilidad hasta 20 años.',done:false}
+  ],fallos:[
+    {id:1,title:'Resolución 029 — Fallo violencia psicológica',date:'2022-04-25',auth:'Comisaría Cuarta de Familia Envigado',rad:'Historia 25671',type:'Resolución administrativa',decision:'Declara a LFGG víctima de violencia verbal y psicológica. Actos de JELP más lesivos y no justificables.',actions:'Prueba documental de violencia psicológica. Fundamento proceso penal Art. 229 CP.',pending_:'Incorporar como prueba en proceso penal activo.',compliance:'Incumplido',appeal:''},
+    {id:2,title:'⭐ Auto Interlocutorio 1083/2023 — REINCIDENCIA',date:'2023-09-22',auth:'Juzgado Séptimo de Familia de Oralidad de Medellín',rad:'050013110007-2023-00458-01',type:'Auto interlocutorio',decision:'CONFIRMA medidas. DECLARA REINCIDENCIA EN VIF. Cobro coactivo multa 3 SMLMV.',actions:'PRUEBA REINA: agravante reincidencia Art. 229 CP, falta gravísima Art. 48 Ley 1952/2019, base custodia.',pending_:'Adjuntar a queja Procuraduría. Incorporar en proceso penal.',compliance:'Incumplido',appeal:''}
+  ],procesos:[
+    {id:1,name:'Proceso penal — LFGG como VÍCTIMA',rad:'05001609916620225977701',type:'Penal — víctima',entidad:'Fiscalía 011 Local Envigado / Juzgado Penal del Circuito de Envigado',fecha:'2022-05-11',estado:'SIN actuaciones desde 11/09/2023. Remitido en apelación.',ultima:'11/09/2023 — Remisión recurso de apelación',contraparte:'JUAN ESTEBAN LÓPEZ PALACIO — C.C. 8.103.048',next:'Verificar despacho y principio de oportunidad. Sin respuesta al D. Petición → tutela.'},
+    {id:2,name:'Proceso VIF — Comisaría 16 Belén — 13 hechos 2026',rad:'002-15088-26 MESA 1',type:'Administrativo',entidad:'Comisaría de Familia Comuna 16 Belén',fecha:'2026-06-01',estado:'ACTIVO. Medida provisional: alejamiento 300m. Audiencia fallo 13/08/2026.',ultima:'01/06/2026 — Auto 1217',contraparte:'JUAN ESTEBAN LÓPEZ PALACIO — C.C. 8.103.048',next:'21/07 10:30am: Descargos JELP. 13/08 8:30am: Audiencia fallo. Llevar Auto 1083/2023.'}
+  ],uploads:[]};
 }
 
 // ===== INIT =====
 async function init(){
   renderAuthForm();
-  const {data:{session}}=await sb.auth.getSession();
-  if(session?.user){ await enterApp(session.user); return; }
+  const{data:{session}}=await sb.auth.getSession();
+  if(session?.user){await enterApp(session.user);return;}
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN'&&session?.user){ await enterApp(session.user); }
+    if(event==='SIGNED_IN'&&session?.user){await enterApp(session.user);}
     if(event==='PASSWORD_RECOVERY'){
       document.getElementById('authScreen').style.display='flex';
       document.getElementById('appShell').style.display='none';
-      switchAuthTab('login');
-      showAuthSuccess('Ingresa tu nueva contraseña en el campo de abajo.');
+      showAuthOk('Ahora puedes crear una nueva contraseña. Ve a "Entrar" e ingresa con tu nueva clave.');
     }
   });
 }
-
 init();
 </script>
 </body>
