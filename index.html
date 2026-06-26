@@ -487,6 +487,7 @@ tr:hover td{background:var(--bg2)}
       <div id="existingFileInfo" style="display:none;margin-top:6px;padding:8px 12px;background:var(--successbg);border-radius:var(--radius);font-size:12px;color:var(--successtext)"></div>
     </div>
     <div class="form-row"><label>Notas adicionales</label><textarea id="d_notas" placeholder="Observaciones, conexiones con otros documentos..."></textarea></div>
+    <div id="docNameMismatchError" style="display:none;background:var(--dangerbg);border:0.5px solid var(--dangerborder);border-radius:var(--radius);padding:12px 14px;margin-top:4px"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('docModal')">Cancelar</button>
       <button class="btn primary" id="docSaveBtn" onclick="saveDoc()">✓ Guardar</button>
@@ -1026,11 +1027,39 @@ async function saveDoc(){
   const n=document.getElementById('d_nombre').value.trim();
   const f=document.getElementById('d_fecha').value;
   if(!n||!f){alert('Nombre y fecha son obligatorios');return;}
+
+  // ✅ VALIDACIÓN: nombre del documento vs nombre del archivo adjunto
+  const fileInput=document.getElementById('d_file');
+  if(fileInput.files&&fileInput.files[0]){
+    const fileName=fileInput.files[0].name;
+    // Limpiar ambos nombres para comparar: minúsculas, sin extensión, sin caracteres especiales
+    const cleanDocName=n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+    const cleanFileName=fileName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\.[^.]+$/,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+    // Verificar si comparten al menos 3 palabras significativas (más de 3 letras)
+    const docWords=cleanDocName.split(' ').filter(w=>w.length>3);
+    const fileWords=cleanFileName.split(' ').filter(w=>w.length>3);
+    const commonWords=docWords.filter(w=>fileWords.some(fw=>fw.includes(w)||w.includes(fw)));
+    if(commonWords.length===0&&docWords.length>0&&fileWords.length>0){
+      // Mostrar error bloqueante
+      const errEl=document.getElementById('docNameMismatchError');
+      errEl.innerHTML=`
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">⚠️ El nombre del documento y el archivo no coinciden</div>
+        <div style="font-size:12px;margin-bottom:4px"><strong>Nombre del documento:</strong><br>${n}</div>
+        <div style="font-size:12px;margin-bottom:10px"><strong>Archivo adjunto:</strong><br>${fileName}</div>
+        <div style="font-size:12px;color:var(--dangertext)">Por favor corrige el nombre del documento o cambia el archivo adjunto para que coincidan antes de guardar.</div>
+      `;
+      errEl.style.display='block';
+      errEl.scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }else{
+      document.getElementById('docNameMismatchError').style.display='none';
+    }
+  }
+
   const btn=document.getElementById('docSaveBtn');
   btn.disabled=true;btn.textContent='Guardando...';
   try{
     let filePath=null,fileName=null;
-    const fileInput=document.getElementById('d_file');
     if(fileInput.files&&fileInput.files[0]){
       const file=fileInput.files[0];
       if(file.size>50*1024*1024){alert('El archivo no puede superar 50MB');btn.disabled=false;btn.textContent='✓ Guardar';return;}
@@ -1043,7 +1072,6 @@ async function saveDoc(){
     const vence=document.getElementById('d_vence').value;
 
     if(isEdit){
-      // EDITAR documento existente
       const idx=db.docs.findIndex(d=>d.id==editId);
       if(idx>=0){
         const existing=db.docs[idx];
@@ -1063,26 +1091,19 @@ async function saveDoc(){
           notas:document.getElementById('d_notas').value.trim(),
           ...(filePath?{filePath,fileName}:{})
         };
-        // Si cambió la fecha de vencimiento, actualizar evento en calendario
         if(vence && vence!==oldVence){
-          // Borrar evento anterior si existía
           db.events=db.events.filter(e=>!(e.type==='deadline'&&e.docId==editId));
-          // Agregar nuevo evento
           db.events.push({id:Date.now()+2,title:'📅 Vence: '+n,date:vence,time:'',type:'deadline',lugar:'',rad:'',notes:'Vencimiento automático del documento: '+n,docId:editId});
-          // Actualizar alerta
           db.alerts=db.alerts.filter(a=>a.docId!=editId);
           db.alerts.push({id:Date.now()+3,title:'Vencimiento: '+n,date:vence,level:'warning',consequence:'Revisar acción requerida.',action:'',docId:editId});
         }
       }
     }else{
-      // CREAR nuevo documento
       const docId=Date.now();
       const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),filePath,fileName};
       db.docs.push(doc);
       if(vence){
-        // Agregar automáticamente al calendario como vencimiento
         db.events.push({id:docId+1,title:'📅 Vence: '+n,date:vence,time:'',type:'deadline',lugar:'',rad:'',notes:'Vencimiento automático del documento: '+n,docId:docId});
-        // Agregar alerta
         db.alerts.push({id:docId+2,title:'Vencimiento: '+n,date:vence,level:'warning',consequence:'Revisar acción requerida.',action:'',docId:docId});
       }
     }
