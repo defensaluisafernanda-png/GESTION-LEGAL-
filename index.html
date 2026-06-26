@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Expediente Legal — LFGG</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -19,87 +20,70 @@
   --radius:8px;--radius-lg:12px;
   --shadow:0 1px 4px rgba(0,0,0,.08),0 0 0 0.5px rgba(0,0,0,.06);
 }
-@media(prefers-color-scheme:dark){
-  :root{
-    --bg:#1c1c1c;--bg2:#242424;--bg3:#2c2c2c;
-    --text:#e8e8e8;--text2:#a8a8a8;--text3:#707070;
-    --border:#3a3a3a;--border2:#505050;
-    --accent:#c47a5a;--accent2:#d4896a;--accentbg:#2a1a12;--accenttext:#f0c0a0;
-    --danger:#e05050;--dangerbg:#2a1818;--dangertext:#f0a0a0;--dangerborder:#5a2828;
-    --warning:#e09040;--warningbg:#2a2010;--warningtext:#f0c080;--warningborder:#5a4020;
-    --success:#40b070;--successbg:#102818;--successtext:#80e0b0;--successborder:#205838;
-    --info:#4090d0;--infobg:#101828;--infotext:#80c0f0;--infoborder:#204060;
-    --purple:#8070d0;--purplebg:#181028;--purpletext:#c0b0f0;--purpleborder:#402870;
-    --shadow:0 1px 4px rgba(0,0,0,.3),0 0 0 0.5px rgba(255,255,255,.06);
-  }
-}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1c1c1c;--bg2:#242424;--bg3:#2c2c2c;
+  --text:#e8e8e8;--text2:#a8a8a8;--text3:#707070;
+  --border:#3a3a3a;--border2:#505050;
+  --accent:#c47a5a;--accent2:#d4896a;--accentbg:#2a1a12;--accenttext:#f0c0a0;
+  --danger:#e05050;--dangerbg:#2a1818;--dangertext:#f0a0a0;--dangerborder:#5a2828;
+  --warning:#e09040;--warningbg:#2a2010;--warningtext:#f0c080;--warningborder:#5a4020;
+  --success:#40b070;--successbg:#102818;--successtext:#80e0b0;--successborder:#205838;
+  --info:#4090d0;--infobg:#101828;--infotext:#80c0f0;--infoborder:#204060;
+  --purple:#8070d0;--purplebg:#181028;--purpletext:#c0b0f0;--purpleborder:#402870;
+  --shadow:0 1px 4px rgba(0,0,0,.3),0 0 0 0.5px rgba(255,255,255,.06);
+}}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
-button{cursor:pointer;font-family:inherit;font-size:13px}
+button{cursor:pointer;font-family:inherit}
 input,select,textarea{font-family:inherit;font-size:13px;color:var(--text);background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius);padding:7px 10px;width:100%;outline:none;transition:border-color .15s}
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 textarea{resize:vertical;min-height:72px;line-height:1.5}
 select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23888' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:28px}
 
-/* ===== LOCK SCREEN ===== */
-#lockScreen{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  min-height:100vh;padding:24px;background:var(--bg3);
-}
-.lock-card{
-  background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);
-  padding:36px 32px;width:100%;max-width:400px;box-shadow:var(--shadow);text-align:center;
-}
-.lock-icon{font-size:48px;margin-bottom:16px}
-.lock-title{font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px}
-.lock-sub{font-size:13px;color:var(--text3);margin-bottom:28px;line-height:1.5}
-.lock-form{text-align:left}
-.lock-form label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px}
-.lock-form input{margin-bottom:12px;font-size:15px;padding:10px 12px;letter-spacing:.05em}
-.lock-form input[type=password]{font-size:18px;letter-spacing:.15em}
-.lock-btn{width:100%;padding:11px;font-size:14px;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);margin-top:4px;transition:background .15s}
-.lock-btn:hover{background:var(--accent2)}
-.lock-btn:disabled{opacity:.5;cursor:not-allowed}
-.lock-error{background:var(--dangerbg);border:0.5px solid var(--dangerborder);color:var(--dangertext);padding:9px 12px;border-radius:var(--radius);font-size:13px;margin-top:10px;display:none}
-.lock-hint{font-size:11px;color:var(--text3);margin-top:14px;text-align:center;line-height:1.6}
-.lock-hint strong{color:var(--dangertext)}
-.strength-bar{height:4px;border-radius:2px;margin-top:4px;background:var(--bg2);overflow:hidden;margin-bottom:8px}
-.strength-fill{height:100%;border-radius:2px;transition:width .3s,background .3s;width:0}
-.strength-label{font-size:11px;color:var(--text3);margin-bottom:10px}
+/* AUTH SCREEN */
+#authScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:var(--bg3)}
+.auth-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:36px 32px;width:100%;max-width:420px;box-shadow:var(--shadow)}
+.auth-logo{font-size:40px;text-align:center;margin-bottom:12px}
+.auth-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:4px}
+.auth-sub{font-size:13px;color:var(--text3);text-align:center;margin-bottom:28px;line-height:1.5}
+.auth-tabs{display:flex;border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px}
+.auth-tab{flex:1;padding:8px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;background:var(--bg2);color:var(--text3);border:none;transition:all .15s}
+.auth-tab.active{background:var(--accent);color:#fff}
+.form-row{margin-bottom:13px}
+.form-row label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px}
+.auth-btn{width:100%;padding:11px;font-size:14px;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);margin-top:4px;transition:background .15s;cursor:pointer}
+.auth-btn:hover{background:var(--accent2)}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-error{background:var(--dangerbg);border:0.5px solid var(--dangerborder);color:var(--dangertext);padding:9px 12px;border-radius:var(--radius);font-size:13px;margin-top:10px;display:none}
+.auth-success{background:var(--successbg);border:0.5px solid var(--successborder);color:var(--successtext);padding:9px 12px;border-radius:var(--radius);font-size:13px;margin-top:10px;display:none}
+.auth-link{font-size:12px;color:var(--accent);cursor:pointer;text-align:center;margin-top:14px;display:block}
+.auth-hint{font-size:11px;color:var(--text3);margin-top:10px;text-align:center;line-height:1.6}
 
-/* ===== SESSION TIMEOUT BAR ===== */
-#timeoutBar{
-  position:fixed;top:0;left:0;right:0;height:3px;
-  background:var(--accent);z-index:9999;
-  transform-origin:left;transition:transform 1s linear;
-  transform:scaleX(1);
-}
-#timeoutBar.warning{background:var(--danger)}
-
-/* ===== LOCK OVERLAY (inactivity) ===== */
-#inactivityOverlay{
-  display:none;position:fixed;inset:0;z-index:500;
-  background:rgba(0,0,0,.85);backdrop-filter:blur(8px);
-  align-items:center;justify-content:center;
-}
+/* INACTIVITY */
+#inactivityOverlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center}
 #inactivityOverlay.show{display:flex}
 .inact-card{background:var(--bg);border-radius:var(--radius-lg);padding:32px;text-align:center;max-width:360px;width:90%}
 .inact-icon{font-size:40px;margin-bottom:12px}
 .inact-title{font-size:16px;font-weight:700;margin-bottom:6px}
 .inact-sub{font-size:13px;color:var(--text3);margin-bottom:20px}
-.inact-input{margin-bottom:10px;font-size:16px;letter-spacing:.1em;padding:10px 12px}
-.inact-btn{width:100%;padding:10px;font-size:14px;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius)}
-.inact-error{font-size:12px;color:var(--dangertext);margin-top:8px;display:none}
+.inact-btn{width:100%;padding:10px;font-size:14px;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer}
 
-/* ===== APP SHELL ===== */
+/* SYNC STATUS */
+#syncBar{position:fixed;top:0;left:0;right:0;height:3px;background:var(--accent);z-index:9999;transform:scaleX(0);transform-origin:left;transition:transform .3s}
+#syncBar.syncing{transform:scaleX(0.7)}
+#syncBar.done{transform:scaleX(1);transition:transform .1s}
+#syncToast{position:fixed;bottom:20px;right:20px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 16px;font-size:13px;box-shadow:var(--shadow);z-index:9000;display:none;align-items:center;gap:8px}
+#syncToast.show{display:flex}
+
+/* APP SHELL */
 #appShell{display:none}
 #appShell.visible{display:flex}
 .app-shell{display:flex;height:100vh;overflow:hidden;width:100%}
 .sidebar{width:220px;min-width:220px;background:var(--bg);border-right:0.5px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
-.main{flex:1;overflow-y:auto;padding:0}
+.main{flex:1;overflow-y:auto}
 .sidebar-header{padding:16px 14px 12px;border-bottom:0.5px solid var(--border)}
 .sidebar-logo{display:flex;align-items:center;gap:9px;margin-bottom:4px}
 .logo-icon{width:30px;height:30px;background:var(--accent);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.sidebar-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.2}
+.sidebar-title{font-size:13px;font-weight:600;line-height:1.2}
 .sidebar-sub{font-size:10px;color:var(--text3);margin-top:2px}
 .nav{padding:10px 8px;flex:1}
 .nav-section{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:6px 8px 4px;margin-top:8px}
@@ -108,51 +92,52 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .nav-item.active{background:var(--accentbg);color:var(--accenttext);font-weight:500}
 .nav-item .icon{font-size:16px;opacity:.7;width:18px;text-align:center}
 .nav-item.active .icon{opacity:1}
-.nav-badge{margin-left:auto;font-size:10px;font-weight:600;background:var(--danger);color:#fff;padding:1px 6px;border-radius:20px;min-width:18px;text-align:center}
+.nav-badge{margin-left:auto;font-size:10px;font-weight:600;background:var(--danger);color:#fff;padding:1px 6px;border-radius:20px;display:none}
 .nav-badge.warn{background:var(--warning)}
+.nav-badge.show{display:block}
 .sidebar-footer{padding:10px 12px;border-top:0.5px solid var(--border)}
-.lock-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);margin-bottom:6px}
-.lock-dot{width:6px;height:6px;background:var(--success);border-radius:50%}
-.btn-lock{width:100%;padding:6px;font-size:12px;background:var(--dangerbg);color:var(--dangertext);border:0.5px solid var(--dangerborder);border-radius:var(--radius);font-weight:500}
-.btn-lock:hover{background:var(--dangerborder)}
-.timeout-info{font-size:10px;color:var(--text3);margin-top:6px;text-align:center}
+.user-info{font-size:11px;color:var(--text3);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sync-status{font-size:11px;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.sync-dot{width:6px;height:6px;background:var(--success);border-radius:50%;flex-shrink:0}
+.btn-logout{width:100%;padding:6px;font-size:12px;background:var(--bg2);color:var(--text2);border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:5px;cursor:pointer}
+.btn-lock{width:100%;padding:6px;font-size:12px;background:var(--dangerbg);color:var(--dangertext);border:0.5px solid var(--dangerborder);border-radius:var(--radius);cursor:pointer}
 
-/* Page */
+/* PAGE */
 .page-header{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-.page-title{font-size:18px;font-weight:600;color:var(--text)}
+.page-title{font-size:18px;font-weight:600}
 .page-sub{font-size:12px;color:var(--text3);margin-top:2px}
 .page-content{padding:0 24px 24px}
 
-/* Stats */
+/* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
 .stat{background:var(--bg);border-radius:var(--radius-lg);padding:14px 16px;border:0.5px solid var(--border);box-shadow:var(--shadow)}
 .stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
-.stat-value{font-size:24px;font-weight:600;line-height:1;color:var(--text)}
+.stat-value{font-size:24px;font-weight:600;line-height:1}
 .stat-sub{font-size:11px;color:var(--text3);margin-top:4px}
 .stat.danger .stat-value{color:var(--danger)}
 .stat.warning .stat-value{color:var(--warning)}
 .stat.success .stat-value{color:var(--success)}
 .stat.info .stat-value{color:var(--info)}
 
-/* Alert banners */
+/* ALERTS */
 .alert-banner{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:var(--radius);border:0.5px solid;margin-bottom:8px;font-size:13px}
 .alert-banner.danger{background:var(--dangerbg);border-color:var(--dangerborder);color:var(--dangertext)}
 .alert-banner.warning{background:var(--warningbg);border-color:var(--warningborder);color:var(--warningtext)}
 
-/* Toolbar */
+/* TOOLBAR */
 .toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
 .toolbar input,.toolbar select{max-width:200px;min-width:120px}
 .toolbar .search{min-width:200px;max-width:300px;flex:1}
 
-/* Buttons */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--radius);font-size:13px;font-weight:500;border:0.5px solid var(--border2);background:var(--bg);color:var(--text);transition:all .15s;white-space:nowrap}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--radius);font-size:13px;font-weight:500;border:0.5px solid var(--border2);background:var(--bg);color:var(--text);transition:all .15s;white-space:nowrap;cursor:pointer}
 .btn:hover{background:var(--bg2)}
 .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn.primary:hover{background:var(--accent2)}
 .btn.danger{background:var(--dangerbg);color:var(--dangertext);border-color:var(--dangerborder)}
 .btn.sm{padding:4px 9px;font-size:12px}
 
-/* Table */
+/* TABLE */
 .table-wrap{overflow-x:auto;border-radius:var(--radius-lg);border:0.5px solid var(--border);background:var(--bg);box-shadow:var(--shadow)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);background:var(--bg2);border-bottom:0.5px solid var(--border);white-space:nowrap}
@@ -161,9 +146,8 @@ tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--bg2)}
 .td-name{font-weight:500;font-size:13px;margin-bottom:3px}
 .td-sub{font-size:11px;color:var(--text3);line-height:1.4;max-width:260px}
-.td-rad{font-size:11px;color:var(--text3);font-family:monospace;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* Badges */
+/* BADGES */
 .badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;border:0.5px solid transparent}
 .badge.danger{background:var(--dangerbg);color:var(--dangertext);border-color:var(--dangerborder)}
 .badge.warning{background:var(--warningbg);color:var(--warningtext);border-color:var(--warningborder)}
@@ -172,35 +156,33 @@ tr:hover td{background:var(--bg2)}
 .badge.neutral{background:var(--bg2);color:var(--text3);border-color:var(--border)}
 .badge.purple{background:var(--purplebg);color:var(--purpletext);border-color:var(--purpleborder)}
 
-/* Cards */
+/* CARDS */
 .card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;box-shadow:var(--shadow);margin-bottom:10px}
 .card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
-.card-title{font-size:14px;font-weight:600;color:var(--text)}
+.card-title{font-size:14px;font-weight:600}
 .card-meta{font-size:12px;color:var(--text3);margin-top:3px}
 .card-body{font-size:13px;color:var(--text2);line-height:1.6}
 .card-section{margin-top:12px;padding:10px 12px;background:var(--bg2);border-radius:var(--radius);border-left:3px solid var(--info)}
 .card-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--infotext);margin-bottom:5px}
-.card.priority-urgente{border-left:3px solid var(--danger)}
-.card.priority-alta{border-left:3px solid var(--warning)}
 
-/* Pending */
+/* PENDING */
 .pending-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;box-shadow:var(--shadow)}
 .pending-item.priority-Urgente{border-left:3px solid var(--danger)}
 .pending-item.priority-Alta{border-left:3px solid var(--warning)}
 .pending-item.done{opacity:.5}
 .pending-item.done .pi-title{text-decoration:line-through}
-.pi-check{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:2px;background:var(--bg)}
+.pi-check{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:2px;background:var(--bg);transition:all .15s}
 .pending-item.done .pi-check{background:var(--success);border-color:var(--success);color:#fff}
-.pi-title{font-size:13px;font-weight:500;color:var(--text)}
+.pi-title{font-size:13px;font-weight:500}
 .pi-meta{font-size:12px;color:var(--text3);margin-top:3px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .pi-notes{font-size:12px;color:var(--text2);margin-top:5px;line-height:1.5}
 
-/* Calendar */
+/* CALENDAR */
 .cal-nav{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .cal-month{font-size:16px;font-weight:600;min-width:180px;text-align:center}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
 .cal-dname{font-size:11px;font-weight:600;color:var(--text3);text-align:center;padding:5px 0;text-transform:uppercase;letter-spacing:.04em}
-.cal-cell{min-height:76px;border:0.5px solid var(--border);border-radius:var(--radius);padding:5px;background:var(--bg);font-size:11px;cursor:default}
+.cal-cell{min-height:76px;border:0.5px solid var(--border);border-radius:var(--radius);padding:5px;background:var(--bg);font-size:11px}
 .cal-cell.today{border-color:var(--accent);background:var(--accentbg)}
 .cal-cell.other{opacity:.3}
 .cal-num{font-size:12px;font-weight:600;margin-bottom:3px}
@@ -210,41 +192,47 @@ tr:hover td{background:var(--bg2)}
 .cal-evt.deadline{background:var(--dangerbg);color:var(--dangertext)}
 .cal-evt.meeting{background:var(--successbg);color:var(--successtext)}
 .upc-item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px}
-.upc-date{min-width:44px;border-radius:var(--radius);padding:6px 4px;text-align:center}
+.upc-date{min-width:44px;border-radius:var(--radius);padding:6px 4px;text-align:center;flex-shrink:0}
 .upc-date.hearing{background:var(--warningbg);color:var(--warningtext)}
 .upc-date.deadline{background:var(--dangerbg);color:var(--dangertext)}
 .upc-date.meeting{background:var(--successbg);color:var(--successtext)}
 .upc-day{font-size:20px;font-weight:700;line-height:1}
 .upc-dow{font-size:10px;font-weight:600;text-transform:uppercase}
 
-/* Modal */
+/* FILES */
+.file-upload-area{border:2px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:all .15s;margin-top:8px}
+.file-upload-area:hover,.file-upload-area.drag{border-color:var(--accent);background:var(--accentbg)}
+.file-upload-area p{font-size:13px;color:var(--text3);margin-top:6px}
+.file-chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:4px 10px;font-size:12px;margin:3px}
+.file-chip button{background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;line-height:1;padding:0}
+
+/* MODAL */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
 .overlay.open{display:flex}
 .modal{background:var(--bg);border-radius:var(--radius-lg);border:0.5px solid var(--border);width:100%;max-width:580px;padding:24px;margin:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
-.modal-title{font-size:16px;font-weight:600;margin-bottom:18px;color:var(--text)}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:18px}
 .form-row{margin-bottom:13px}
 .form-row label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px}
 .req{color:var(--danger)}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:0.5px solid var(--border)}
 
-/* Sections */
+/* SECTIONS */
 .section{display:none}
 .section.active{display:block}
 
-/* Empty */
+/* EMPTY */
 .empty{text-align:center;padding:48px 20px;color:var(--text3)}
 .empty-icon{font-size:36px;margin-bottom:10px;display:block;opacity:.4}
 
-/* Mobile */
-.mobile-toggle{display:none;padding:10px 14px;background:none;border:none;font-size:20px;color:var(--text)}
+/* MOBILE */
+.mobile-toggle{display:none;padding:10px 14px;background:none;border:none;font-size:20px;color:var(--text);cursor:pointer}
 @media(max-width:700px){
   .app-shell{flex-direction:column;height:auto}
-  .sidebar{width:100%;min-width:0;border-right:none;border-bottom:0.5px solid var(--border);max-height:52px;overflow:hidden;transition:max-height .25s;flex-direction:row;flex-wrap:wrap}
-  .sidebar.open{max-height:100vh;flex-direction:column}
-  .sidebar-header{display:flex;align-items:center;justify-content:space-between;flex:1}
-  .nav{display:flex;flex-direction:column;width:100%}
+  .sidebar{width:100%;min-width:0;border-right:none;border-bottom:0.5px solid var(--border);max-height:52px;overflow:hidden;transition:max-height .25s}
+  .sidebar.open{max-height:100vh}
   .mobile-toggle{display:block}
+  .sidebar-header{display:flex;align-items:center;justify-content:space-between}
   .main{overflow-y:auto;max-height:calc(100vh - 52px)}
   .form-grid{grid-template-columns:1fr}
   .page-header{padding:14px 14px 0}
@@ -258,34 +246,38 @@ tr:hover td{background:var(--bg2)}
 </head>
 <body>
 
-<!-- ===== LOCK SCREEN ===== -->
-<div id="lockScreen">
-  <div class="lock-card">
-    <div class="lock-icon" id="lockIcon">🔐</div>
-    <div class="lock-title" id="lockTitle">Expediente Legal</div>
-    <div class="lock-sub" id="lockSub">Cargando...</div>
-    <div class="lock-form" id="lockForm"></div>
-    <div class="lock-error" id="lockError"></div>
-    <div class="lock-hint" id="lockHint"></div>
+<div id="syncBar"></div>
+<div id="syncToast"></div>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">⚖️</div>
+    <div class="auth-title">Expediente Legal</div>
+    <div class="auth-sub" id="authSub">Luisa Fernanda Garcés García — C.C. 1.036.602.429</div>
+    <div class="auth-tabs" id="authTabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Entrar</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Crear cuenta</button>
+    </div>
+    <div id="authForm"></div>
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-success" id="authSuccess"></div>
   </div>
 </div>
 
-<!-- ===== INACTIVITY OVERLAY ===== -->
+<!-- INACTIVITY -->
 <div id="inactivityOverlay">
   <div class="inact-card">
     <div class="inact-icon">🔒</div>
-    <div class="inact-title">Sesión bloqueada</div>
-    <div class="inact-sub">La sesión se cerró por inactividad. Ingresa tu contraseña para continuar.</div>
-    <input type="password" class="inact-input" id="inactPwd" placeholder="Contraseña..." onkeydown="if(event.key==='Enter')unlockFromInactivity()">
-    <button class="inact-btn" onclick="unlockFromInactivity()">🔓 Desbloquear</button>
-    <div class="inact-error" id="inactError">Contraseña incorrecta</div>
+    <div class="inact-title">Sesión bloqueada por inactividad</div>
+    <div class="inact-sub">Ingresa tu contraseña de Supabase para continuar.</div>
+    <input type="password" id="inactPwd" placeholder="Contraseña..." style="margin-bottom:10px" onkeydown="if(event.key==='Enter')unlockInactivity()">
+    <button class="inact-btn" onclick="unlockInactivity()">🔓 Desbloquear</button>
+    <div style="font-size:12px;color:var(--dangertext);margin-top:8px;display:none" id="inactErr">Contraseña incorrecta</div>
   </div>
 </div>
 
-<!-- ===== TIMEOUT BAR ===== -->
-<div id="timeoutBar" style="display:none"></div>
-
-<!-- ===== APP SHELL ===== -->
+<!-- APP SHELL -->
 <div id="appShell">
 <div class="app-shell">
   <div class="sidebar" id="sidebar">
@@ -303,23 +295,21 @@ tr:hover td{background:var(--bg2)}
     </div>
     <nav class="nav">
       <div class="nav-section">Principal</div>
-      <button class="nav-item active" onclick="navigate('dashboard')"><span class="icon">🏠</span>Resumen general <span class="nav-badge danger" id="nbAlerts" style="display:none"></span></button>
-      <button class="nav-item" onclick="navigate('documentos')"><span class="icon">📄</span>Documentos <span class="nav-badge" id="nbDocs" style="background:var(--text3);display:none"></span></button>
-      <button class="nav-item" onclick="navigate('alertas')"><span class="icon">🔔</span>Alertas <span class="nav-badge warn" id="nbWarn" style="display:none"></span></button>
+      <button class="nav-item active" onclick="navigate('dashboard')"><span class="icon">🏠</span>Resumen <span class="nav-badge danger" id="nbAlerts"></span></button>
+      <button class="nav-item" onclick="navigate('documentos')"><span class="icon">📄</span>Documentos <span class="nav-badge" id="nbDocs" style="background:var(--text3)"></span></button>
+      <button class="nav-item" onclick="navigate('archivos')"><span class="icon">📎</span>Archivos adjuntos</button>
+      <button class="nav-item" onclick="navigate('alertas')"><span class="icon">🔔</span>Alertas <span class="nav-badge warn" id="nbWarn"></span></button>
       <button class="nav-item" onclick="navigate('calendario')"><span class="icon">📅</span>Calendario</button>
       <div class="nav-section">Gestión</div>
-      <button class="nav-item" onclick="navigate('pendientes')"><span class="icon">✅</span>Pendientes <span class="nav-badge warn" id="nbPend" style="display:none"></span></button>
+      <button class="nav-item" onclick="navigate('pendientes')"><span class="icon">✅</span>Pendientes <span class="nav-badge warn" id="nbPend"></span></button>
       <button class="nav-item" onclick="navigate('fallos')"><span class="icon">⚖️</span>Fallos / Resoluciones</button>
       <button class="nav-item" onclick="navigate('procesos')"><span class="icon">🗂️</span>Procesos activos</button>
-      <div class="nav-section">Datos</div>
-      <button class="nav-item" onclick="exportData()"><span class="icon">📤</span>Exportar (respaldo)</button>
-      <button class="nav-item" onclick="importData()"><span class="icon">📥</span>Importar</button>
-      <button class="nav-item" onclick="changePwd()"><span class="icon">🔑</span>Cambiar contraseña</button>
     </nav>
     <div class="sidebar-footer">
-      <div class="lock-status"><span class="lock-dot"></span>Sesión activa y encriptada</div>
-      <button class="btn-lock" onclick="manualLock()">🔒 Bloquear ahora</button>
-      <div class="timeout-info" id="timeoutInfo"></div>
+      <div class="user-info" id="userEmail"></div>
+      <div class="sync-status"><span class="sync-dot"></span><span id="syncStatusText">Sincronizado</span></div>
+      <button class="btn-logout" onclick="manualLock()">🔒 Bloquear sesión</button>
+      <button class="btn-logout" onclick="doLogout()">← Cerrar sesión</button>
     </div>
   </div>
 
@@ -362,9 +352,18 @@ tr:hover td{background:var(--bg2)}
           </select>
         </div>
         <div class="table-wrap"><table><thead><tr>
-          <th>Fecha</th><th>Documento</th><th>Categoría</th><th>Entidad</th><th>Radicado</th><th>Estado</th><th>Vence</th><th></th>
+          <th>Fecha</th><th>Documento</th><th>Categoría</th><th>Entidad</th><th>Radicado</th><th>Estado</th><th>Vence</th><th>Archivo</th><th></th>
         </tr></thead><tbody id="docsTable"></tbody></table></div>
       </div>
+    </div>
+
+    <!-- ARCHIVOS -->
+    <div id="view-archivos" class="section">
+      <div class="page-header">
+        <div><div class="page-title">Archivos adjuntos</div><div class="page-sub">PDFs, documentos Word e imágenes del expediente</div></div>
+        <button class="btn primary" onclick="openModal('uploadModal')">+ Subir archivo</button>
+      </div>
+      <div class="page-content" id="archivosContent"></div>
     </div>
 
     <!-- ALERTAS -->
@@ -393,7 +392,7 @@ tr:hover td{background:var(--bg2)}
           <div class="cal-dname">Mié</div><div class="cal-dname">Jue</div><div class="cal-dname">Vie</div><div class="cal-dname">Sáb</div>
         </div>
         <div class="cal-grid" id="calGrid"></div>
-        <div style="margin-top:6px;display:flex;gap:10px;font-size:11px">
+        <div style="margin-top:6px;display:flex;gap:10px;font-size:11px;flex-wrap:wrap">
           <span style="background:var(--warningbg);padding:2px 8px;border-radius:4px;color:var(--warningtext)">● Audiencia</span>
           <span style="background:var(--dangerbg);padding:2px 8px;border-radius:4px;color:var(--dangertext)">● Vencimiento</span>
           <span style="background:var(--successbg);padding:2px 8px;border-radius:4px;color:var(--successtext)">● Cita/reunión</span>
@@ -458,14 +457,14 @@ tr:hover td{background:var(--bg2)}
     </div>
     <div class="form-grid">
       <div class="form-row"><label>Entidad</label><input type="text" id="d_entidad" placeholder="Ej: Fiscalía 011 Local Envigado"></div>
-      <div class="form-row"><label>Radicado</label><input type="text" id="d_radicado" placeholder="Número de radicado"></div>
+      <div class="form-row"><label>Radicado</label><input type="text" id="d_radicado"></div>
     </div>
-    <div class="form-row"><label>Resumen / relevancia legal</label><textarea id="d_resumen" placeholder="Describe el contenido y la importancia jurídica del documento..."></textarea></div>
-    <div class="form-row"><label>Ubicación física / digital</label><input type="text" id="d_ubicacion" placeholder="Ej: Carpeta roja — Comisaría / Google Drive/Pruebas/..."></div>
+    <div class="form-row"><label>Resumen / relevancia legal</label><textarea id="d_resumen" placeholder="Contenido e importancia jurídica del documento..."></textarea></div>
+    <div class="form-row"><label>Ubicación física / digital</label><input type="text" id="d_ubicacion" placeholder="Ej: Carpeta roja / Google Drive/Pruebas/..."></div>
     <div class="form-grid">
       <div class="form-row"><label>Plazo legal automático</label>
         <select id="d_plazo" onchange="calcDeadline()">
-          <option value="">Sin plazo automático</option>
+          <option value="">Sin plazo</option>
           <option value="15">15 días hábiles — Derecho de petición</option>
           <option value="10">10 días hábiles — Urgente</option>
           <option value="30">30 días hábiles — Judicial</option>
@@ -474,10 +473,43 @@ tr:hover td{background:var(--bg2)}
       </div>
       <div class="form-row"><label>Fecha de vencimiento</label><input type="date" id="d_vence"></div>
     </div>
-    <div class="form-row"><label>Notas adicionales</label><textarea id="d_notas" placeholder="Observaciones, conexiones con otros documentos, acciones pendientes..."></textarea></div>
+    <div class="form-row"><label>📎 Adjuntar archivo (PDF, Word, imagen — máx. 50MB)</label>
+      <div class="file-upload-area" id="dropZoneDoc" onclick="document.getElementById('d_file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'d_file')">
+        <div style="font-size:28px">📂</div>
+        <p>Arrastra tu archivo aquí o haz clic para seleccionar</p>
+        <p style="font-size:11px;margin-top:4px">PDF, Word (.doc/.docx), imágenes (JPG, PNG, HEIC)</p>
+      </div>
+      <input type="file" id="d_file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic,.webp" onchange="showSelectedFile(this,'filePreviewDoc')">
+      <div id="filePreviewDoc" style="margin-top:6px"></div>
+    </div>
+    <div class="form-row"><label>Notas adicionales</label><textarea id="d_notas" placeholder="Observaciones, conexiones con otros documentos..."></textarea></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('docModal')">Cancelar</button>
-      <button class="btn primary" onclick="saveDoc()">✓ Guardar</button>
+      <button class="btn primary" id="docSaveBtn" onclick="saveDoc()">✓ Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="uploadModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">📎 Subir archivo independiente</div>
+    <div class="form-row"><label>Nombre / descripción <span class="req">*</span></label><input type="text" id="up_nombre" placeholder="Ej: Video del ascensor — feb 2020"></div>
+    <div class="form-row"><label>Categoría</label>
+      <select id="up_cat"><option>Pruebas</option><option>Fallos</option><option>Medidas de protección</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Comunicaciones</option><option>Otro</option></select>
+    </div>
+    <div class="form-row"><label>Archivo (máx. 50MB)</label>
+      <div class="file-upload-area" onclick="document.getElementById('up_file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'up_file')">
+        <div style="font-size:28px">📂</div>
+        <p>Arrastra aquí o haz clic para seleccionar</p>
+        <p style="font-size:11px;margin-top:4px">PDF, Word, imágenes, videos</p>
+      </div>
+      <input type="file" id="up_file" style="display:none" onchange="showSelectedFile(this,'filePreviewUp')">
+      <div id="filePreviewUp" style="margin-top:6px"></div>
+    </div>
+    <div class="form-row"><label>Notas</label><textarea id="up_notas" placeholder="Contexto o relevancia del archivo..."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('uploadModal')">Cancelar</button>
+      <button class="btn primary" id="upSaveBtn" onclick="saveUpload()">⬆ Subir archivo</button>
     </div>
   </div>
 </div>
@@ -492,7 +524,7 @@ tr:hover td{background:var(--bg2)}
     </div>
     <div class="form-grid">
       <div class="form-row"><label>Tipo</label><select id="ev_type"><option value="hearing">Audiencia</option><option value="deadline">Vencimiento</option><option value="meeting">Cita / reunión</option></select></div>
-      <div class="form-row"><label>Lugar / despacho</label><input type="text" id="ev_lugar" placeholder="Ej: Comisaría 16 Belén"></div>
+      <div class="form-row"><label>Lugar / despacho</label><input type="text" id="ev_lugar"></div>
     </div>
     <div class="form-row"><label>Radicado relacionado</label><input type="text" id="ev_rad"></div>
     <div class="form-row"><label>Notas / documentos que llevar</label><textarea id="ev_notes"></textarea></div>
@@ -511,8 +543,8 @@ tr:hover td{background:var(--bg2)}
       <div class="form-row"><label>Fecha de vencimiento <span class="req">*</span></label><input type="date" id="al_date"></div>
       <div class="form-row"><label>Nivel</label><select id="al_level"><option value="danger">🔴 Crítico</option><option value="warning">🟡 Importante</option><option value="info">🔵 Informativo</option></select></div>
     </div>
-    <div class="form-row"><label>Consecuencia legal del vencimiento</label><textarea id="al_consequence" placeholder="¿Qué pasa si vence este plazo sin acción?"></textarea></div>
-    <div class="form-row"><label>Acción a tomar</label><input type="text" id="al_action" placeholder="Ej: Presentar tutela ante Tribunal Superior"></div>
+    <div class="form-row"><label>Consecuencia legal</label><textarea id="al_consequence" placeholder="¿Qué pasa si vence sin acción?"></textarea></div>
+    <div class="form-row"><label>Acción a tomar</label><input type="text" id="al_action"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('alertModal')">Cancelar</button>
       <button class="btn primary" onclick="saveAlert()">✓ Guardar</button>
@@ -523,16 +555,16 @@ tr:hover td{background:var(--bg2)}
 <div class="overlay" id="pendModal">
   <div class="modal">
     <div class="modal-title">✅ Nueva tarea pendiente</div>
-    <div class="form-row"><label>Descripción <span class="req">*</span></label><input type="text" id="p_title" placeholder="Ej: Llamar al Juzgado para verificar estado del recurso de apelación"></div>
+    <div class="form-row"><label>Descripción <span class="req">*</span></label><input type="text" id="p_title" placeholder="Ej: Llamar al Juzgado — verificar estado recurso apelación"></div>
     <div class="form-grid">
       <div class="form-row"><label>Tipo</label><select id="p_type"><option>Llamada</option><option>Correo</option><option>Visita</option><option>Documento</option><option>Legal</option></select></div>
       <div class="form-row"><label>Prioridad</label><select id="p_priority"><option>Urgente</option><option>Alta</option><option>Normal</option></select></div>
     </div>
     <div class="form-grid">
       <div class="form-row"><label>Fecha límite</label><input type="date" id="p_due"></div>
-      <div class="form-row"><label>Radicado / proceso relacionado</label><input type="text" id="p_related"></div>
+      <div class="form-row"><label>Radicado / proceso</label><input type="text" id="p_related"></div>
     </div>
-    <div class="form-row"><label>Notas / instrucciones</label><textarea id="p_notes" placeholder="Qué hacer, a quién contactar, qué preguntar..."></textarea></div>
+    <div class="form-row"><label>Notas</label><textarea id="p_notes"></textarea></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('pendModal')">Cancelar</button>
       <button class="btn primary" onclick="savePending()">✓ Guardar</button>
@@ -543,20 +575,20 @@ tr:hover td{background:var(--bg2)}
 <div class="overlay" id="falloModal">
   <div class="modal">
     <div class="modal-title">⚖️ Registrar fallo / resolución</div>
-    <div class="form-row"><label>Título <span class="req">*</span></label><input type="text" id="f_title" placeholder="Ej: Resolución 344 — Declaratoria de reincidencia JELP"></div>
+    <div class="form-row"><label>Título <span class="req">*</span></label><input type="text" id="f_title" placeholder="Ej: Resolución 344 — Reincidencia JELP"></div>
     <div class="form-grid">
       <div class="form-row"><label>Fecha <span class="req">*</span></label><input type="date" id="f_date"></div>
-      <div class="form-row"><label>Autoridad</label><input type="text" id="f_auth" placeholder="Ej: Comisaría de Familia Comuna 16 Belén"></div>
+      <div class="form-row"><label>Autoridad</label><input type="text" id="f_auth"></div>
     </div>
     <div class="form-grid">
       <div class="form-row"><label>Radicado</label><input type="text" id="f_rad"></div>
       <div class="form-row"><label>Tipo</label><select id="f_type"><option>Medida de protección</option><option>Fallo de fondo</option><option>Auto interlocutorio</option><option>Sentencia</option><option>Resolución administrativa</option><option>Otro</option></select></div>
     </div>
-    <div class="form-row"><label>Decisión adoptada</label><textarea id="f_decision" placeholder="Describe la decisión completa, medidas ordenadas y responsables..."></textarea></div>
-    <div class="form-row"><label>Acciones jurídicas que genera</label><textarea id="f_actions" placeholder="Ej: Constituye título ejecutivo. Agravante reincidencia Art. 229 CP. Base queja Procuraduría..."></textarea></div>
-    <div class="form-row"><label>Pendiente de este fallo</label><textarea id="f_pending" placeholder="Qué queda por hacer a raíz de esta decisión..."></textarea></div>
+    <div class="form-row"><label>Decisión adoptada</label><textarea id="f_decision"></textarea></div>
+    <div class="form-row"><label>Acciones jurídicas que genera</label><textarea id="f_actions"></textarea></div>
+    <div class="form-row"><label>Pendiente de este fallo</label><textarea id="f_pending"></textarea></div>
     <div class="form-grid">
-      <div class="form-row"><label>Estado de cumplimiento</label><select id="f_compliance"><option>Cumplido</option><option>Parcialmente cumplido</option><option>Incumplido</option><option>Pendiente de ejecución</option></select></div>
+      <div class="form-row"><label>Cumplimiento</label><select id="f_compliance"><option>Cumplido</option><option>Parcialmente cumplido</option><option>Incumplido</option><option>Pendiente de ejecución</option></select></div>
       <div class="form-row"><label>Apelable hasta</label><input type="date" id="f_appeal"></div>
     </div>
     <div class="modal-footer">
@@ -569,19 +601,19 @@ tr:hover td{background:var(--bg2)}
 <div class="overlay" id="procesoModal">
   <div class="modal">
     <div class="modal-title">🗂️ Registrar proceso activo</div>
-    <div class="form-row"><label>Nombre del proceso <span class="req">*</span></label><input type="text" id="pr_name" placeholder="Ej: Proceso penal — LFGG como víctima — Fiscalía 011"></div>
+    <div class="form-row"><label>Nombre del proceso <span class="req">*</span></label><input type="text" id="pr_name"></div>
     <div class="form-grid">
-      <div class="form-row"><label>Radicado principal <span class="req">*</span></label><input type="text" id="pr_rad"></div>
+      <div class="form-row"><label>Radicado <span class="req">*</span></label><input type="text" id="pr_rad"></div>
       <div class="form-row"><label>Tipo</label><select id="pr_type"><option>Penal — víctima</option><option>Penal — denunciada</option><option>Civil / familia</option><option>Administrativo</option><option>Disciplinario</option><option>Otro</option></select></div>
     </div>
     <div class="form-grid">
       <div class="form-row"><label>Entidad / despacho</label><input type="text" id="pr_entidad"></div>
       <div class="form-row"><label>Fecha de inicio</label><input type="date" id="pr_fecha"></div>
     </div>
-    <div class="form-row"><label>Estado actual</label><input type="text" id="pr_estado" placeholder="Ej: Remitido en apelación — sin actuación desde sept. 2023"></div>
-    <div class="form-row"><label>Última actuación</label><input type="text" id="pr_ultima" placeholder="Ej: 11/09/2023 — Remisión recurso de apelación"></div>
-    <div class="form-row"><label>Contraparte</label><input type="text" id="pr_contraparte" placeholder="Ej: JUAN ESTEBAN LÓPEZ PALACIO — C.C. 8.103.048"></div>
-    <div class="form-row"><label>Próxima actuación / pendiente</label><textarea id="pr_next" placeholder="Qué falta, cuándo, qué documentos llevar..."></textarea></div>
+    <div class="form-row"><label>Estado actual</label><input type="text" id="pr_estado"></div>
+    <div class="form-row"><label>Última actuación</label><input type="text" id="pr_ultima"></div>
+    <div class="form-row"><label>Contraparte</label><input type="text" id="pr_contraparte"></div>
+    <div class="form-row"><label>Próxima actuación / pendiente</label><textarea id="pr_next"></textarea></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('procesoModal')">Cancelar</button>
       <button class="btn primary" onclick="saveProceso()">✓ Guardar</button>
@@ -589,332 +621,272 @@ tr:hover td{background:var(--bg2)}
   </div>
 </div>
 
-<!-- Change password modal -->
-<div class="overlay" id="changePwdModal">
-  <div class="modal" style="max-width:400px">
-    <div class="modal-title">🔑 Cambiar contraseña</div>
-    <div class="form-row"><label>Contraseña actual <span class="req">*</span></label><input type="password" id="cp_current" placeholder="••••••••"></div>
-    <div class="form-row"><label>Nueva contraseña <span class="req">*</span></label><input type="password" id="cp_new" placeholder="Mín. 8 caracteres" oninput="checkStrength(this.value,'cp_str','cp_slabel')">
-      <div class="strength-bar"><div class="strength-fill" id="cp_str"></div></div>
-      <div class="strength-label" id="cp_slabel"></div>
-    </div>
-    <div class="form-row"><label>Confirmar nueva contraseña <span class="req">*</span></label><input type="password" id="cp_confirm" placeholder="••••••••"></div>
-    <div class="lock-error" id="cp_error" style="margin-top:0;margin-bottom:10px"></div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('changePwdModal')">Cancelar</button>
-      <button class="btn primary" onclick="doChangePwd()">✓ Cambiar contraseña</button>
-    </div>
-  </div>
-</div>
-
-<input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
-
 <script>
-// ===== CRYPTO UTILS =====
-const ENC_KEY = 'expediente_enc_v1';
-const HASH_KEY = 'expediente_hash_v1';
-const SALT_KEY = 'expediente_salt_v1';
-const TIMEOUT_MIN = 5;
-
-async function getSalt(){
-  let s = localStorage.getItem(SALT_KEY);
-  if(!s){ s = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join(''); localStorage.setItem(SALT_KEY,s); }
-  return s;
-}
-
-async function deriveKey(pwd, salt){
-  const enc = new TextEncoder();
-  const keyMat = await crypto.subtle.importKey('raw', enc.encode(pwd), {name:'PBKDF2'}, false, ['deriveKey']);
-  return crypto.subtle.deriveKey(
-    {name:'PBKDF2', salt:enc.encode(salt), iterations:200000, hash:'SHA-256'},
-    keyMat, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']
-  );
-}
-
-async function hashPwd(pwd, salt){
-  const enc = new TextEncoder();
-  const keyMat = await crypto.subtle.importKey('raw', enc.encode(pwd+salt+'verify'), {name:'PBKDF2'}, false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({name:'PBKDF2', salt:enc.encode(salt+'chk'), iterations:100000, hash:'SHA-256'}, keyMat, 256);
-  return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-async function encrypt(data, key){
-  const enc = new TextEncoder();
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, enc.encode(JSON.stringify(data)));
-  const combined = new Uint8Array(iv.length + ct.byteLength);
-  combined.set(iv); combined.set(new Uint8Array(ct), iv.length);
-  return btoa(String.fromCharCode(...combined));
-}
-
-async function decrypt(b64, key){
-  const bytes = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
-  const iv = bytes.slice(0,12), ct = bytes.slice(12);
-  const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, ct);
-  return JSON.parse(new TextDecoder().decode(pt));
-}
+// ===== SUPABASE CONFIG =====
+const SUPA_URL = 'https://mxglrdkokdbpygczlcgo.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14Z2xyZGtva2RicHlnY3psY2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjA5NjgsImV4cCI6MjA5Nzk5Njk2OH0.0GIVFMzU4pBQMSXmVZ_mrnG-jhnjadaashBT5XcaScg';
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY);
 
 // ===== STATE =====
-let cryptoKey = null;
-let db = {docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[]};
+let db = {docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[]};
+let currentUser = null;
+let dbRowId = null;
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
-let timeoutTimer = null, timeoutStart = null;
+let inactTimer = null;
+const INACT_MIN = 10;
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DAYS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
-// ===== LOCK / UNLOCK =====
-async function initApp(){
-  const hasData = !!localStorage.getItem(ENC_KEY);
-  const hasHash = !!localStorage.getItem(HASH_KEY);
-  if(!hasData && !hasHash){
-    showSetupForm();
+// ===== AUTH =====
+let authMode = 'login';
+
+function switchAuthTab(mode){
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&mode==='login')||(i===1&&mode==='register')));
+  document.getElementById('authError').style.display='none';
+  document.getElementById('authSuccess').style.display='none';
+  renderAuthForm();
+}
+
+function renderAuthForm(){
+  const f = document.getElementById('authForm');
+  if(authMode==='login'){
+    f.innerHTML=`
+      <div class="form-row"><label>Correo electrónico</label><input type="email" id="a_email" value="defensaluisafernanda@gmail.com" placeholder="correo@gmail.com"></div>
+      <div class="form-row"><label>Contraseña</label><input type="password" id="a_pwd" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="auth-btn" onclick="doLogin()">🔓 Entrar</button>
+      <span class="auth-link" onclick="switchAuthTab('reset')">¿Olvidaste tu contraseña? Recuperar por correo</span>
+    `;
+  } else if(authMode==='register'){
+    f.innerHTML=`
+      <div class="form-row"><label>Correo electrónico</label><input type="email" id="a_email" value="defensaluisafernanda@gmail.com"></div>
+      <div class="form-row"><label>Contraseña (mín. 8 caracteres)</label><input type="password" id="a_pwd" placeholder="Crea una contraseña segura"></div>
+      <div class="form-row"><label>Confirmar contraseña</label><input type="password" id="a_pwd2" placeholder="Repite la contraseña" onkeydown="if(event.key==='Enter')doRegister()"></div>
+      <button class="auth-btn" onclick="doRegister()">✓ Crear cuenta</button>
+    `;
   } else {
-    showLoginForm();
+    f.innerHTML=`
+      <div class="form-row"><label>Correo electrónico</label><input type="email" id="a_email" value="defensaluisafernanda@gmail.com"></div>
+      <button class="auth-btn" onclick="doReset()">📧 Enviar correo de recuperación</button>
+      <span class="auth-link" onclick="switchAuthTab('login')">← Volver a iniciar sesión</span>
+    `;
+    document.getElementById('authTabs').style.display='none';
   }
 }
 
-function showSetupForm(){
-  document.getElementById('lockIcon').textContent = '🔐';
-  document.getElementById('lockTitle').textContent = 'Crear contraseña maestra';
-  document.getElementById('lockSub').textContent = 'Elige una contraseña segura. Sin ella no podrás acceder a tus datos. Guárdala en un lugar seguro.';
-  document.getElementById('lockForm').innerHTML = `
-    <div class="form-row"><label>Nueva contraseña <span class="req">*</span></label>
-      <input type="password" id="s_pwd" placeholder="Mín. 8 caracteres" oninput="checkStrength(this.value,'s_str','s_slabel')">
-      <div class="strength-bar"><div class="strength-fill" id="s_str"></div></div>
-      <div class="strength-label" id="s_slabel"></div>
-    </div>
-    <div class="form-row"><label>Confirmar contraseña <span class="req">*</span></label>
-      <input type="password" id="s_pwd2" placeholder="Repite la contraseña" onkeydown="if(event.key==='Enter')setupPwd()">
-    </div>
-    <button class="lock-btn" onclick="setupPwd()">✓ Crear contraseña y entrar</button>
-  `;
-  document.getElementById('lockHint').innerHTML = `<strong>⚠️ Sin tu contraseña, los datos NO son recuperables.</strong><br>Guárdala en un gestor de contraseñas o anótala en un lugar privado y seguro.`;
+function showAuthError(msg){ const e=document.getElementById('authError'); e.textContent=msg; e.style.display='block'; }
+function showAuthSuccess(msg){ const e=document.getElementById('authSuccess'); e.textContent=msg; e.style.display='block'; }
+
+async function doLogin(){
+  const email=document.getElementById('a_email').value.trim();
+  const pwd=document.getElementById('a_pwd').value;
+  if(!email||!pwd){ showAuthError('Completa todos los campos'); return; }
+  const btn=document.querySelector('.auth-btn'); btn.disabled=true; btn.textContent='Entrando...';
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pwd});
+  if(error){ showAuthError(error.message==='Invalid login credentials'?'Correo o contraseña incorrectos':error.message); btn.disabled=false; btn.textContent='🔓 Entrar'; return; }
+  await enterApp(data.user);
 }
 
-function showLoginForm(){
-  document.getElementById('lockIcon').textContent = '🔒';
-  document.getElementById('lockTitle').textContent = 'Expediente Legal';
-  document.getElementById('lockSub').textContent = 'Ingresa tu contraseña para acceder a tu expediente cifrado.';
-  document.getElementById('lockForm').innerHTML = `
-    <div class="form-row"><label>Contraseña</label>
-      <input type="password" id="l_pwd" placeholder="••••••••" autofocus onkeydown="if(event.key==='Enter')login()">
-    </div>
-    <button class="lock-btn" onclick="login()">🔓 Entrar</button>
-  `;
-  document.getElementById('lockHint').textContent = '';
-  setTimeout(()=>{ const el=document.getElementById('l_pwd'); if(el) el.focus(); },100);
+async function doRegister(){
+  const email=document.getElementById('a_email').value.trim();
+  const pwd=document.getElementById('a_pwd').value;
+  const pwd2=document.getElementById('a_pwd2').value;
+  if(!email||!pwd||!pwd2){ showAuthError('Completa todos los campos'); return; }
+  if(pwd.length<8){ showAuthError('La contraseña debe tener al menos 8 caracteres'); return; }
+  if(pwd!==pwd2){ showAuthError('Las contraseñas no coinciden'); return; }
+  const btn=document.querySelector('.auth-btn'); btn.disabled=true; btn.textContent='Creando cuenta...';
+  const {data,error}=await sb.auth.signUp({email,password:pwd});
+  if(error){ showAuthError(error.message); btn.disabled=false; btn.textContent='✓ Crear cuenta'; return; }
+  showAuthSuccess('✓ Cuenta creada. Revisa tu correo defensaluisafernanda@gmail.com para verificar tu cuenta, luego inicia sesión.');
+  btn.disabled=false; btn.textContent='✓ Crear cuenta';
+  setTimeout(()=>switchAuthTab('login'),3000);
 }
 
-async function setupPwd(){
-  const p1 = document.getElementById('s_pwd').value;
-  const p2 = document.getElementById('s_pwd2').value;
-  const err = document.getElementById('lockError');
-  err.style.display='none';
-  if(p1.length < 8){ showErr('La contraseña debe tener al menos 8 caracteres.'); return; }
-  if(p1 !== p2){ showErr('Las contraseñas no coinciden.'); return; }
-  const score = getStrengthScore(p1);
-  if(score < 2){ showErr('La contraseña es muy débil. Usa mayúsculas, números y símbolos.'); return; }
-  const btn = document.querySelector('.lock-btn');
-  btn.disabled = true; btn.textContent = 'Cifrando datos...';
-  try{
-    const salt = await getSalt();
-    const hash = await hashPwd(p1, salt);
-    localStorage.setItem(HASH_KEY, hash);
-    cryptoKey = await deriveKey(p1, salt);
-    seedData();
-    await saveEncrypted();
-    enterApp();
-  }catch(e){ showErr('Error: '+e.message); btn.disabled=false; btn.textContent='✓ Crear contraseña y entrar'; }
+async function doReset(){
+  const email=document.getElementById('a_email').value.trim();
+  if(!email){ showAuthError('Ingresa tu correo'); return; }
+  const btn=document.querySelector('.auth-btn'); btn.disabled=true; btn.textContent='Enviando...';
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
+  if(error){ showAuthError(error.message); btn.disabled=false; btn.textContent='📧 Enviar correo de recuperación'; return; }
+  showAuthSuccess('✓ Correo enviado a '+email+'. Revisa tu bandeja de entrada y sigue el enlace para crear una nueva contraseña.');
+  btn.disabled=false;
 }
 
-async function login(){
-  const pwd = document.getElementById('l_pwd')?.value || '';
-  const btn = document.querySelector('.lock-btn');
-  const err = document.getElementById('lockError');
-  err.style.display='none';
-  if(!pwd){ showErr('Ingresa tu contraseña.'); return; }
-  btn.disabled=true; btn.textContent='Verificando...';
-  try{
-    const salt = await getSalt();
-    const hash = await hashPwd(pwd, salt);
-    const storedHash = localStorage.getItem(HASH_KEY);
-    if(hash !== storedHash){ showErr('Contraseña incorrecta. Inténtalo de nuevo.'); btn.disabled=false; btn.textContent='🔓 Entrar'; return; }
-    cryptoKey = await deriveKey(pwd, salt);
-    const enc = localStorage.getItem(ENC_KEY);
-    if(enc){ db = await decrypt(enc, cryptoKey); if(!db.procesos) db.procesos=[]; }
-    enterApp();
-  }catch(e){ showErr('Error al descifrar. Contraseña incorrecta.'); btn.disabled=false; btn.textContent='🔓 Entrar'; }
-}
-
-function showErr(msg){ const e=document.getElementById('lockError'); e.textContent=msg; e.style.display='block'; }
-
-function enterApp(){
-  document.getElementById('lockScreen').style.display='none';
-  document.getElementById('appShell').style.display='flex';
-  document.getElementById('todayDate').textContent = new Date().toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  startTimeout();
-  refreshAll();
+async function doLogout(){
+  await sb.auth.signOut();
+  currentUser=null; db={docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[]}; dbRowId=null;
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('authScreen').style.display='flex';
+  document.getElementById('authTabs').style.display='flex';
+  switchAuthTab('login');
 }
 
 function manualLock(){
-  if(!confirm('¿Bloquear la sesión ahora?')) return;
-  lockSession();
-}
-
-function lockSession(){
-  clearTimeout(timeoutTimer);
-  document.getElementById('timeoutBar').style.display='none';
-  document.getElementById('appShell').style.display='none';
-  cryptoKey = null;
-  document.getElementById('lockScreen').style.display='flex';
-  showLoginForm();
-}
-
-// ===== INACTIVITY =====
-function startTimeout(){
-  const ms = TIMEOUT_MIN * 60 * 1000;
-  clearTimeout(timeoutTimer);
-  timeoutStart = Date.now();
-  const bar = document.getElementById('timeoutBar');
-  bar.style.display='block';
-  bar.classList.remove('warning');
-  bar.style.transform='scaleX(1)';
-  timeoutTimer = setTimeout(showInactivityOverlay, ms);
-  updateTimeoutUI();
-}
-
-function updateTimeoutUI(){
-  const remaining = Math.max(0, TIMEOUT_MIN*60*1000 - (Date.now()-timeoutStart));
-  const mins = Math.floor(remaining/60000);
-  const secs = Math.floor((remaining%60000)/1000);
-  const frac = remaining / (TIMEOUT_MIN*60*1000);
-  const bar = document.getElementById('timeoutBar');
-  bar.style.transform=`scaleX(${frac})`;
-  if(frac < 0.2) bar.classList.add('warning'); else bar.classList.remove('warning');
-  const ti = document.getElementById('timeoutInfo');
-  if(ti) ti.textContent = `Bloqueo en ${mins}:${secs.toString().padStart(2,'0')}`;
-  if(remaining > 0) setTimeout(updateTimeoutUI, 1000);
-}
-
-function resetTimeout(){
-  if(cryptoKey) startTimeout();
-}
-
-function showInactivityOverlay(){
+  clearTimeout(inactTimer);
   document.getElementById('inactivityOverlay').classList.add('show');
   document.getElementById('inactPwd').value='';
-  document.getElementById('inactError').style.display='none';
-  setTimeout(()=>document.getElementById('inactPwd').focus(),100);
 }
 
-async function unlockFromInactivity(){
-  const pwd = document.getElementById('inactPwd').value;
-  const err = document.getElementById('inactError');
-  err.style.display='none';
+async function unlockInactivity(){
+  const pwd=document.getElementById('inactPwd').value;
+  const email=currentUser?.email||'defensaluisafernanda@gmail.com';
+  const {error}=await sb.auth.signInWithPassword({email,password:pwd});
+  if(error){ document.getElementById('inactErr').style.display='block'; return; }
+  document.getElementById('inactivityOverlay').classList.remove('show');
+  document.getElementById('inactErr').style.display='none';
+  resetInactTimer();
+}
+
+function resetInactTimer(){
+  clearTimeout(inactTimer);
+  inactTimer=setTimeout(()=>{ document.getElementById('inactivityOverlay').classList.add('show'); document.getElementById('inactPwd').value=''; }, INACT_MIN*60*1000);
+}
+
+['mousemove','keydown','touchstart','click'].forEach(e=>document.addEventListener(e,()=>{ if(currentUser) resetInactTimer(); }));
+
+// ===== ENTER APP =====
+async function enterApp(user){
+  currentUser=user;
+  document.getElementById('authScreen').style.display='none';
+  document.getElementById('appShell').style.display='flex';
+  document.getElementById('userEmail').textContent=user.email;
+  document.getElementById('todayDate').textContent=new Date().toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  setSyncStatus('Cargando...');
+  await loadData();
+  resetInactTimer();
+  refreshAll();
+  setSyncStatus('Sincronizado ✓');
+}
+
+// ===== DATA =====
+async function loadData(){
+  const {data,error}=await sb.from('expediente').select('*').eq('user_id',currentUser.id).single();
+  if(data){ db=data.data; dbRowId=data.id; if(!db.uploads) db.uploads=[]; }
+  else { seedData(); await saveData(); }
+}
+
+async function saveData(){
+  setSyncStatus('Guardando...');
+  const bar=document.getElementById('syncBar');
+  bar.classList.add('syncing');
   try{
-    const salt = await getSalt();
-    const hash = await hashPwd(pwd, salt);
-    if(hash !== localStorage.getItem(HASH_KEY)){ err.style.display='block'; return; }
-    cryptoKey = await deriveKey(pwd, salt);
-    document.getElementById('inactivityOverlay').classList.remove('show');
-    startTimeout();
-  }catch(e){ err.style.display='block'; }
-}
-
-document.addEventListener('mousemove', resetTimeout);
-document.addEventListener('keydown', resetTimeout);
-document.addEventListener('touchstart', resetTimeout);
-document.addEventListener('click', resetTimeout);
-
-// ===== CHANGE PASSWORD =====
-function changePwd(){ openModal('changePwdModal'); }
-
-async function doChangePwd(){
-  const cur = document.getElementById('cp_current').value;
-  const nw = document.getElementById('cp_new').value;
-  const conf = document.getElementById('cp_confirm').value;
-  const err = document.getElementById('cp_error');
-  err.style.display='none';
-  if(nw.length<8){ err.textContent='La nueva contraseña debe tener al menos 8 caracteres.'; err.style.display='block'; return; }
-  if(nw!==conf){ err.textContent='Las contraseñas no coinciden.'; err.style.display='block'; return; }
-  try{
-    const salt = await getSalt();
-    const curHash = await hashPwd(cur, salt);
-    if(curHash !== localStorage.getItem(HASH_KEY)){ err.textContent='La contraseña actual es incorrecta.'; err.style.display='block'; return; }
-    const newHash = await hashPwd(nw, salt);
-    localStorage.setItem(HASH_KEY, newHash);
-    cryptoKey = await deriveKey(nw, salt);
-    await saveEncrypted();
-    closeModal('changePwdModal');
-    alert('✓ Contraseña cambiada correctamente. Todos los datos fueron re-cifrados.');
-  }catch(e){ err.textContent='Error: '+e.message; err.style.display='block'; }
-}
-
-// ===== STRENGTH =====
-function getStrengthScore(p){
-  let s=0;
-  if(p.length>=8) s++;
-  if(p.length>=12) s++;
-  if(/[A-Z]/.test(p)) s++;
-  if(/[0-9]/.test(p)) s++;
-  if(/[^A-Za-z0-9]/.test(p)) s++;
-  return s;
-}
-
-function checkStrength(p, barId, labelId){
-  const s = getStrengthScore(p);
-  const bar = document.getElementById(barId);
-  const label = document.getElementById(labelId);
-  const colors=['#e05050','#e09040','#e09040','#40b070','#1a7a4a'];
-  const labels=['Muy débil','Débil','Regular','Fuerte','Muy fuerte'];
-  const pcts=['20%','40%','60%','80%','100%'];
-  bar.style.width = p ? pcts[Math.min(s,4)] : '0';
-  bar.style.background = p ? colors[Math.min(s,4)] : '';
-  label.textContent = p ? labels[Math.min(s,4)] : '';
-  label.style.color = p ? colors[Math.min(s,4)] : '';
-}
-
-// ===== SAVE / LOAD =====
-async function saveEncrypted(){
-  if(!cryptoKey) return;
-  const enc = await encrypt(db, cryptoKey);
-  localStorage.setItem(ENC_KEY, enc);
-}
-
-async function save(){
-  await saveEncrypted();
+    if(dbRowId){
+      await sb.from('expediente').update({data:db,updated_at:new Date().toISOString()}).eq('id',dbRowId);
+    } else {
+      const {data}=await sb.from('expediente').insert({user_id:currentUser.id,data:db}).select().single();
+      if(data) dbRowId=data.id;
+    }
+    bar.classList.remove('syncing'); bar.classList.add('done');
+    setTimeout(()=>bar.classList.remove('done'),600);
+    setSyncStatus('Sincronizado ✓');
+  }catch(e){
+    setSyncStatus('⚠ Error al guardar');
+    bar.classList.remove('syncing');
+  }
   refreshAll();
 }
 
-// ===== EXPORT / IMPORT =====
-function exportData(){
-  const blob = new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'expediente_lfgg_respaldo_'+new Date().toISOString().split('T')[0]+'.json';
-  a.click();
+function setSyncStatus(msg){ const el=document.getElementById('syncStatusText'); if(el) el.textContent=msg; }
+
+// ===== FILE UPLOAD =====
+function handleDrop(event,inputId){
+  event.preventDefault();
+  event.currentTarget.classList.remove('drag');
+  const file=event.dataTransfer.files[0];
+  if(!file) return;
+  const input=document.getElementById(inputId);
+  const dt=new DataTransfer(); dt.items.add(file); input.files=dt.files;
+  showSelectedFile(input, inputId==='d_file'?'filePreviewDoc':'filePreviewUp');
 }
-function importData(){ document.getElementById('importFile').click(); }
-async function handleImport(e){
-  const f=e.target.files[0]; if(!f) return;
-  const r=new FileReader();
-  r.onload=async ev=>{
-    try{
-      const d=JSON.parse(ev.target.result);
-      if(d.docs&&d.events&&d.alerts&&d.pending&&d.fallos){
-        if(!confirm('¿Reemplazar todos los datos actuales con los del archivo importado?')) return;
-        db=d; if(!db.procesos) db.procesos=[];
-        await save(); alert('✓ Datos importados y cifrados correctamente.');
-      } else { alert('Archivo inválido'); }
-    }catch(err){ alert('Error al importar: '+err.message); }
-  };
-  r.readAsText(f); e.target.value='';
+
+function showSelectedFile(input,previewId){
+  const el=document.getElementById(previewId); if(!el) return;
+  if(!input.files||!input.files[0]){ el.innerHTML=''; return; }
+  const f=input.files[0];
+  const size=(f.size/1024/1024).toFixed(1);
+  const icon=f.type.includes('pdf')?'📄':f.type.includes('word')||f.name.endsWith('.doc')||f.name.endsWith('.docx')?'📝':f.type.includes('image')?'🖼️':'📎';
+  el.innerHTML=`<div class="file-chip">${icon} ${f.name} <span style="color:var(--text3)">(${size}MB)</span></div>`;
+}
+
+async function uploadFileToSupabase(file, folder){
+  const ext=file.name.split('.').pop();
+  const path=`${currentUser.id}/${folder}/${Date.now()}_${file.name}`;
+  const {data,error}=await sb.storage.from('documentos').upload(path,file,{cacheControl:'3600',upsert:false});
+  if(error) throw new Error('Error subiendo archivo: '+error.message);
+  return path;
+}
+
+async function getFileUrl(path){
+  const {data}=await sb.storage.from('documentos').createSignedUrl(path,3600);
+  return data?.signedUrl||null;
+}
+
+async function saveDoc(){
+  const n=document.getElementById('d_nombre').value.trim();
+  const f=document.getElementById('d_fecha').value;
+  if(!n||!f){ alert('Nombre y fecha son obligatorios'); return; }
+  const btn=document.getElementById('docSaveBtn');
+  btn.disabled=true; btn.textContent='Guardando...';
+  try{
+    let filePath=null, fileName=null;
+    const fileInput=document.getElementById('d_file');
+    if(fileInput.files&&fileInput.files[0]){
+      const file=fileInput.files[0];
+      if(file.size>50*1024*1024){ alert('El archivo no puede superar 50MB'); btn.disabled=false; btn.textContent='✓ Guardar'; return; }
+      filePath=await uploadFileToSupabase(file,'docs');
+      fileName=file.name;
+    }
+    const doc={id:Date.now(),fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:document.getElementById('d_vence').value,notas:document.getElementById('d_notas').value.trim(),filePath,fileName};
+    db.docs.push(doc);
+    if(doc.vence) db.alerts.push({id:Date.now()+1,title:'Vencimiento: '+doc.nombre,date:doc.vence,level:'warning',consequence:'Revisar acción requerida.',action:''});
+    await saveData();
+    closeModal('docModal');
+    ['d_fecha','d_fechaRad','d_nombre','d_entidad','d_radicado','d_resumen','d_ubicacion','d_vence','d_notas'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('d_plazo').value=''; document.getElementById('d_file').value=''; document.getElementById('filePreviewDoc').innerHTML='';
+  }catch(e){ alert('Error: '+e.message); }
+  btn.disabled=false; btn.textContent='✓ Guardar';
+}
+
+async function saveUpload(){
+  const n=document.getElementById('up_nombre').value.trim();
+  const fileInput=document.getElementById('up_file');
+  if(!n||!fileInput.files||!fileInput.files[0]){ alert('Nombre y archivo son obligatorios'); return; }
+  const btn=document.getElementById('upSaveBtn');
+  btn.disabled=true; btn.textContent='Subiendo...';
+  try{
+    const file=fileInput.files[0];
+    if(file.size>50*1024*1024){ alert('El archivo no puede superar 50MB'); btn.disabled=false; btn.textContent='⬆ Subir archivo'; return; }
+    const filePath=await uploadFileToSupabase(file,'uploads');
+    db.uploads.push({id:Date.now(),nombre:n,cat:document.getElementById('up_cat').value,notas:document.getElementById('up_notas').value.trim(),filePath,fileName:file.name,fileSize:file.size,date:new Date().toISOString().split('T')[0]});
+    await saveData();
+    closeModal('uploadModal');
+    ['up_nombre','up_notas'].forEach(id=>document.getElementById(id).value='');
+    fileInput.value=''; document.getElementById('filePreviewUp').innerHTML='';
+    navigate('archivos');
+  }catch(e){ alert('Error: '+e.message); }
+  btn.disabled=false; btn.textContent='⬆ Subir archivo';
+}
+
+async function openFile(path){
+  try{ const url=await getFileUrl(path); if(url) window.open(url,'_blank'); else alert('No se pudo obtener el archivo.'); }
+  catch(e){ alert('Error: '+e.message); }
+}
+
+async function deleteFile(path, collection, id){
+  if(!confirm('¿Eliminar este archivo?')) return;
+  try{
+    await sb.storage.from('documentos').remove([path]);
+    if(collection==='docs'){ const doc=db.docs.find(d=>d.id===id); if(doc){doc.filePath=null;doc.fileName=null;} }
+    else { db.uploads=db.uploads.filter(u=>u.id!==id); }
+    await saveData();
+  }catch(e){ alert('Error: '+e.message); }
 }
 
 // ===== RENDER =====
 function refreshAll(){
   updateNav();
-  const v = document.querySelector('.section.active');
+  const v=document.querySelector('.section.active');
   if(v) renderView(v.id.replace('view-',''));
 }
 
@@ -922,6 +894,7 @@ function renderView(id){
   switch(id){
     case 'dashboard': renderDashboard(); break;
     case 'documentos': renderDocs(); break;
+    case 'archivos': renderArchivos(); break;
     case 'alertas': renderAlerts(); break;
     case 'calendario': renderCalendar(); break;
     case 'pendientes': renderPending(); break;
@@ -938,7 +911,6 @@ function navigate(id){
   renderView(id);
   if(window.innerWidth<=700) document.getElementById('sidebar').classList.remove('open');
 }
-
 function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
 
 function updateNav(){
@@ -947,14 +919,13 @@ function updateNav(){
   const crit=db.alerts.filter(a=>{ const d=new Date(a.date+'T00:00:00'); return d>=today&&d<=in5&&a.level==='danger'; }).length;
   const warn=db.alerts.filter(a=>{ const d=new Date(a.date+'T00:00:00'); return d>=today&&d<=in5&&a.level==='warning'; }).length;
   const pend=db.pending.filter(p=>!p.done).length;
-  const nb=document.getElementById('nbAlerts'); if(nb){nb.textContent=crit||'';nb.style.display=crit?'':'none';}
-  const nw=document.getElementById('nbWarn'); if(nw){nw.textContent=warn||'';nw.style.display=warn?'':'none';}
-  const np=document.getElementById('nbPend'); if(np){np.textContent=pend||'';np.style.display=pend?'':'none';}
-  const nd=document.getElementById('nbDocs'); if(nd){nd.textContent=db.docs.length;nd.style.display=db.docs.length?'':'none';}
+  const setNb=(id,val,cls)=>{ const el=document.getElementById(id); if(!el) return; el.textContent=val||''; el.className='nav-badge'+(cls?' '+cls:'')+(val?' show':''); };
+  setNb('nbAlerts',crit,'danger'); setNb('nbWarn',warn,'warn'); setNb('nbPend',pend,'warn');
+  const nd=document.getElementById('nbDocs'); if(nd){ nd.textContent=db.docs.length; nd.className='nav-badge'+(db.docs.length?' show':''); nd.style.background='var(--text3)'; }
 }
 
-function fmt(s){ if(!s) return '—'; const[y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
-function daysLeft(s){ if(!s) return null; const t=new Date(); t.setHours(0,0,0,0); return Math.ceil((new Date(s+'T00:00:00')-t)/86400000); }
+const fmt=s=>{ if(!s) return '—'; const[y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
+const daysLeft=s=>{ if(!s) return null; const t=new Date(); t.setHours(0,0,0,0); return Math.ceil((new Date(s+'T00:00:00')-t)/86400000); };
 function deadlineBadge(s){
   if(!s) return '';
   const d=daysLeft(s);
@@ -972,22 +943,21 @@ const COMP_BADGE={Cumplido:'success','Parcialmente cumplido':'warning',Incumplid
 function renderDashboard(){
   const today=new Date(); today.setHours(0,0,0,0);
   const in5=new Date(today); in5.setDate(in5.getDate()+5);
-  const critAlerts=db.alerts.filter(a=>{ const d=new Date(a.date+'T00:00:00'); return d>=today&&d<=in5&&a.level==='danger'; });
-  document.getElementById('dashBanners').innerHTML=critAlerts.map(a=>`<div class="alert-banner danger">🚨 <div><strong>Alerta crítica:</strong> ${a.title} — vence ${fmt(a.date)}<br><small>${a.consequence||''}</small></div></div>`).join('');
+  const crit=db.alerts.filter(a=>{ const d=new Date(a.date+'T00:00:00'); return d>=today&&d<=in5&&a.level==='danger'; });
+  document.getElementById('dashBanners').innerHTML=crit.map(a=>`<div class="alert-banner danger">🚨 <div><strong>Alerta crítica:</strong> ${a.title} — vence ${fmt(a.date)}<br><small>${a.consequence||''}</small></div></div>`).join('');
   const hearings=db.events.filter(e=>e.type==='hearing'&&new Date(e.date+'T00:00:00')>=today).length;
-  const pendCount=db.pending.filter(p=>!p.done).length;
   document.getElementById('statsRow').innerHTML=`
-    <div class="stat danger"><div class="stat-label">Alertas críticas</div><div class="stat-value">${critAlerts.length}</div><div class="stat-sub">próximos 5 días</div></div>
+    <div class="stat danger"><div class="stat-label">Alertas críticas</div><div class="stat-value">${crit.length}</div><div class="stat-sub">próximos 5 días</div></div>
     <div class="stat"><div class="stat-label">Documentos</div><div class="stat-value">${db.docs.length}</div><div class="stat-sub">en el expediente</div></div>
-    <div class="stat warning"><div class="stat-label">Pendientes</div><div class="stat-value">${pendCount}</div><div class="stat-sub">por completar</div></div>
+    <div class="stat warning"><div class="stat-label">Pendientes</div><div class="stat-value">${db.pending.filter(p=>!p.done).length}</div><div class="stat-sub">por completar</div></div>
     <div class="stat info"><div class="stat-label">Audiencias</div><div class="stat-value">${hearings}</div><div class="stat-sub">próximas</div></div>
     <div class="stat"><div class="stat-label">Procesos</div><div class="stat-value">${db.procesos.length}</div><div class="stat-sub">activos</div></div>
-    <div class="stat success"><div class="stat-label">Fallos registrados</div><div class="stat-value">${db.fallos.length}</div><div class="stat-sub">resoluciones</div></div>
+    <div class="stat success"><div class="stat-label">Archivos subidos</div><div class="stat-value">${db.uploads.length}</div><div class="stat-sub">en la nube</div></div>
   `;
-  const deadlines=db.docs.filter(d=>d.vence&&daysLeft(d.vence)!==null&&daysLeft(d.vence)>=0).sort((a,b)=>a.vence.localeCompare(b.vence)).slice(0,5);
+  const deadlines=db.docs.filter(d=>d.vence&&daysLeft(d.vence)>=0).sort((a,b)=>a.vence.localeCompare(b.vence)).slice(0,5);
   document.getElementById('dashDeadlines').innerHTML=deadlines.length===0?'<div class="empty"><span class="empty-icon">🎉</span>Sin vencimientos próximos</div>':deadlines.map(d=>`<div class="card" style="margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${d.nombre}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>${deadlineBadge(d.vence)}</div></div>`).join('');
   const urgent=db.pending.filter(p=>!p.done&&p.priority==='Urgente').slice(0,5);
-  document.getElementById('dashUrgent').innerHTML=urgent.length===0?'<div class="empty"><span class="empty-icon">✅</span>Sin tareas urgentes</div>':urgent.map(p=>`<div class="card priority-urgente" style="margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${p.title}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${p.type}${p.due?' · Límite: '+fmt(p.due):''}${p.related?' · '+p.related:''}</div></div>`).join('');
+  document.getElementById('dashUrgent').innerHTML=urgent.length===0?'<div class="empty"><span class="empty-icon">✅</span>Sin tareas urgentes</div>':urgent.map(p=>`<div class="card" style="border-left:3px solid var(--danger);margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${p.title}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${p.type}${p.due?' · Límite: '+fmt(p.due):''}${p.related?' · '+p.related:''}</div></div>`).join('');
 }
 
 function renderDocs(){
@@ -1001,22 +971,52 @@ function renderDocs(){
     return true;
   }).sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const tb=document.getElementById('docsTable'); if(!tb) return;
-  tb.innerHTML=docs.length===0?`<tr><td colspan="8"><div class="empty"><span class="empty-icon">📄</span>Sin documentos que coincidan</div></td></tr>`:docs.map(d=>`<tr>
+  tb.innerHTML=docs.length===0?`<tr><td colspan="9"><div class="empty"><span class="empty-icon">📄</span>Sin documentos que coincidan</div></td></tr>`:docs.map(d=>`<tr>
     <td style="white-space:nowrap;font-size:12px;color:var(--text3)">${fmt(d.fecha)}</td>
-    <td style="max-width:280px"><div class="td-name">${d.nombre}</div><div class="td-sub">${(d.resumen||'').substring(0,90)}${(d.resumen||'').length>90?'…':''}</div></td>
+    <td style="max-width:240px"><div class="td-name">${d.nombre}</div><div class="td-sub">${(d.resumen||'').substring(0,80)}${(d.resumen||'').length>80?'…':''}</div></td>
     <td><span class="badge ${CAT_BADGE[d.cat]||'neutral'}">${d.cat}</span></td>
-    <td style="font-size:12px;max-width:130px;color:var(--text2)">${d.entidad||'—'}</td>
-    <td><div class="td-rad" title="${d.radicado||''}">${d.radicado||'—'}</div></td>
+    <td style="font-size:12px;max-width:120px;color:var(--text2)">${d.entidad||'—'}</td>
+    <td style="font-size:11px;color:var(--text3);font-family:monospace;max-width:120px;overflow:hidden;text-overflow:ellipsis">${d.radicado||'—'}</td>
     <td><span class="badge ${STATUS_BADGE[d.status]||'neutral'}">${d.status}</span></td>
     <td>${deadlineBadge(d.vence)}</td>
+    <td>${d.filePath?`<button class="btn sm" onclick="openFile('${d.filePath}')" title="Ver archivo">📂 Ver</button>`:''}</td>
     <td><button class="btn sm danger" onclick="delItem('docs',${d.id})">🗑</button></td>
   </tr>`).join('');
+}
+
+function renderArchivos(){
+  const el=document.getElementById('archivosContent'); if(!el) return;
+  const allFiles=[
+    ...db.uploads.map(u=>({...u,source:'upload'})),
+    ...db.docs.filter(d=>d.filePath).map(d=>({id:d.id,nombre:d.nombre,cat:d.cat,filePath:d.filePath,fileName:d.fileName,date:d.fecha,notas:d.resumen,source:'doc'}))
+  ].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(allFiles.length===0){ el.innerHTML=`<div class="empty"><span class="empty-icon">📎</span><div>No hay archivos subidos aún</div><div style="font-size:13px;margin-top:8px">Adjunta archivos al crear documentos o usa el botón "+ Subir archivo"</div></div>`; return; }
+  const fileIcon=name=>{ if(!name) return '📎'; const e=name.split('.').pop().toLowerCase(); if(e==='pdf') return '📄'; if(['doc','docx'].includes(e)) return '📝'; if(['jpg','jpeg','png','heic','webp'].includes(e)) return '🖼️'; return '📎'; };
+  const fileSize=s=>s?`${(s/1024/1024).toFixed(1)}MB`:'';
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">`+allFiles.map(f=>`
+    <div class="card" style="padding:14px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="font-size:28px;flex-shrink:0">${fileIcon(f.fileName)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.nombre}</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${f.fileName||''} ${fileSize(f.fileSize)}</div>
+          <span class="badge ${CAT_BADGE[f.cat]||'neutral'}" style="font-size:10px">${f.cat}</span>
+          <span class="badge neutral" style="font-size:10px;margin-left:4px">${f.source==='doc'?'Adjunto a doc':'Archivo independiente'}</span>
+          ${f.notas?`<div style="font-size:11px;color:var(--text2);margin-top:6px;line-height:1.4">${f.notas.substring(0,80)}${f.notas.length>80?'…':''}</div>`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
+        <button class="btn sm primary" onclick="openFile('${f.filePath}')" style="flex:1">📂 Ver / descargar</button>
+        <button class="btn sm danger" onclick="deleteFile('${f.filePath}','${f.source==='doc'?'docs':'uploads'}',${f.id})">🗑</button>
+      </div>
+    </div>
+  `).join('')+`</div>`;
 }
 
 function renderAlerts(){
   const el=document.getElementById('alertsContent'); if(!el) return;
   const sorted=[...db.alerts].sort((a,b)=>a.date.localeCompare(b.date));
-  el.innerHTML=sorted.length===0?`<div class="empty"><span class="empty-icon">🔔</span>Sin alertas registradas</div>`:sorted.map(a=>{
+  el.innerHTML=sorted.length===0?`<div class="empty"><span class="empty-icon">🔔</span>Sin alertas</div>`:sorted.map(a=>{
     const d=daysLeft(a.date); const past=d!==null&&d<0; const lvl=past?'danger':a.level;
     return `<div class="card" style="border-left:3px solid var(--${lvl})">
       <div class="card-header">
@@ -1040,27 +1040,15 @@ function renderCalendar(){
   let html='';
   for(let i=0;i<totalCells;i++){
     const d=new Date(calYear,calMonth,1+(i-startDay));
-    const isOther=d.getMonth()!==calMonth;
-    const isToday=d.getTime()===today.getTime();
     const ds=d.toISOString().split('T')[0];
     const evts=db.events.filter(e=>e.date===ds);
-    html+=`<div class="cal-cell${isOther?' other':''}${isToday?' today':''}"><div class="cal-num">${d.getDate()}</div>${evts.map(e=>`<div class="cal-evt ${e.type}" title="${e.title}">${e.title.substring(0,14)}…</div>`).join('')}</div>`;
+    html+=`<div class="cal-cell${d.getMonth()!==calMonth?' other':''}${d.getTime()===today.getTime()?' today':''}"><div class="cal-num">${d.getDate()}</div>${evts.map(e=>`<div class="cal-evt ${e.type}" title="${e.title}">${e.title.substring(0,14)}…</div>`).join('')}</div>`;
   }
   grid.innerHTML=html;
   const upc=[...db.events].filter(e=>new Date(e.date+'T00:00:00')>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,8);
-  const ul=document.getElementById('upcomingList'); if(!ul) return;
-  ul.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Próximos eventos</div>`+(upc.length===0?'<div class="empty" style="padding:20px">Sin eventos próximos</div>':upc.map(e=>{
+  document.getElementById('upcomingList').innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Próximos eventos</div>`+(upc.length===0?'<div class="empty" style="padding:20px">Sin eventos próximos</div>':upc.map(e=>{
     const d2=new Date(e.date+'T00:00:00'); const dl=daysLeft(e.date);
-    return `<div class="upc-item">
-      <div class="upc-date ${e.type}"><div class="upc-day">${d2.getDate()}</div><div class="upc-dow">${DAYS[d2.getDay()]}</div></div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:500">${e.title}</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:3px">${e.time||''}${e.lugar?' · '+e.lugar:''} <span class="badge ${e.type==='hearing'?'warning':e.type==='deadline'?'danger':'success'}" style="font-size:10px">${e.type==='hearing'?'Audiencia':e.type==='deadline'?'Vencimiento':'Cita'}</span></div>
-        ${e.notes?`<div style="font-size:11px;color:var(--text2);margin-top:3px">${e.notes.substring(0,120)}…</div>`:''}
-        ${e.rad?`<div style="font-size:11px;color:var(--text3)">Rad: ${e.rad}</div>`:''}
-      </div>
-      <div style="font-size:11px;font-weight:600;color:${dl<=5?'var(--danger)':dl<=15?'var(--warning)':'var(--text3)'};white-space:nowrap">${dl===0?'Hoy':dl===1?'Mañana':'en '+dl+'d'}</div>
-    </div>`;
+    return `<div class="upc-item"><div class="upc-date ${e.type}"><div class="upc-day">${d2.getDate()}</div><div class="upc-dow">${DAYS[d2.getDay()]}</div></div><div style="flex:1"><div style="font-size:13px;font-weight:500">${e.title}</div><div style="font-size:12px;color:var(--text3);margin-top:3px">${e.time||''}${e.lugar?' · '+e.lugar:''} <span class="badge ${e.type==='hearing'?'warning':e.type==='deadline'?'danger':'success'}" style="font-size:10px">${e.type==='hearing'?'Audiencia':e.type==='deadline'?'Vencimiento':'Cita'}</span></div>${e.notes?`<div style="font-size:11px;color:var(--text2);margin-top:3px">${e.notes.substring(0,100)}…</div>`:''}</div><div style="font-size:11px;font-weight:600;color:${dl<=5?'var(--danger)':dl<=15?'var(--warning)':'var(--text3)'};white-space:nowrap">${dl===0?'Hoy':dl===1?'Mañana':'en '+dl+'d'}</div></div>`;
   }).join(''));
 }
 function changeMonth(d){ calMonth+=d; if(calMonth>11){calMonth=0;calYear++;} if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
@@ -1070,66 +1058,24 @@ function renderPending(){
   const typ=document.getElementById('pendType')?.value||'';
   const dn=document.getElementById('pendDone')?.value||'';
   const order={Urgente:0,Alta:1,Normal:2};
-  let items=[...db.pending].filter(p=>{
-    if(pri&&p.priority!==pri) return false;
-    if(typ&&p.type!==typ) return false;
-    if(dn==='false'&&p.done) return false;
-    if(dn==='true'&&!p.done) return false;
-    return true;
-  }).sort((a,b)=>{ if(a.done!==b.done) return a.done?1:-1; return (order[a.priority]||2)-(order[b.priority]||2); });
+  let items=[...db.pending].filter(p=>{ if(pri&&p.priority!==pri) return false; if(typ&&p.type!==typ) return false; if(dn==='false'&&p.done) return false; if(dn==='true'&&!p.done) return false; return true; }).sort((a,b)=>{ if(a.done!==b.done) return a.done?1:-1; return (order[a.priority]||2)-(order[b.priority]||2); });
   const el=document.getElementById('pendingContent'); if(!el) return;
-  el.innerHTML=items.length===0?`<div class="empty"><span class="empty-icon">✅</span>Sin tareas que coincidan</div>`:items.map(p=>`<div class="pending-item priority-${p.priority}${p.done?' done':''}">
-    <div class="pi-check" onclick="toggleDone(${p.id})">${p.done?'✓':''}</div>
-    <div style="flex:1">
-      <div class="pi-title">${p.title}</div>
-      <div class="pi-meta">
-        <span class="badge ${p.priority==='Urgente'?'danger':p.priority==='Alta'?'warning':'neutral'}" style="font-size:10px">${p.priority}</span>
-        <span class="badge info" style="font-size:10px">${p.type}</span>
-        ${p.due?`<span style="font-size:11px;color:var(--text3)">Límite: ${fmt(p.due)}</span>`:''}
-        ${p.related?`<span style="font-size:11px;color:var(--text3)">${p.related}</span>`:''}
-      </div>
-      ${p.notes?`<div class="pi-notes">${p.notes}</div>`:''}
-    </div>
-    <button class="btn sm danger" onclick="delItem('pending',${p.id})">🗑</button>
-  </div>`).join('');
+  el.innerHTML=items.length===0?`<div class="empty"><span class="empty-icon">✅</span>Sin tareas que coincidan</div>`:items.map(p=>`<div class="pending-item priority-${p.priority}${p.done?' done':''}"><div class="pi-check" onclick="toggleDone(${p.id})">${p.done?'✓':''}</div><div style="flex:1"><div class="pi-title">${p.title}</div><div class="pi-meta"><span class="badge ${p.priority==='Urgente'?'danger':p.priority==='Alta'?'warning':'neutral'}" style="font-size:10px">${p.priority}</span><span class="badge info" style="font-size:10px">${p.type}</span>${p.due?`<span style="font-size:11px;color:var(--text3)">Límite: ${fmt(p.due)}</span>`:''}${p.related?`<span style="font-size:11px;color:var(--text3)">${p.related}</span>`:''}</div>${p.notes?`<div class="pi-notes">${p.notes}</div>`:''}</div><button class="btn sm danger" onclick="delItem('pending',${p.id})">🗑</button></div>`).join('');
 }
 
 function renderFallos(){
   const el=document.getElementById('fallosContent'); if(!el) return;
   const sorted=[...db.fallos].sort((a,b)=>b.date.localeCompare(a.date));
-  el.innerHTML=sorted.length===0?`<div class="empty"><span class="empty-icon">⚖️</span>Sin fallos registrados</div>`:sorted.map(f=>`<div class="card">
-    <div class="card-header">
-      <div><div class="card-title">⚖️ ${f.title}</div><div class="card-meta">${fmt(f.date)} · ${f.auth||'—'} · Rad: ${f.rad||'—'}</div></div>
-      <div style="display:flex;gap:6px"><span class="badge ${COMP_BADGE[f.compliance]||'neutral'}">${f.compliance}</span><span class="badge purple" style="font-size:10px">${f.type||''}</span><button class="btn sm danger" onclick="delItem('fallos',${f.id})">🗑</button></div>
-    </div>
-    <div class="card-body">
-      <div style="margin-bottom:10px"><strong>Decisión:</strong> ${f.decision||'—'}</div>
-      ${f.actions?`<div class="card-section"><div class="card-section-title">⚡ Acciones jurídicas que genera</div>${f.actions}</div>`:''}
-      ${f.pending_?`<div style="margin-top:10px;padding:10px;background:var(--warningbg);border-radius:var(--radius);border-left:3px solid var(--warning)"><div style="font-size:10px;font-weight:700;color:var(--warningtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Pendiente de este fallo</div>${f.pending_}</div>`:''}
-      ${f.appeal?`<div style="margin-top:8px;font-size:12px;color:var(--text3)">Apelable hasta: ${fmt(f.appeal)}</div>`:''}
-    </div>
-  </div>`).join('');
+  el.innerHTML=sorted.length===0?`<div class="empty"><span class="empty-icon">⚖️</span>Sin fallos registrados</div>`:sorted.map(f=>`<div class="card"><div class="card-header"><div><div class="card-title">⚖️ ${f.title}</div><div class="card-meta">${fmt(f.date)} · ${f.auth||'—'} · Rad: ${f.rad||'—'}</div></div><div style="display:flex;gap:6px"><span class="badge ${COMP_BADGE[f.compliance]||'neutral'}">${f.compliance}</span><span class="badge purple" style="font-size:10px">${f.type||''}</span><button class="btn sm danger" onclick="delItem('fallos',${f.id})">🗑</button></div></div><div class="card-body"><div style="margin-bottom:10px"><strong>Decisión:</strong> ${f.decision||'—'}</div>${f.actions?`<div class="card-section"><div class="card-section-title">⚡ Acciones jurídicas que genera</div>${f.actions}</div>`:''}${f.pending_?`<div style="margin-top:10px;padding:10px;background:var(--warningbg);border-radius:var(--radius);border-left:3px solid var(--warning)"><div style="font-size:10px;font-weight:700;color:var(--warningtext);text-transform:uppercase;margin-bottom:4px">Pendiente de este fallo</div>${f.pending_}</div>`:''}</div></div>`).join('');
 }
 
 function renderProcesos(){
   const el=document.getElementById('procesosContent'); if(!el) return;
   const typeColor={'Penal — víctima':'danger','Penal — denunciada':'warning','Civil / familia':'info',Administrativo:'neutral',Disciplinario:'purple'};
-  el.innerHTML=db.procesos.length===0?`<div class="empty"><span class="empty-icon">🗂️</span>Sin procesos registrados</div>`:db.procesos.map(p=>`<div class="card">
-    <div class="card-header">
-      <div><div class="card-title">🗂️ ${p.name}</div><div class="card-meta">Inicio: ${fmt(p.fecha)} · ${p.entidad||''}</div></div>
-      <div style="display:flex;gap:6px"><span class="badge ${typeColor[p.type]||'neutral'}" style="font-size:10px">${p.type}</span><button class="btn sm danger" onclick="delItem('procesos',${p.id})">🗑</button></div>
-    </div>
-    <div class="card-body">
-      <div style="margin-bottom:8px"><strong>Radicado:</strong> <code style="font-size:12px;background:var(--bg2);padding:2px 6px;border-radius:4px">${p.rad}</code></div>
-      ${p.estado?`<div style="margin-bottom:8px"><strong>Estado:</strong> ${p.estado}</div>`:''}
-      ${p.ultima?`<div style="font-size:12px;color:var(--text3);margin-bottom:6px">Última actuación: ${p.ultima}</div>`:''}
-      ${p.contraparte?`<div style="margin-bottom:8px;font-size:12px"><strong>Contraparte:</strong> ${p.contraparte}</div>`:''}
-      ${p.next?`<div class="card-section"><div class="card-section-title">📋 Próxima actuación / pendiente</div>${p.next}</div>`:''}
-    </div>
-  </div>`).join('');
+  el.innerHTML=db.procesos.length===0?`<div class="empty"><span class="empty-icon">🗂️</span>Sin procesos registrados</div>`:db.procesos.map(p=>`<div class="card"><div class="card-header"><div><div class="card-title">🗂️ ${p.name}</div><div class="card-meta">Inicio: ${fmt(p.fecha)} · ${p.entidad||''}</div></div><div style="display:flex;gap:6px"><span class="badge ${typeColor[p.type]||'neutral'}" style="font-size:10px">${p.type}</span><button class="btn sm danger" onclick="delItem('procesos',${p.id})">🗑</button></div></div><div class="card-body"><div style="margin-bottom:8px"><strong>Radicado:</strong> <code style="font-size:12px;background:var(--bg2);padding:2px 6px;border-radius:4px">${p.rad}</code></div>${p.estado?`<div style="margin-bottom:8px"><strong>Estado:</strong> ${p.estado}</div>`:''}${p.ultima?`<div style="font-size:12px;color:var(--text3);margin-bottom:6px">Última actuación: ${p.ultima}</div>`:''}${p.contraparte?`<div style="margin-bottom:8px;font-size:12px"><strong>Contraparte:</strong> ${p.contraparte}</div>`:''}${p.next?`<div class="card-section"><div class="card-section-title">📋 Próxima actuación / pendiente</div>${p.next}</div>`:''}</div></div>`).join('');
 }
 
-// ===== SAVE FUNCTIONS =====
+// ===== SAVE ACTIONS =====
 function calcDeadline(){
   const pl=document.getElementById('d_plazo').value, fr=document.getElementById('d_fechaRad').value;
   if(!pl||!fr) return;
@@ -1138,22 +1084,11 @@ function calcDeadline(){
   document.getElementById('d_vence').value=d.toISOString().split('T')[0];
 }
 
-async function saveDoc(){
-  const n=document.getElementById('d_nombre').value.trim(), f=document.getElementById('d_fecha').value;
-  if(!n||!f){ alert('Nombre y fecha son obligatorios'); return; }
-  const doc={id:Date.now(),fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:document.getElementById('d_vence').value,notas:document.getElementById('d_notas').value.trim()};
-  db.docs.push(doc);
-  if(doc.vence) db.alerts.push({id:Date.now()+1,title:'Vencimiento: '+doc.nombre,date:doc.vence,level:'warning',consequence:'Revisar acción requerida.',action:''});
-  await save(); closeModal('docModal');
-  ['d_fecha','d_fechaRad','d_nombre','d_entidad','d_radicado','d_resumen','d_ubicacion','d_vence','d_notas'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('d_plazo').value='';
-}
-
 async function saveEvent(){
   const t=document.getElementById('ev_title').value.trim(), d=document.getElementById('ev_date').value;
   if(!t||!d){ alert('Título y fecha son obligatorios'); return; }
   db.events.push({id:Date.now(),title:t,date:d,time:document.getElementById('ev_time').value,type:document.getElementById('ev_type').value,lugar:document.getElementById('ev_lugar').value.trim(),rad:document.getElementById('ev_rad').value.trim(),notes:document.getElementById('ev_notes').value.trim()});
-  await save(); closeModal('eventModal');
+  await saveData(); closeModal('eventModal');
   ['ev_title','ev_date','ev_lugar','ev_rad','ev_notes'].forEach(id=>document.getElementById(id).value='');
 }
 
@@ -1161,7 +1096,7 @@ async function saveAlert(){
   const t=document.getElementById('al_title').value.trim(), d=document.getElementById('al_date').value;
   if(!t||!d){ alert('Título y fecha son obligatorios'); return; }
   db.alerts.push({id:Date.now(),title:t,date:d,level:document.getElementById('al_level').value,consequence:document.getElementById('al_consequence').value.trim(),action:document.getElementById('al_action').value.trim()});
-  await save(); closeModal('alertModal');
+  await saveData(); closeModal('alertModal');
   ['al_title','al_date','al_consequence','al_action'].forEach(id=>document.getElementById(id).value='');
 }
 
@@ -1169,7 +1104,7 @@ async function savePending(){
   const t=document.getElementById('p_title').value.trim();
   if(!t){ alert('La descripción es obligatoria'); return; }
   db.pending.push({id:Date.now(),title:t,type:document.getElementById('p_type').value,priority:document.getElementById('p_priority').value,due:document.getElementById('p_due').value,related:document.getElementById('p_related').value.trim(),notes:document.getElementById('p_notes').value.trim(),done:false});
-  await save(); closeModal('pendModal');
+  await saveData(); closeModal('pendModal');
   ['p_title','p_due','p_related','p_notes'].forEach(id=>document.getElementById(id).value='');
 }
 
@@ -1177,7 +1112,7 @@ async function saveFallo(){
   const t=document.getElementById('f_title').value.trim(), d=document.getElementById('f_date').value;
   if(!t||!d){ alert('Título y fecha son obligatorios'); return; }
   db.fallos.push({id:Date.now(),title:t,date:d,auth:document.getElementById('f_auth').value.trim(),rad:document.getElementById('f_rad').value.trim(),type:document.getElementById('f_type').value,decision:document.getElementById('f_decision').value.trim(),actions:document.getElementById('f_actions').value.trim(),pending_:document.getElementById('f_pending').value.trim(),compliance:document.getElementById('f_compliance').value,appeal:document.getElementById('f_appeal').value});
-  await save(); closeModal('falloModal');
+  await saveData(); closeModal('falloModal');
   ['f_title','f_date','f_auth','f_rad','f_decision','f_actions','f_pending','f_appeal'].forEach(id=>document.getElementById(id).value='');
 }
 
@@ -1185,12 +1120,12 @@ async function saveProceso(){
   const n=document.getElementById('pr_name').value.trim(), r=document.getElementById('pr_rad').value.trim();
   if(!n||!r){ alert('Nombre y radicado son obligatorios'); return; }
   db.procesos.push({id:Date.now(),name:n,rad:r,type:document.getElementById('pr_type').value,entidad:document.getElementById('pr_entidad').value.trim(),fecha:document.getElementById('pr_fecha').value,estado:document.getElementById('pr_estado').value.trim(),ultima:document.getElementById('pr_ultima').value.trim(),contraparte:document.getElementById('pr_contraparte').value.trim(),next:document.getElementById('pr_next').value.trim()});
-  await save(); closeModal('procesoModal');
+  await saveData(); closeModal('procesoModal');
   ['pr_name','pr_rad','pr_entidad','pr_fecha','pr_estado','pr_ultima','pr_contraparte','pr_next'].forEach(id=>document.getElementById(id).value='');
 }
 
-async function toggleDone(id){ const p=db.pending.find(x=>x.id===id); if(p){p.done=!p.done; await save();} }
-async function delItem(col,id){ if(confirm('¿Eliminar este elemento?')){ db[col]=db[col].filter(x=>x.id!==id); await save(); } }
+async function toggleDone(id){ const p=db.pending.find(x=>x.id===id); if(p){p.done=!p.done; await saveData();} }
+async function delItem(col,id){ if(confirm('¿Eliminar este elemento?')){ db[col]=db[col].filter(x=>x.id!==id); await saveData(); } }
 
 function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
@@ -1199,58 +1134,67 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySele
 
 // ===== SEED DATA =====
 function seedData(){
-  db.docs=[
-    {id:1,fecha:'2020-02-25',fechaRad:'2022-03-15',nombre:'Historia clínica EPS SURA — trauma costal por agresión física',cat:'Clínico/pericial',status:'Vigente',entidad:'EPS SURA',radicado:'',resumen:'Diagnóstico contusión reja costal izquierda generada en pelea con su esposo (25/02/2020). Prueba de lesión física con origen en violencia doméstica.',ubicacion:'',vence:'',notas:''},
-    {id:2,fecha:'2020-06-23',fechaRad:'',nombre:'Historia clínica Psiquiatría — Dra. Alejandra Gutiérrez Rúa',cat:'Clínico/pericial',status:'Vigente',entidad:'Psiquiatría',radicado:'',resumen:'Registro de síntomas: acosada, acechada, cambió rutas, miedo de que le haga daño, teme por bienestar de su hijo. Diagnóstico: Trastorno de ajuste con síntomas ansiosos.',ubicacion:'',vence:'',notas:''},
-    {id:3,fecha:'2020-09-21',fechaRad:'2020-09-21',nombre:'Acta de Conciliación CONALBOS — mérito ejecutivo',cat:'Actas y conciliaciones',status:'Vigente',entidad:'CONALBOS',radicado:'2020-0047',resumen:'Declara UMH 2015–2020 y sociedad patrimonial. Alimentos $1.000.000/mes. Pensión estudiantil $500.000/mes. $80.000.000 para LFGG de la venta del inmueble.',ubicacion:'',vence:'',notas:'PRESTA MÉRITO EJECUTIVO. Base para demanda ejecutiva de alimentos ~$40M.'},
-    {id:4,fecha:'2022-03-15',fechaRad:'2022-03-15',nombre:'Auto No. 106 — Comisaría Cuarta de Familia Envigado',cat:'Medidas de protección',status:'Vigente',entidad:'Comisaría Cuarta de Familia Envigado',radicado:'Historia 25671',resumen:'Medida de protección provisional por violencia verbal y psicológica continuada. Ordena a JELP abstenerse de todo acto de violencia contra LFGG y núcleo familiar.',ubicacion:'',vence:'',notas:''},
-    {id:5,fecha:'2022-04-11',fechaRad:'',nombre:'Informe Psicológico Clínico — Pedro Vélez Pardo T.P. 166271',cat:'Clínico/pericial',status:'Vigente',entidad:'Pedro Vélez Pardo',radicado:'',resumen:'Evaluación psicológica clínica de LFGG. Prueba #5 del expediente.',ubicacion:'',vence:'',notas:''},
-    {id:6,fecha:'2022-04-19',fechaRad:'',nombre:'Informe Pericial Medicina Legal — incapacidad 15 días',cat:'Clínico/pericial',status:'Vigente',entidad:'Instituto Nacional de Medicina Legal',radicado:'UBMEDME-DSAN-05335-2022',resumen:'Lesiones por mecanismo traumático contundente. INCAPACIDAD MÉDICO LEGAL 15 DÍAS. Prueba oficial — máximo valor probatorio.',ubicacion:'',vence:'',notas:'PRUEBA DE NIVEL 1.'},
-    {id:7,fecha:'2022-04-25',fechaRad:'',nombre:'Resolución 029 — Comisaría Cuarta Envigado — fallo de fondo',cat:'Fallos',status:'Vigente',entidad:'Comisaría Cuarta de Familia Envigado',radicado:'Historia 25671',resumen:'Declara a LFGG víctima de violencia verbal y psicológica. Califica actos de JELP como más lesivos y no justificables.',ubicacion:'',vence:'',notas:''},
-    {id:8,fecha:'2022-05-24',fechaRad:'',nombre:'Informe Psicológico Tomás López Garcés — Colegio Hontanares',cat:'Clínico/pericial',status:'Vigente',entidad:'Colegio Hontanares',radicado:'',resumen:'El niño dibuja a su familia cuando no peleaban y afirma: "el papá porque maltrata a la gente". Agravante Art. 229 inciso 3° CP.',ubicacion:'',vence:'',notas:'Prueba #8. Agravante: conducta en presencia del menor (pena aumenta 1/2 a 3/4).'},
-    {id:9,fecha:'2022-11-22',fechaRad:'2022-11-22',nombre:'Resolución 484 — Comisaría Belén — medida de protección definitiva',cat:'Medidas de protección',status:'Vigente',entidad:'Comisaría de Familia Comuna 16 Belén',radicado:'02-26195-22 M2',resumen:'Medida de protección definitiva. Prohibición de acercamiento, contacto y vinculación del menor TLG en el conflicto parental.',ubicacion:'',vence:'',notas:''},
-    {id:10,fecha:'2023-08-09',fechaRad:'',nombre:'Resolución 344 — Reincidencia — multa 3 SMLMV',cat:'Fallos',status:'Vigente',entidad:'Comisaría de Familia Comuna 16 Belén',radicado:'002-26195-22-001',resumen:'DECLARA RESPONSABLE a JELP por incumplimiento. Multa 3 SMLMV ($4.270.500 en 2026). Medidas adicionales de alejamiento.',ubicacion:'',vence:'',notas:''},
-    {id:11,fecha:'2023-09-22',fechaRad:'',nombre:'⭐ Auto 1083/2023 — REINCIDENCIA — SENTENCIA EJECUTORIADA',cat:'Fallos',status:'Vigente',entidad:'Juzgado Séptimo de Familia de Oralidad de Medellín — Jueza ANA PAULA PUERTA MEJÍA',radicado:'050013110007-2023-00458-01',resumen:'SENTENCIA EJECUTORIADA. Confirma reincidencia en VIF. Declara reincidencia. Ordena cobro coactivo multa 3 SMLMV. MÁXIMO VALOR PROBATORIO.',ubicacion:'',vence:'',notas:'PRUEBA REINA. Agravante Art. 229 CP. Falta gravísima Art. 48 Ley 1952/2019 → Procuraduría. Base custodia.'},
-    {id:12,fecha:'2025-01-13',fechaRad:'2025-01-13',nombre:'Promesa de compraventa inmueble — $480.000.000',cat:'Documentos patrimoniales',status:'Vigente',entidad:'Rafael Andrés Cardona Patiño / Alejandra Hincapié García',radicado:'',resumen:'Precio $480M. Compradores pagaron $80M. JELP entregó solo $26M descontando ilegalmente. Saldo adeudado $54M. Cláusula penal 10% = $48M.',ubicacion:'',vence:'',notas:'PRESTA MÉRITO EJECUTIVO. Venta NO registrada. Embargo Anotación 011. Afectación familiar Anotación 010.'},
-    {id:13,fecha:'2026-01-04',fechaRad:'',nombre:'Certificados de tradición y libertad — Apto + Parqueadero + Cuarto útil',cat:'Documentos patrimoniales',status:'Vigente',entidad:'Oficina de Registro de Instrumentos Públicos',radicado:'001-1145277 / 001-1145132 / 001-1145197',resumen:'Embargo ejecutivo ACTIVO (Anotación 011). Afectación vivienda familiar VIGENTE (Anotación 010). Venta sin registrar. Avalúo $340M → 50% LFGG = $170M en riesgo.',ubicacion:'',vence:'',notas:'URGENTE: Verificar si embargo fue levantado antes de radicar demanda civil.'},
-    {id:14,fecha:'2026-04-28',fechaRad:'2026-04-28',nombre:'Constancia preventiva hechos 26/04/2026 — Comisaría 16 Belén',cat:'Comunicaciones',status:'Vigente',entidad:'Comisaría de Familia Comuna 16 Belén',radicado:'002-26195-22-001',resumen:'Documenta: incumplimiento horario entrega, desprotección menor, uso celular del menor para agresión verbal, rastreo ubicación madre, solicitud llaves hogar materno.',ubicacion:'',vence:'',notas:''},
-    {id:15,fecha:'2026-06-01',fechaRad:'2026-06-01',nombre:'Auto 1217 — Nueva medida de protección — 13 hechos 2026',cat:'Medidas de protección',status:'Vigente',entidad:'Comisaría de Familia Comuna 16 Belén — Comisario Carlos Alberto Velásquez Escobar',radicado:'002-15088-26 MESA 1',resumen:'13 hechos documentados. Alejamiento 300m. Prohibición hostigamiento virtual y físico. Audiencia 13/08/2026. Valoración psicológica Tomás (Psic. Adriana Tamayo). Valoración riesgo Medicina Legal.',ubicacion:'',vence:'',notas:'Descargos JELP: 21/07/2026 10:30am. Testigo Marlon Garcés: 22/07/2026 10:30am. Audiencia fallo: 13/08/2026 8:30am.'},
-    {id:16,fecha:'2026-06-23',fechaRad:'2026-06-23',nombre:'Derecho de petición urgente — Fiscalía 011 / Juzgado Envigado',cat:'Derecho de petición',status:'Pendiente respuesta',entidad:'Fiscalía 011 Local Envigado / Juzgado Municipal Penal con Función de Conocimiento Despacho 004',radicado:'05001609916620225977701 / 05266600020320225141400',resumen:'Solicita: estado radicados, trámite principio de oportunidad, actuaciones desde sept. 2023, razón diferencia celeridad procesal entre radicados, medidas de protección.',ubicacion:'',vence:'2026-07-14',notas:'15 días hábiles (Ley 1755/2015). Si no hay respuesta: ACCIÓN DE TUTELA inmediata.'}
-  ];
-  db.events=[
-    {id:1,title:'Descargos JELP — Comisaría 16 Belén',date:'2026-07-21',time:'10:30',type:'hearing',lugar:'Comisaría de Familia Comuna 16 Belén — Carrera 84E Nº 9-20',rad:'002-15088-26 MESA 1',notes:'Secretario: IVAN CARLOS CASTAÑEDA — ivan.castaneda@medellin.gov.co'},
-    {id:2,title:'Declaración testigo Marlon Alberto Garcés Román',date:'2026-07-22',time:'10:30',type:'meeting',lugar:'Comisaría de Familia Comuna 16 Belén',rad:'002-15088-26 MESA 1',notes:'Declaración juramentada como testigo.'},
-    {id:3,title:'🔴 Vence D. Petición — Fiscalía 011 (15 días hábiles)',date:'2026-07-14',time:'',type:'deadline',lugar:'',rad:'05001609916620225977701',notes:'Si no hay respuesta: interponer ACCIÓN DE TUTELA inmediata Art. 23 CP.'},
-    {id:4,title:'⭐ Audiencia de fallo — Comisaría 16 Belén',date:'2026-08-13',time:'08:30',type:'hearing',lugar:'Comisaría de Familia Comuna 16 Belén — Carrera 84E Nº 9-20 Belén Aliadas',rad:'002-15088-26 MESA 1',notes:'Abogada del despacho: MARGARETH PAZ. Llevar TODOS los anexos del Auto 1217 y Auto 1083/2023 (PRUEBA REINA).'}
-  ];
-  db.alerts=[
-    {id:1,title:'Vence plazo respuesta Derecho de Petición — Fiscalía 011 y Juzgado',date:'2026-07-14',level:'danger',consequence:'Si no hay respuesta de fondo en 15 días hábiles, interponer ACCIÓN DE TUTELA inmediata ante Tribunal Superior de Medellín por vulneración del derecho de petición (Art. 23 CP y Ley 1755/2015).',action:'Presentar tutela ante Tribunal Superior de Medellín — Sala Penal'},
-    {id:2,title:'Audiencia de fallo — Comisaría 16 Belén — 002-15088-26',date:'2026-08-13',level:'warning',consequence:'Audiencia definitiva. No asistir puede generar deserción o decisión desfavorable. Preparar todos los anexos del Auto 1217 y la Prueba Reina (Auto 1083/2023).',action:'Coordinar con abogada. Llevar originales. Confirmar hora y sala.'},
-    {id:3,title:'Verificar estado embargo Anotación 011 — inmueble 001-1145277',date:'2026-07-01',level:'warning',consequence:'El embargo activo puede impedir la venta y poner en riesgo $170M del patrimonio de LFGG. Verificar ANTES de firmar cualquier documento relacionado con el inmueble.',action:'Solicitar nuevo certificado de tradición y libertad. Confirmar con abogada.'}
-  ];
-  db.pending=[
-    {id:1,title:'Llamar Juzgado Penal Circuito Envigado — verificar estado radicado y principio de oportunidad',type:'Llamada',priority:'Urgente',due:'2026-06-30',related:'05001609916620225977701',notes:'Preguntar: (1) dónde está el expediente desde sept. 2023, (2) estado del principio de oportunidad suscrito, (3) actuaciones posteriores.',done:false},
-    {id:2,title:'Guardar comprobante de envío del Derecho de Petición con fecha y hora',type:'Documento',priority:'Urgente',due:'2026-06-25',related:'Derecho de petición — Fiscalía 011',notes:'El comprobante marca el inicio del plazo de 15 días hábiles. Sin él no se puede probar incumplimiento.',done:true},
-    {id:3,title:'Solicitar nuevo certificado de tradición — verificar si embargo fue levantado',type:'Legal',priority:'Alta',due:'2026-07-01',related:'Inmueble 001-1145277 / 001-1145132 / 001-1145197',notes:'Verificar Anotación 011. Si sigue activo, $170M en riesgo. Urgente antes de firmar cualquier documento.',done:false},
-    {id:4,title:'Coordinar con abogada inicio proceso ejecutivo de alimentos',type:'Legal',priority:'Alta',due:'2026-07-05',related:'Acta CONALBOS 2020-0047',notes:'Base: Acta CONALBOS (mérito ejecutivo). Monto ~$40M + intereses moratorios Art. 1617 CC desde 2020.',done:false},
-    {id:5,title:'Solicitar embargo preventivo salario JELP como empleado público ESE',type:'Legal',priority:'Alta',due:'2026-07-10',related:'Proceso ejecutivo alimentos',notes:'Medida cautelar para garantizar pago. JELP es Subgerente de ESE — empleado público.',done:false},
-    {id:6,title:'Preparar queja disciplinaria ante Procuraduría General de la Nación',type:'Legal',priority:'Alta',due:'2026-07-20',related:'Auto 1083/2023 — Reincidencia',notes:'Art. 48 Ley 1952/2019 (falta gravísima). Adjuntar Auto 1083/2023. Pretensión: destitución e inhabilidad hasta 20 años. Procurador Regional Antioquia.',done:false},
-    {id:7,title:'Evaluar demanda declarativa ineficacia venta inmueble',type:'Legal',priority:'Alta',due:'2026-07-15',related:'Inmueble 001-1145277',notes:'Afectación Anotación 010 + embargo Anotación 011 + LFGG no firmó escritura. Solicitar inscripción cautelar en folios 001-1145277, 001-1145132 y 001-1145197.',done:false},
-    {id:8,title:'Remitir informe psicológico Tomás (Colegio Hontanares) al proceso',type:'Documento',priority:'Normal',due:'2026-07-10',related:'Proceso de custodia / Art. 229 CP',notes:'Prueba #8. Confirmar si requiere autenticación. Agravante Art. 229 inciso 3° CP.',done:false}
-  ];
-  db.fallos=[
-    {id:1,title:'Resolución 029 — Fallo violencia psicológica — Comisaría Cuarta Envigado',date:'2022-04-25',auth:'Comisaría Cuarta de Familia Envigado',rad:'Historia 25671',type:'Resolución administrativa',decision:'Declara a LUISA FERNANDA GARCES GARCIA víctima de violencia verbal y psicológica. Califica actos de JUAN ESTEBAN LÓPEZ PALACIO como más lesivos y no justificables.',actions:'Prueba documental de violencia psicológica. Fundamento proceso penal Art. 229 CP. Antecedente directo para declaratoria de reincidencia.',pending_:'Incorporar como prueba en proceso penal activo.',compliance:'Incumplido',appeal:''},
-    {id:2,title:'Resolución 344 — Incumplimiento — multa 3 SMLMV',date:'2023-08-09',auth:'Comisaría de Familia Comuna 16 Belén',rad:'002-26195-22-001',type:'Resolución administrativa',decision:'DECLARA RESPONSABLE a JUAN ESTEBAN LÓPEZ PALACIO por incumplimiento de medida definitiva. Multa 3 SMLMV (~$4.270.500 en 2026). Medidas adicionales de alejamiento y prohibición de contacto.',actions:'Confirmada por Juzgado 7° Familia (Auto 1083/2023). Agravante reincidencia Art. 229 CP (cuarto máximo). Falta gravísima Art. 48 Ley 1952/2019. Base cobro coactivo.',pending_:'Verificar pago de la multa. Si no: solicitar cobro coactivo. Incorporar en queja Procuraduría.',compliance:'Incumplido',appeal:''},
-    {id:3,title:'⭐ Auto Interlocutorio 1083/2023 — REINCIDENCIA — SENTENCIA EJECUTORIADA',date:'2023-09-22',auth:'Juzgado Séptimo de Familia de Oralidad de Medellín — Jueza ANA PAULA PUERTA MEJÍA',rad:'050013110007-2023-00458-01',type:'Auto interlocutorio',decision:'CONFIRMA todas las medidas de protección. DECLARA REINCIDENCIA EN VIOLENCIA INTRAFAMILIAR. Ordena cobro coactivo multa 3 SMLMV. Decisión ejecutoriada.',actions:'PRUEBA REINA. Fundamenta: (1) Agravante reincidencia Art. 229 CP — pena cuarto máximo, (2) Falta gravísima Art. 48 Ley 1952/2019 → destitución e inhabilidad 20 años, (3) Custodia principal a LFGG, (4) Cobro coactivo multa.',pending_:'Verificar pago de multa. Adjuntar a queja disciplinaria. Incorporar en proceso penal y custodia.',compliance:'Incumplido',appeal:''}
-  ];
-  db.procesos=[
-    {id:1,name:'Proceso penal — LFGG como VÍCTIMA',rad:'05001609916620225977701',type:'Penal — víctima',entidad:'Fiscalía 011 Local Envigado / Juzgado Penal del Circuito de Envigado',fecha:'2022-05-11',estado:'Remitido en recurso de apelación al Juzgado Penal del Circuito de Envigado. SIN actuaciones desde 11/09/2023.',ultima:'11/09/2023 — Remisión recurso de apelación al superior funcional',contraparte:'JUAN ESTEBAN LÓPEZ PALACIO — C.C. 8.103.048',next:'Verificar despacho actual del expediente. Estado del Principio de Oportunidad suscrito. Si no hay respuesta al D. de Petición: interponer tutela.'},
-    {id:2,name:'Proceso penal — LFGG como DENUNCIADA',rad:'05266600020320225141400',type:'Penal — denunciada',entidad:'Fiscalía / Juzgado Envigado',fecha:'2022-04-29',estado:'Registra actuaciones hasta 02/07/2024 — casi un año más de actividad que el proceso donde LFGG es víctima. Diferencia inexplicable que amerita explicación formal.',ultima:'02/07/2024 — última actuación registrada',contraparte:'JUAN ESTEBAN LÓPEZ PALACIO (denunciante)',next:'Verificar delito imputado. Revisar si hay medida de aseguramiento. Solicitar explicación de la mayor celeridad vs. proceso como víctima.'},
-    {id:3,name:'Proceso VIF — Comisaría 16 Belén — 13 hechos 2026',rad:'002-15088-26 MESA 1',type:'Administrativo',entidad:'Comisaría de Familia Comuna 16 Belén — Comisario Carlos Alberto Velásquez Escobar',fecha:'2026-06-01',estado:'ACTIVO. Medida provisional: alejamiento 300m, prohibición hostigamiento. Pendiente audiencia de fallo 13/08/2026.',ultima:'01/06/2026 — Auto 1217 admite solicitud y decreta medida provisional',contraparte:'JUAN ESTEBAN LÓPEZ PALACIO — C.C. 8.103.048',next:'21/07/2026 10:30am: Descargos JELP. 22/07/2026 10:30am: Testigo Marlon Garcés. 13/08/2026 8:30am: Audiencia de fallo. Llevar todos los anexos y la Prueba Reina (Auto 1083/2023).'}
-  ];
+  db={
+    docs:[
+      {id:1,fecha:'2020-02-25',fechaRad:'2022-03-15',nombre:'Historia clínica EPS SURA — trauma costal por agresión física',cat:'Clínico/pericial',status:'Vigente',entidad:'EPS SURA',radicado:'',resumen:'Diagnóstico contusión reja costal izquierda generada en pelea con su esposo (25/02/2020). Prueba de lesión física con origen en violencia doméstica.',ubicacion:'',vence:'',notas:'PRUEBA #1',filePath:null,fileName:null},
+      {id:2,fecha:'2020-09-21',fechaRad:'2020-09-21',nombre:'Acta de Conciliación CONALBOS — mérito ejecutivo',cat:'Actas y conciliaciones',status:'Vigente',entidad:'CONALBOS',radicado:'2020-0047',resumen:'Declara UMH 2015–2020 y sociedad patrimonial. Alimentos $1.000.000/mes. $80.000.000 para LFGG de la venta del inmueble.',ubicacion:'',vence:'',notas:'PRESTA MÉRITO EJECUTIVO. Base demanda ejecutiva alimentos ~$40M.',filePath:null,fileName:null},
+      {id:3,fecha:'2022-03-15',fechaRad:'2022-03-15',nombre:'Auto No. 106 — Comisaría Cuarta de Familia Envigado',cat:'Medidas de protección',status:'Vigente',entidad:'Comisaría Cuarta de Familia Envigado',radicado:'Historia 25671',resumen:'Medida de protección provisional por violencia verbal y psicológica. Ordena a JELP abstenerse de todo acto de violencia.',ubicacion:'',vence:'',notas:'',filePath:null,fileName:null},
+      {id:4,fecha:'2022-04-19',fechaRad:'',nombre:'Informe Pericial Medicina Legal — incapacidad 15 días',cat:'Clínico/pericial',status:'Vigente',entidad:'Instituto Nacional de Medicina Legal',radicado:'UBMEDME-DSAN-05335-2022',resumen:'Lesiones por mecanismo traumático contundente. INCAPACIDAD MÉDICO LEGAL 15 DÍAS. Máximo valor probatorio.',ubicacion:'',vence:'',notas:'PRUEBA DE NIVEL 1.',filePath:null,fileName:null},
+      {id:5,fecha:'2022-11-22',fechaRad:'2022-11-22',nombre:'Resolución 484 — Medida de protección definitiva — Comisaría Belén',cat:'Medidas de protección',status:'Vigente',entidad:'Comisaría de Familia Comuna 16 Belén',radicado:'02-26195-22 M2',resumen:'Medida de protección definitiva. Prohibición de acercamiento, contacto y vinculación del menor TLG en el conflicto parental.',ubicacion:'',vence:'',notas:'',filePath:null,fileName:null},
+      {id:6,fecha:'2023-09-22',fechaRad:'',nombre:'⭐ Auto 1083/2023 — REINCIDENCIA — SENTENCIA EJECUTORIADA',cat:'Fallos',status:'Vigente',entidad:'Juzgado Séptimo de Familia de Oralidad de Medellín — Jueza ANA PAULA PUERTA MEJÍA',radicado:'050013110007-2023-00458-01',resumen:'SENTENCIA EJECUTORIADA. Confirma reincidencia en VIF. Ordena cobro coactivo multa 3 SMLMV. MÁXIMO VALOR PROBATORIO.',ubicacion:'',vence:'',notas:'PRUEBA REINA. Agravante Art. 229 CP. Falta gravísima Art. 48 Ley 1952/2019.',filePath:null,fileName:null},
+      {id:7,fecha:'2025-01-13',fechaRad:'2025-01-13',nombre:'Promesa de compraventa inmueble — $480.000.000',cat:'Documentos patrimoniales',status:'Vigente',entidad:'Rafael Andrés Cardona Patiño / Alejandra Hincapié García',radicado:'',resumen:'Precio $480M. Compradores pagaron $80M. JELP entregó solo $26M. Saldo adeudado $54M. Cláusula penal 10% = $48M.',ubicacion:'',vence:'',notas:'PRESTA MÉRITO EJECUTIVO.',filePath:null,fileName:null},
+      {id:8,fecha:'2026-06-01',fechaRad:'2026-06-01',nombre:'Auto 1217 — Nueva medida de protección — 13 hechos 2026',cat:'Medidas de protección',status:'Vigente',entidad:'Comisaría de Familia Comuna 16 Belén',radicado:'002-15088-26 MESA 1',resumen:'13 hechos documentados. Alejamiento 300m. Prohibición hostigamiento. Audiencia 13/08/2026 8:30am. Descargos JELP 21/07/2026.',ubicacion:'',vence:'',notas:'',filePath:null,fileName:null},
+      {id:9,fecha:'2026-06-23',fechaRad:'2026-06-23',nombre:'Derecho de petición urgente — Fiscalía 011 / Juzgado Envigado',cat:'Derecho de petición',status:'Pendiente respuesta',entidad:'Fiscalía 011 Local Envigado / Juzgado Municipal Penal Despacho 004',radicado:'05001609916620225977701 / 05266600020320225141400',resumen:'Solicita estado radicados, principio de oportunidad, actuaciones desde sept. 2023, razón diferencia celeridad procesal.',ubicacion:'',vence:'2026-07-14',notas:'15 días hábiles (Ley 1755/2015). Sin respuesta → TUTELA inmediata.',filePath:null,fileName:null}
+    ],
+    events:[
+      {id:1,title:'Descargos JELP — Comisaría 16 Belén',date:'2026-07-21',time:'10:30',type:'hearing',lugar:'Comisaría de Familia Comuna 16 Belén — Carrera 84E Nº 9-20',rad:'002-15088-26 MESA 1',notes:'Secretario: IVAN CARLOS CASTAÑEDA — ivan.castaneda@medellin.gov.co'},
+      {id:2,title:'Declaración testigo Marlon Alberto Garcés Román',date:'2026-07-22',time:'10:30',type:'meeting',lugar:'Comisaría de Familia Comuna 16 Belén',rad:'002-15088-26 MESA 1',notes:'Declaración juramentada como testigo.'},
+      {id:3,title:'🔴 Vence D. Petición — Fiscalía 011',date:'2026-07-14',time:'',type:'deadline',lugar:'',rad:'05001609916620225977701',notes:'Sin respuesta → TUTELA inmediata Art. 23 CP.'},
+      {id:4,title:'⭐ Audiencia de fallo — Comisaría 16 Belén',date:'2026-08-13',time:'08:30',type:'hearing',lugar:'Comisaría de Familia Comuna 16 Belén — Carrera 84E Nº 9-20',rad:'002-15088-26 MESA 1',notes:'Abogada del despacho: MARGARETH PAZ. Llevar Auto 1083/2023 (PRUEBA REINA) y todos los anexos.'}
+    ],
+    alerts:[
+      {id:1,title:'Vence plazo D. Petición — Fiscalía 011 y Juzgado Envigado',date:'2026-07-14',level:'danger',consequence:'Interponer ACCIÓN DE TUTELA ante Tribunal Superior de Medellín por vulneración Art. 23 CP y Ley 1755/2015.',action:'Presentar tutela — Tribunal Superior de Medellín Sala Penal'},
+      {id:2,title:'Audiencia de fallo — Comisaría 16 Belén 002-15088-26',date:'2026-08-13',level:'warning',consequence:'Audiencia definitiva. No asistir puede generar deserción. Llevar Auto 1083/2023 y todos los anexos del Auto 1217.',action:'Coordinar con abogada. Confirmar hora y sala.'},
+      {id:3,title:'Verificar estado embargo Anotación 011 — inmueble 001-1145277',date:'2026-07-01',level:'warning',consequence:'$170M del patrimonio de LFGG en riesgo si el embargo sigue activo. Verificar ANTES de firmar cualquier documento.',action:'Solicitar nuevo certificado de tradición y libertad.'}
+    ],
+    pending:[
+      {id:1,title:'Llamar Juzgado Penal Circuito Envigado — estado radicado y principio de oportunidad',type:'Llamada',priority:'Urgente',due:'2026-06-30',related:'05001609916620225977701',notes:'Preguntar: (1) dónde está el expediente, (2) estado del principio de oportunidad suscrito, (3) actuaciones desde sept. 2023.',done:false},
+      {id:2,title:'Verificar si embargo Anotación 011 fue levantado — nuevo certificado de tradición',type:'Legal',priority:'Alta',due:'2026-07-01',related:'Inmueble 001-1145277',notes:'Urgente antes de firmar cualquier documento. Si sigue activo, $170M en riesgo.',done:false},
+      {id:3,title:'Coordinar con abogada proceso ejecutivo de alimentos',type:'Legal',priority:'Alta',due:'2026-07-05',related:'Acta CONALBOS 2020-0047',notes:'Monto ~$40M + intereses moratorios Art. 1617 CC desde 2020.',done:false},
+      {id:4,title:'Solicitar embargo preventivo salario JELP — empleado público ESE',type:'Legal',priority:'Alta',due:'2026-07-10',related:'Proceso ejecutivo alimentos',notes:'Medida cautelar. JELP es Subgerente de ESE.',done:false},
+      {id:5,title:'Preparar queja disciplinaria ante Procuraduría General de la Nación',type:'Legal',priority:'Alta',due:'2026-07-20',related:'Auto 1083/2023 — Reincidencia',notes:'Art. 48 Ley 1952/2019. Adjuntar Auto 1083/2023. Destitución e inhabilidad hasta 20 años.',done:false},
+      {id:6,title:'Guardar comprobante de envío del Derecho de Petición',type:'Documento',priority:'Urgente',due:'2026-06-25',related:'D. Petición — Fiscalía 011',notes:'Marca el inicio del plazo de 15 días hábiles. Sin comprobante no se puede probar el incumplimiento.',done:true}
+    ],
+    fallos:[
+      {id:1,title:'Resolución 029 — Fallo violencia psicológica — Comisaría Cuarta Envigado',date:'2022-04-25',auth:'Comisaría Cuarta de Familia Envigado',rad:'Historia 25671',type:'Resolución administrativa',decision:'Declara a LFGG víctima de violencia verbal y psicológica. Califica actos de JELP como más lesivos y no justificables.',actions:'Prueba documental de violencia psicológica. Fundamento proceso penal Art. 229 CP. Antecedente reincidencia.',pending_:'Incorporar como prueba en proceso penal activo.',compliance:'Incumplido',appeal:''},
+      {id:2,title:'⭐ Auto Interlocutorio 1083/2023 — REINCIDENCIA EJECUTORIADA',date:'2023-09-22',auth:'Juzgado Séptimo de Familia de Oralidad de Medellín — Jueza ANA PAULA PUERTA MEJÍA',rad:'050013110007-2023-00458-01',type:'Auto interlocutorio',decision:'CONFIRMA todas las medidas. DECLARA REINCIDENCIA EN VIOLENCIA INTRAFAMILIAR. Ordena cobro coactivo multa 3 SMLMV.',actions:'PRUEBA REINA: (1) Agravante reincidencia Art. 229 CP — pena cuarto máximo, (2) Falta gravísima Art. 48 Ley 1952/2019 → destitución e inhabilidad 20 años, (3) Base custodia principal, (4) Cobro coactivo multa.',pending_:'Verificar pago multa. Adjuntar a queja Procuraduría. Incorporar en proceso penal y custodia.',compliance:'Incumplido',appeal:''}
+    ],
+    procesos:[
+      {id:1,name:'Proceso penal — LFGG como VÍCTIMA',rad:'05001609916620225977701',type:'Penal — víctima',entidad:'Fiscalía 011 Local Envigado / Juzgado Penal del Circuito de Envigado',fecha:'2022-05-11',estado:'Remitido en apelación al Juzgado Penal del Circuito. SIN actuaciones desde 11/09/2023.',ultima:'11/09/2023 — Remisión recurso de apelación',contraparte:'JUAN ESTEBAN LÓPEZ PALACIO — C.C. 8.103.048',next:'Verificar despacho. Estado principio de oportunidad. Sin respuesta al D. Petición → tutela.'},
+      {id:2,name:'Proceso penal — LFGG como DENUNCIADA',rad:'05266600020320225141400',type:'Penal — denunciada',entidad:'Fiscalía / Juzgado Envigado',fecha:'2022-04-29',estado:'Actuaciones hasta 02/07/2024 — año más de actividad que el proceso donde LFGG es víctima.',ultima:'02/07/2024 — última actuación registrada',contraparte:'JUAN ESTEBAN LÓPEZ PALACIO (denunciante)',next:'Verificar delito imputado. Solicitar explicación diferencia celeridad vs. proceso como víctima.'},
+      {id:3,name:'Proceso VIF — Comisaría 16 Belén — 13 hechos 2026',rad:'002-15088-26 MESA 1',type:'Administrativo',entidad:'Comisaría de Familia Comuna 16 Belén — Comisario Carlos Alberto Velásquez Escobar',fecha:'2026-06-01',estado:'ACTIVO. Medida provisional: alejamiento 300m. Audiencia fallo 13/08/2026.',ultima:'01/06/2026 — Auto 1217',contraparte:'JUAN ESTEBAN LÓPEZ PALACIO — C.C. 8.103.048',next:'21/07 10:30am: Descargos JELP. 22/07 10:30am: Testigo Marlon Garcés. 13/08 8:30am: Audiencia fallo. Llevar Auto 1083/2023.'}
+    ],
+    uploads:[]
+  };
 }
 
-initApp();
+// ===== INIT =====
+async function init(){
+  renderAuthForm();
+  const {data:{session}}=await sb.auth.getSession();
+  if(session?.user){ await enterApp(session.user); return; }
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='SIGNED_IN'&&session?.user){ await enterApp(session.user); }
+    if(event==='PASSWORD_RECOVERY'){
+      document.getElementById('authScreen').style.display='flex';
+      document.getElementById('appShell').style.display='none';
+      switchAuthTab('login');
+      showAuthSuccess('Ingresa tu nueva contraseña en el campo de abajo.');
+    }
+  });
+}
+
+init();
 </script>
 </body>
 </html>
