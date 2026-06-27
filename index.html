@@ -999,6 +999,33 @@ async function doChangePwd(){
   setTimeout(()=>closeModal('changePwdModal'),3000);
 }
 
+function exportData(){
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='expediente_legal_'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();
+}
+
+function handleImport(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    try{
+      const imported=JSON.parse(ev.target.result);
+      if(!imported.docs){alert('Archivo inválido — no contiene datos del expediente.');return;}
+      if(!confirm('¿Deseas importar estos datos? Esto reemplazará los datos actuales.'))return;
+      db=imported;
+      if(!db.uploads)db.uploads=[];
+      if(!db.redactados)db.redactados=[];
+      await saveData();
+      refreshAll();
+      alert('✅ Datos importados correctamente.');
+    }catch(e){alert('Error al importar: '+e.message);}
+  };
+  reader.readAsText(file);
+}
+
 async function doLogout(){
   // ✅ Recordatorio de respaldo antes de cerrar sesión
   const hasData=(db.docs&&db.docs.length>0)||(db.events&&db.events.length>0)||(db.pending&&db.pending.length>0);
