@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Expediente Legal — LFGG</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -347,6 +348,8 @@ tr:hover td{background:var(--bg2)}
       <button class="nav-item" id="nav-procesos" onclick="navigate('procesos')"><span class="icon">🗂️</span>Procesos activos</button>
       <div class="nav-section" id="adminSection" style="display:none">Administración</div>
       <button class="nav-item" id="nav-usuarios" onclick="navigate('usuarios')" style="display:none"><span class="icon">👥</span>Usuarios</button>
+      <div class="nav-section">Configuración</div>
+      <button class="nav-item" onclick="openModal('settingsModal')"><span class="icon">⚙️</span>Extracción con IA</button>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info" id="userEmail"></div>
@@ -533,9 +536,18 @@ tr:hover td{background:var(--bg2)}
         <p style="font-size:13px;color:var(--text3);margin-top:6px">Arrastra aquí o haz clic para seleccionar</p>
         <p style="font-size:11px;color:var(--text3);margin-top:4px">PDF · Word (.doc/.docx) · JPG · PNG · HEIC</p>
       </div>
-      <input type="file" id="d_file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic,.webp" onchange="showSelectedFile(this,'filePreviewDoc')">
+      <input type="file" id="d_file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic,.webp" onchange="handleFileSelected(this)">
       <div id="filePreviewDoc" style="margin-top:6px"></div>
       <div id="existingFileInfo" style="display:none;margin-top:6px;padding:8px 12px;background:var(--successbg);border-radius:var(--radius);font-size:12px;color:var(--successtext)"></div>
+      <!-- Extracción automática -->
+      <div id="extractBox" style="display:none;margin-top:10px;padding:12px 14px;background:var(--infobg);border:0.5px solid var(--infoborder);border-radius:var(--radius)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:600;color:var(--infotext)">🤖 Extracción automática de datos</div>
+          <button class="btn sm" id="btnExtract" onclick="extractDocData()" style="background:var(--accent);color:#fff;border-color:var(--accent)">✨ Llenar campos automáticamente</button>
+        </div>
+        <div id="extractStatus" style="font-size:12px;color:var(--infotext)">Se detectó un PDF — haz clic para extraer fecha, radicado, entidad y más.</div>
+        <div id="extractResult" style="display:none;margin-top:8px"></div>
+      </div>
     </div>
     <div class="form-row"><label>Notas adicionales</label><textarea id="d_notas" placeholder="Observaciones, conexiones con otros documentos..."></textarea></div>
     <div id="docNameMismatchError" style="display:none;background:var(--dangerbg);border:0.5px solid var(--dangerborder);border-radius:var(--radius);padding:12px 14px;margin-top:4px"></div>
@@ -710,6 +722,28 @@ tr:hover td{background:var(--bg2)}
   </div>
 </div>
 
+<!-- MODAL CONFIGURACIÓN API KEY -->
+<div class="overlay" id="settingsModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">⚙️ Configurar extracción automática con IA</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">
+      La extracción automática usa la IA de Claude para leer tus documentos (PDFs, imágenes, fotos de WhatsApp) y llenar los campos automáticamente.<br><br>
+      Necesitas una <strong>API key de Anthropic</strong>. Si aún no la tienes, créala en <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent)">console.anthropic.com</a>.
+    </div>
+    <div class="form-row">
+      <label>Tu API key de Claude <span class="req">*</span></label>
+      <input type="password" id="set_key" placeholder="sk-ant-api03-..." autocomplete="off">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Tu key se guarda encriptada en tu cuenta — nunca en el código ni en GitHub.</div>
+    </div>
+    <div id="set_status" style="display:none;padding:9px 12px;border-radius:var(--radius);font-size:13px;margin-top:8px"></div>
+    <div id="set_current" style="display:none;margin-top:10px;padding:9px 12px;background:var(--successbg);border:0.5px solid var(--successborder);border-radius:var(--radius);font-size:12px;color:var(--successtext)"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('settingsModal')">Cerrar</button>
+      <button class="btn primary" onclick="saveApiKey()">✓ Guardar API key</button>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
 
 <!-- MODAL CAMBIAR CONTRASEÑA -->
@@ -829,6 +863,42 @@ async function doReset(){
   showAuthOk('✓ Correo enviado a '+email+'. Revisa tu bandeja de entrada y sigue el enlace.');
   btn.disabled=false;
 }
+async function saveApiKey(){
+  const key=document.getElementById('set_key').value.trim();
+  const status=document.getElementById('set_status');
+  if(!key||!key.startsWith('sk-ant-')){
+    status.style.display='block';
+    status.style.background='var(--dangerbg)';
+    status.style.color='var(--dangertext)';
+    status.style.border='0.5px solid var(--dangerborder)';
+    status.textContent='⚠️ La key debe empezar con sk-ant-...';
+    return;
+  }
+  // Verificar que la key funciona
+  status.style.display='block';
+  status.style.background='var(--infobg)';
+  status.style.color='var(--infotext)';
+  status.style.border='0.5px solid var(--infoborder)';
+  status.textContent='Verificando key...';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,messages:[{role:'user',content:'ok'}]})
+    });
+    if(!res.ok&&res.status===401){ status.style.background='var(--dangerbg)';status.style.color='var(--dangertext)';status.style.border='0.5px solid var(--dangerborder)';status.textContent='⚠️ API key incorrecta. Verifica que la copiaste completa.'; return; }
+    const saved=await saveClaudeKey(key);
+    if(saved){
+      status.style.background='var(--successbg)';status.style.color='var(--successtext)';status.style.border='0.5px solid var(--successborder)';
+      status.textContent='✅ API key guardada y verificada correctamente. Ya puedes usar la extracción automática.';
+      document.getElementById('set_key').value='';
+      const cur=document.getElementById('set_current');
+      cur.style.display='block';
+      cur.textContent='✓ API key configurada — la extracción automática está activa.';
+    }else{ status.style.background='var(--dangerbg)';status.style.color='var(--dangertext)';status.style.border='0.5px solid var(--dangerborder)';status.textContent='⚠️ Error al guardar. Intenta de nuevo.'; }
+  }catch(e){ status.style.background='var(--dangerbg)';status.style.color='var(--dangertext)';status.style.border='0.5px solid var(--dangerborder)';status.textContent='⚠️ Error de conexión: '+e.message; }
+}
+
 async function doChangePwd(){
   const nw=document.getElementById('cp_new').value;
   const conf=document.getElementById('cp_confirm').value;
@@ -909,6 +979,13 @@ async function enterApp(user){
   }
 
   await loadData();
+  // Cargar API key de Claude en segundo plano
+  loadClaudeKey().then(hasKey=>{
+    if(hasKey){
+      const cur=document.getElementById('set_current');
+      if(cur){ cur.style.display='block'; cur.textContent='✓ API key configurada — la extracción automática está activa.'; }
+    }
+  });
   resetInactTimer();
   refreshAll();
   setSyncStatus('Sincronizado ✓');
@@ -1049,6 +1126,421 @@ async function saveData(){
   refreshAll();
 }
 function setSyncStatus(msg){const el=document.getElementById('syncStatusText');if(el)el.textContent=msg;}
+
+// ===== EXTRACCIÓN AUTOMÁTICA CON IA =====
+let CLAUDE_KEY=''; // Se carga desde Supabase — nunca en el código
+
+async function loadClaudeKey(){
+  try{
+    const{data}=await sb.from('configuracion').select('settings').eq('user_id',currentUser.id).single();
+    if(data&&data.settings&&data.settings.claudeKey){
+      CLAUDE_KEY=data.settings.claudeKey;
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+async function saveClaudeKey(key){
+  try{
+    const{data:existing}=await sb.from('configuracion').select('id').eq('user_id',currentUser.id);
+    if(existing&&existing.length>0){
+      await sb.from('configuracion').update({settings:{claudeKey:key},updated_at:new Date().toISOString()}).eq('user_id',currentUser.id);
+    }else{
+      await sb.from('configuracion').insert({user_id:currentUser.id,settings:{claudeKey:key}});
+    }
+    CLAUDE_KEY=key;
+    return true;
+  }catch(e){ console.error('Error guardando key:',e); return false; }
+}
+
+async function handleFileSelected(input){
+  showSelectedFile(input,'filePreviewDoc');
+  const file=input.files&&input.files[0];
+  if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const extractBox=document.getElementById('extractBox');
+  const extractStatus=document.getElementById('extractStatus');
+  const supported=['pdf','jpg','jpeg','png','heic','webp','doc','docx'];
+  if(supported.includes(ext)){
+    extractBox.style.display='block';
+    const tipo=ext==='pdf'?'PDF':['jpg','jpeg','png','heic','webp'].includes(ext)?'imagen':'documento Word';
+    extractStatus.textContent=`Se detectó un ${tipo} — haz clic en "✨ Llenar campos automáticamente" para extraer los datos con IA.`;
+    document.getElementById('extractResult').style.display='none';
+  }else{
+    extractBox.style.display='none';
+  }
+}
+
+async function extractDocData(){
+  const file=document.getElementById('d_file').files[0];
+  if(!file) return;
+  const btn=document.getElementById('btnExtract');
+  const status=document.getElementById('extractStatus');
+  const result=document.getElementById('extractResult');
+
+  // Verificar si tiene key configurada
+  if(!CLAUDE_KEY){
+    const loaded=await loadClaudeKey();
+    if(!loaded){
+      status.textContent='';
+      result.style.display='block';
+      result.innerHTML=`<div style="font-size:12px;color:var(--warningtext);background:var(--warningbg);padding:10px 12px;border-radius:var(--radius);border:0.5px solid var(--warningborder)">
+        🔑 Para usar la extracción automática necesitas configurar tu API key de Claude.<br><br>
+        <button class="btn sm primary" onclick="openModal('settingsModal')">⚙️ Configurar API key ahora</button>
+      </div>`;
+      return;
+    }
+  }
+
+  btn.disabled=true; btn.textContent='⏳ Analizando con IA...';
+  status.textContent='Claude está leyendo el documento...';
+  result.style.display='none';
+
+  try{
+    const ext=file.name.split('.').pop().toLowerCase();
+    const isImage=['jpg','jpeg','png','heic','webp'].includes(ext);
+    const isPdf=ext==='pdf';
+    let extracted=null;
+
+    if(isImage){
+      extracted=await extractWithClaudeImage(file);
+    }else if(isPdf){
+      let pdfText='';
+      try{ pdfText=await extractPdfText(file); }catch(e){}
+      if(pdfText&&pdfText.trim().length>100){
+        extracted=await extractWithClaudeText(pdfText,file.name);
+      }else{
+        extracted=await extractWithClaudePdfImage(file);
+      }
+    }else{
+      const text=await file.text().catch(()=>'');
+      if(text.length>50) extracted=await extractWithClaudeText(text,file.name);
+      else{ status.textContent='⚠️ No se pudo leer este tipo de archivo. Llena los campos manualmente.'; btn.disabled=false; btn.textContent='✨ Llenar campos automáticamente'; return; }
+    }
+
+    if(!extracted){ status.textContent='⚠️ No se pudo extraer información. Llena los campos manualmente.'; btn.disabled=false; btn.textContent='✨ Llenar campos automáticamente'; return; }
+
+    let filled=[];
+    if(extracted.fecha){ document.getElementById('d_fecha').value=extracted.fecha; filled.push('Fecha'); }
+    if(extracted.fechaRad){ document.getElementById('d_fechaRad').value=extracted.fechaRad; filled.push('Fecha radicación'); }
+    if(extracted.nombre&&!document.getElementById('d_nombre').value){ document.getElementById('d_nombre').value=extracted.nombre; filled.push('Nombre'); }
+    if(extracted.entidad){ document.getElementById('d_entidad').value=extracted.entidad; filled.push('Entidad'); }
+    if(extracted.radicado){ document.getElementById('d_radicado').value=extracted.radicado; filled.push('Radicado'); }
+    if(extracted.cat){ document.getElementById('d_cat').value=extracted.cat; filled.push('Categoría'); }
+    if(extracted.status){ document.getElementById('d_status').value=extracted.status; filled.push('Estado'); }
+    if(extracted.resumen){ document.getElementById('d_resumen').value=extracted.resumen; filled.push('Resumen'); }
+
+    if(filled.length>0){
+      status.textContent=`✅ Campos llenados: ${filled.join(', ')}. Revisa y corrige si es necesario.`;
+      result.style.display='block';
+      result.innerHTML=`<div style="font-size:11px;color:var(--infotext)">💡 <strong>${filled.length} campos detectados automáticamente.</strong> Revisa antes de guardar.</div>`;
+    }else{
+      status.textContent='⚠️ No se detectaron campos. Llena los campos manualmente.';
+    }
+  }catch(e){
+    if(e.message.includes('401')){
+      status.textContent='⚠️ API key incorrecta. Ve a Configuración y verifica tu key.';
+    }else{
+      status.textContent='⚠️ Error: '+e.message;
+    }
+    console.error(e);
+  }
+  btn.disabled=false; btn.textContent='✨ Llenar campos automáticamente';
+}
+
+const CLAUDE_PROMPT=`Eres un asistente legal colombiano. Analiza este documento legal colombiano y extrae estos campos en formato JSON.
+
+Extrae exactamente estos campos (deja en null si no encuentras el dato):
+- fecha: fecha del documento en formato YYYY-MM-DD
+- fechaRad: fecha de radicación/envío en formato YYYY-MM-DD (puede ser diferente a fecha)
+- nombre: nombre o título del documento (máx 100 caracteres)
+- entidad: entidad que emite o recibe el documento (Comisaría, Fiscalía, Juzgado, etc.)
+- radicado: número de radicado, expediente o proceso
+- cat: SOLO una de estas opciones exactas: "Pruebas", "Fallos", "Medidas de protección", "Derecho de petición", "Actuaciones penales", "Documentos patrimoniales", "Clínico/pericial", "Actas y conciliaciones", "Comunicaciones", "Otro"
+- status: SOLO una de: "Vigente", "Pendiente respuesta", "Respondido", "Vencido", "Archivado"
+- resumen: resumen del contenido en 2-3 oraciones (máx 300 caracteres)
+
+Responde SOLO con el JSON, sin texto adicional, sin markdown.`;
+
+async function extractWithClaudeText(text,filename){
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:CLAUDE_PROMPT+'\n\nTexto del documento:\n'+text.substring(0,4000)}]})
+  });
+  if(!res.ok) throw new Error('Error API: '+res.status);
+  const data=await res.json();
+  return JSON.parse(data.content[0].text.trim().replace(/```json|```/g,'').trim());
+}
+
+async function extractWithClaudeImage(file){
+  const base64=await fileToBase64(file);
+  const mediaType=file.type||'image/jpeg';
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
+      {type:'text',text:CLAUDE_PROMPT}
+    ]}]})
+  });
+  if(!res.ok) throw new Error('Error API: '+res.status);
+  const data=await res.json();
+  return JSON.parse(data.content[0].text.trim().replace(/```json|```/g,'').trim());
+}
+
+async function extractWithClaudePdfImage(file){
+  if(typeof pdfjsLib==='undefined') throw new Error('PDF.js no disponible');
+  const arrayBuffer=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  const page=await pdf.getPage(1);
+  const viewport=page.getViewport({scale:1.5});
+  const canvas=document.createElement('canvas');
+  canvas.width=viewport.width; canvas.height=viewport.height;
+  await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+  const base64=canvas.toDataURL('image/jpeg',0.8).split(',')[1];
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
+      {type:'text',text:CLAUDE_PROMPT}
+    ]}]})
+  });
+  if(!res.ok) throw new Error('Error API: '+res.status);
+  const data=await res.json();
+  return JSON.parse(data.content[0].text.trim().replace(/```json|```/g,'').trim());
+}
+
+async function extractPdfText(file){
+  if(typeof pdfjsLib==='undefined') throw new Error('PDF.js no disponible');
+  const arrayBuffer=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  let fullText='';
+  const maxPages=Math.min(pdf.numPages,4);
+  for(let i=1;i<=maxPages;i++){
+    const page=await pdf.getPage(i);
+    const content=await page.getTextContent();
+    fullText+=content.items.map(item=>item.str).join(' ')+'\n';
+  }
+  return fullText;
+}
+
+async function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=e=>res(e.target.result.split(',')[1]);
+    reader.onerror=rej;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ===== FILE UPLOAD =====
+
+async function handleFileSelected(input){
+  showSelectedFile(input,'filePreviewDoc');
+  const file=input.files&&input.files[0];
+  if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const extractBox=document.getElementById('extractBox');
+  const extractStatus=document.getElementById('extractStatus');
+  // Mostrar caja de extracción para PDFs e imágenes
+  const supported=['pdf','jpg','jpeg','png','heic','webp','doc','docx'];
+  if(supported.includes(ext)){
+    extractBox.style.display='block';
+    const tipo=ext==='pdf'?'PDF':['jpg','jpeg','png','heic','webp'].includes(ext)?'imagen':'documento Word';
+    extractStatus.textContent=`Se detectó un ${tipo} — haz clic en "✨ Llenar campos automáticamente" para extraer los datos con IA.`;
+    document.getElementById('extractResult').style.display='none';
+  }else{
+    extractBox.style.display='none';
+  }
+}
+
+async function extractDocData(){
+  const file=document.getElementById('d_file').files[0];
+  if(!file) return;
+  const btn=document.getElementById('btnExtract');
+  const status=document.getElementById('extractStatus');
+  const result=document.getElementById('extractResult');
+  btn.disabled=true; btn.textContent='⏳ Analizando con IA...';
+  status.textContent='Claude está leyendo el documento...';
+  result.style.display='none';
+
+  try{
+    const ext=file.name.split('.').pop().toLowerCase();
+    const isImage=['jpg','jpeg','png','heic','webp'].includes(ext);
+    const isPdf=ext==='pdf';
+
+    let extracted=null;
+
+    if(isImage){
+      extracted=await extractWithClaudeImage(file);
+    }else if(isPdf){
+      // Intentar primero extracción local de texto
+      let pdfText='';
+      try{ pdfText=await extractPdfText(file); }catch(e){}
+      if(pdfText&&pdfText.trim().length>100){
+        // PDF con texto — enviar texto a Claude
+        extracted=await extractWithClaudeText(pdfText, file.name);
+      }else{
+        // PDF escaneado — convertir primera página a imagen y enviar a Claude
+        extracted=await extractWithClaudePdfImage(file);
+      }
+    }else{
+      // Word u otro — extraer texto básico
+      status.textContent='Leyendo el documento...';
+      const text=await file.text().catch(()=>'');
+      if(text.length>50) extracted=await extractWithClaudeText(text, file.name);
+      else{ status.textContent='⚠️ No se pudo leer este tipo de archivo. Llena los campos manualmente.'; btn.disabled=false; btn.textContent='✨ Llenar campos automáticamente'; return; }
+    }
+
+    if(!extracted){ status.textContent='⚠️ No se pudo extraer información. Llena los campos manualmente.'; btn.disabled=false; btn.textContent='✨ Llenar campos automáticamente'; return; }
+
+    // Llenar campos
+    let filled=[];
+    if(extracted.fecha){ document.getElementById('d_fecha').value=extracted.fecha; filled.push('Fecha'); }
+    if(extracted.fechaRad){ document.getElementById('d_fechaRad').value=extracted.fechaRad; filled.push('Fecha radicación'); }
+    if(extracted.nombre&&!document.getElementById('d_nombre').value){ document.getElementById('d_nombre').value=extracted.nombre; filled.push('Nombre'); }
+    if(extracted.entidad){ document.getElementById('d_entidad').value=extracted.entidad; filled.push('Entidad'); }
+    if(extracted.radicado){ document.getElementById('d_radicado').value=extracted.radicado; filled.push('Radicado'); }
+    if(extracted.cat){ document.getElementById('d_cat').value=extracted.cat; filled.push('Categoría'); }
+    if(extracted.status){ document.getElementById('d_status').value=extracted.status; filled.push('Estado'); }
+    if(extracted.resumen){ document.getElementById('d_resumen').value=extracted.resumen; filled.push('Resumen'); }
+
+    if(filled.length>0){
+      status.textContent=`✅ Campos llenados: ${filled.join(', ')}. Revisa y corrige si es necesario.`;
+      result.style.display='block';
+      result.innerHTML=`<div style="font-size:11px;color:var(--infotext)">💡 <strong>${filled.length} campos detectados automáticamente.</strong> Los campos vacíos no se detectaron — llénalos manualmente.</div>`;
+    }else{
+      status.textContent='⚠️ No se detectaron campos. El documento puede no tener información clara. Llena los campos manualmente.';
+    }
+  }catch(e){
+    status.textContent='⚠️ Error al analizar: '+e.message;
+    console.error(e);
+  }
+  btn.disabled=false; btn.textContent='✨ Llenar campos automáticamente';
+}
+
+async function extractWithClaudeText(text, filename){
+  const prompt=`Eres un asistente legal colombiano. Analiza el siguiente texto de un documento legal colombiano y extrae estos campos en formato JSON.
+
+Texto del documento:
+${text.substring(0,4000)}
+
+Extrae exactamente estos campos (deja en null si no encuentras el dato):
+- fecha: fecha del documento en formato YYYY-MM-DD
+- fechaRad: fecha de radicación/envío en formato YYYY-MM-DD (puede ser diferente a fecha)
+- nombre: nombre o título del documento (máx 100 caracteres)
+- entidad: entidad que emite o recibe el documento (Comisaría, Fiscalía, Juzgado, etc.)
+- radicado: número de radicado, expediente o proceso
+- cat: categoría del documento, SOLO una de estas opciones exactas: "Pruebas", "Fallos", "Medidas de protección", "Derecho de petición", "Actuaciones penales", "Documentos patrimoniales", "Clínico/pericial", "Actas y conciliaciones", "Comunicaciones", "Otro"
+- status: SOLO una de estas opciones: "Vigente", "Pendiente respuesta", "Respondido", "Vencido", "Archivado"
+- resumen: resumen del contenido en 2-3 oraciones (máx 300 caracteres)
+
+Responde SOLO con el JSON, sin texto adicional, sin markdown, sin explicaciones.
+Ejemplo: {"fecha":"2026-06-01","fechaRad":null,"nombre":"Auto 1217","entidad":"Comisaría de Familia Comuna 16 Belén","radicado":"002-15088-26","cat":"Medidas de protección","status":"Vigente","resumen":"Auto que admite solicitud de medida de protección por violencia intrafamiliar."}`;
+
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:prompt}]})
+  });
+  if(!res.ok) throw new Error('Error API: '+res.status);
+  const data=await res.json();
+  const txt=data.content[0].text.trim();
+  return JSON.parse(txt.replace(/```json|```/g,'').trim());
+}
+
+async function extractWithClaudeImage(file){
+  const base64=await fileToBase64(file);
+  const mediaType=file.type||'image/jpeg';
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
+      {type:'text',text:`Eres un asistente legal colombiano. Analiza esta imagen de un documento legal colombiano y extrae estos campos en formato JSON.
+
+Extrae exactamente estos campos (deja en null si no encuentras el dato):
+- fecha: fecha del documento en formato YYYY-MM-DD
+- fechaRad: fecha de radicación/envío en formato YYYY-MM-DD
+- nombre: nombre o título del documento (máx 100 caracteres)
+- entidad: entidad que emite o recibe el documento
+- radicado: número de radicado, expediente o proceso
+- cat: SOLO una de: "Pruebas", "Fallos", "Medidas de protección", "Derecho de petición", "Actuaciones penales", "Documentos patrimoniales", "Clínico/pericial", "Actas y conciliaciones", "Comunicaciones", "Otro"
+- status: SOLO una de: "Vigente", "Pendiente respuesta", "Respondido", "Vencido", "Archivado"
+- resumen: resumen en 2-3 oraciones (máx 300 caracteres)
+
+Responde SOLO con el JSON, sin texto adicional.`}
+    ]}]})
+  });
+  if(!res.ok) throw new Error('Error API: '+res.status);
+  const data=await res.json();
+  const txt=data.content[0].text.trim();
+  return JSON.parse(txt.replace(/```json|```/g,'').trim());
+}
+
+async function extractWithClaudePdfImage(file){
+  // Convertir primera página del PDF a imagen usando canvas
+  if(typeof pdfjsLib==='undefined') throw new Error('PDF.js no disponible');
+  const arrayBuffer=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  const page=await pdf.getPage(1);
+  const viewport=page.getViewport({scale:1.5});
+  const canvas=document.createElement('canvas');
+  canvas.width=viewport.width; canvas.height=viewport.height;
+  const ctx=canvas.getContext('2d');
+  await page.render({canvasContext:ctx,viewport}).promise;
+  const base64=canvas.toDataURL('image/jpeg',0.8).split(',')[1];
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
+      {type:'text',text:`Eres un asistente legal colombiano. Analiza esta imagen de la primera página de un documento legal colombiano (PDF escaneado) y extrae estos campos en formato JSON.
+
+Extrae exactamente estos campos (deja en null si no encuentras el dato):
+- fecha: fecha del documento en formato YYYY-MM-DD
+- fechaRad: fecha de radicación/envío en formato YYYY-MM-DD
+- nombre: nombre o título del documento (máx 100 caracteres)
+- entidad: entidad que emite o recibe el documento
+- radicado: número de radicado, expediente o proceso
+- cat: SOLO una de: "Pruebas", "Fallos", "Medidas de protección", "Derecho de petición", "Actuaciones penales", "Documentos patrimoniales", "Clínico/pericial", "Actas y conciliaciones", "Comunicaciones", "Otro"
+- status: SOLO una de: "Vigente", "Pendiente respuesta", "Respondido", "Vencido", "Archivado"
+- resumen: resumen en 2-3 oraciones (máx 300 caracteres)
+
+Responde SOLO con el JSON, sin texto adicional.`}
+    ]}]})
+  });
+  if(!res.ok) throw new Error('Error API: '+res.status);
+  const data=await res.json();
+  const txt=data.content[0].text.trim();
+  return JSON.parse(txt.replace(/```json|```/g,'').trim());
+}
+
+async function extractPdfText(file){
+  if(typeof pdfjsLib==='undefined') throw new Error('PDF.js no disponible');
+  const arrayBuffer=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  let fullText='';
+  const maxPages=Math.min(pdf.numPages,4);
+  for(let i=1;i<=maxPages;i++){
+    const page=await pdf.getPage(i);
+    const content=await page.getTextContent();
+    fullText+=content.items.map(item=>item.str).join(' ')+'\n';
+  }
+  return fullText;
+}
+
+async function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=e=>res(e.target.result.split(',')[1]);
+    reader.onerror=rej;
+    reader.readAsDataURL(file);
+  });
+}
 
 // ===== FILE UPLOAD =====
 function handleDrop(event,inputId){
@@ -1611,6 +2103,10 @@ function seedData(){
 
 // ===== INIT =====
 async function init(){
+  // Inicializar PDF.js
+  if(typeof pdfjsLib!=='undefined'){
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
   renderAuthForm();
   const{data:{session}}=await sb.auth.getSession();
   if(session?.user){await enterApp(session.user);return;}
