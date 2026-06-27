@@ -722,6 +722,16 @@ tr:hover td{background:var(--bg2)}
   </div>
 </div>
 
+<!-- MODAL VISTA DOCUMENTO -->
+<div class="overlay" id="viewDocModal">
+  <div class="modal" style="max-width:620px">
+    <div id="viewDocContent"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('viewDocModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CONFIGURACIÓN API KEY -->
 <div class="overlay" id="settingsModal">
   <div class="modal" style="max-width:480px">
@@ -1912,7 +1922,7 @@ function renderDocs(){
   }).sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const tb=document.getElementById('docsTable');if(!tb)return;
   const canEd=canEdit();const canDel=canDelete();
-  tb.innerHTML=docs.length===0?`<tr><td colspan="9"><div class="empty"><span class="empty-icon">📄</span>Sin documentos</div></td></tr>`:docs.map(d=>`<tr>
+  tb.innerHTML=docs.length===0?`<tr><td colspan="9"><div class="empty"><span class="empty-icon">📄</span>Sin documentos</div></td></tr>`:docs.map(d=>`<tr style="cursor:pointer" onclick="viewDoc(${d.id})" title="Ver detalle">
     <td style="white-space:nowrap;font-size:12px;color:var(--text3)">${fmt(d.fecha)}</td>
     <td style="max-width:220px"><div class="td-name">${d.nombre}</div><div class="td-sub">${(d.resumen||'').substring(0,70)}${(d.resumen||'').length>70?'…':''}</div></td>
     <td><span class="badge ${CAT_BADGE[d.cat]||'neutral'}">${d.cat}</span></td>
@@ -1920,12 +1930,79 @@ function renderDocs(){
     <td style="font-size:11px;color:var(--text3);font-family:monospace;max-width:110px;overflow:hidden;text-overflow:ellipsis">${d.radicado||'—'}</td>
     <td><span class="badge ${STATUS_BADGE[d.status]||'neutral'}">${d.status}</span></td>
     <td>${deadlineBadge(d.vence)}</td>
-    <td>${d.filePath?`<button class="btn sm" onclick="openFile('${d.filePath}')">📂 Ver</button>`:''}</td>
-    <td style="white-space:nowrap">
+    <td>${d.filePath?`<button class="btn sm" onclick="event.stopPropagation();openFile('${d.filePath}')">📂 Ver</button>`:''}</td>
+    <td style="white-space:nowrap" onclick="event.stopPropagation()">
       ${canEd?`<button class="btn sm" onclick="openDocModal(${d.id})" title="Editar">✏️</button>`:''}
       ${canDel?`<button class="btn sm danger" onclick="delItem('docs',${d.id})" title="Eliminar">🗑</button>`:''}
     </td>
   </tr>`).join('');
+}
+
+function viewDoc(id){
+  const d=db.docs.find(x=>x.id===id);
+  if(!d) return;
+  const canEd=canEdit();
+  const modal=document.getElementById('viewDocModal');
+  const content=document.getElementById('viewDocContent');
+  content.innerHTML=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:20px">
+      <div style="flex:1">
+        <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px">${d.nombre}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span class="badge ${CAT_BADGE[d.cat]||'neutral'}">${d.cat}</span>
+          <span class="badge ${STATUS_BADGE[d.status]||'neutral'}">${d.status}</span>
+          ${d.vence?deadlineBadge(d.vence):''}
+        </div>
+      </div>
+      ${canEd?`<button class="btn sm" onclick="closeModal('viewDocModal');openDocModal(${d.id})">✏️ Editar</button>`:''}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="background:var(--bg2);border-radius:var(--radius);padding:12px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:4px">Fecha del documento</div>
+        <div style="font-size:14px;font-weight:500">${fmt(d.fecha)||'—'}</div>
+      </div>
+      <div style="background:var(--bg2);border-radius:var(--radius);padding:12px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:4px">Fecha radicación / envío</div>
+        <div style="font-size:14px;font-weight:500">${fmt(d.fechaRad)||'—'}</div>
+      </div>
+      <div style="background:var(--bg2);border-radius:var(--radius);padding:12px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:4px">Entidad</div>
+        <div style="font-size:13px">${d.entidad||'—'}</div>
+      </div>
+      <div style="background:var(--bg2);border-radius:var(--radius);padding:12px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:4px">Radicado</div>
+        <div style="font-size:12px;font-family:monospace;word-break:break-all">${d.radicado||'—'}</div>
+      </div>
+      ${d.vence?`<div style="background:var(--dangerbg);border-radius:var(--radius);padding:12px;border:0.5px solid var(--dangerborder)">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dangertext);margin-bottom:4px">Fecha de vencimiento</div>
+        <div style="font-size:14px;font-weight:600;color:var(--dangertext)">${fmt(d.vence)} ${deadlineBadge(d.vence)}</div>
+      </div>`:''}
+      ${d.ubicacion?`<div style="background:var(--bg2);border-radius:var(--radius);padding:12px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:4px">Ubicación</div>
+        <div style="font-size:13px">${d.ubicacion}</div>
+      </div>`:''}
+    </div>
+
+    ${d.resumen?`<div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px">Resumen / relevancia legal</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;background:var(--bg2);padding:12px 14px;border-radius:var(--radius);border-left:3px solid var(--accent)">${d.resumen}</div>
+    </div>`:''}
+
+    ${d.notas?`<div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px">Notas adicionales</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;background:var(--warningbg);padding:12px 14px;border-radius:var(--radius);border-left:3px solid var(--warning)">${d.notas}</div>
+    </div>`:''}
+
+    ${d.filePath?`<div style="padding:12px 14px;background:var(--successbg);border:0.5px solid var(--successborder);border-radius:var(--radius);display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--successtext)">📎 Archivo adjunto</div>
+        <div style="font-size:11px;color:var(--successtext);margin-top:2px">${d.fileName||'Archivo'}</div>
+      </div>
+      <button class="btn sm primary" onclick="openFile('${d.filePath}')">📂 Ver / descargar</button>
+    </div>`:'<div style="padding:10px 14px;background:var(--bg2);border-radius:var(--radius);font-size:12px;color:var(--text3)">📎 Sin archivo adjunto</div>'}
+  `;
+  openModal('viewDocModal');
 }
 
 function renderArchivos(){
