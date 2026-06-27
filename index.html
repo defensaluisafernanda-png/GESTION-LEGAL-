@@ -348,6 +348,8 @@ tr:hover td{background:var(--bg2)}
       <button class="nav-item" id="nav-procesos" onclick="navigate('procesos')"><span class="icon">🗂️</span>Procesos activos</button>
       <div class="nav-section" id="adminSection" style="display:none">Administración</div>
       <button class="nav-item" id="nav-usuarios" onclick="navigate('usuarios')" style="display:none"><span class="icon">👥</span>Usuarios</button>
+      <div class="nav-section">Herramientas IA</div>
+      <button class="nav-item" onclick="navigate('redaccion')"><span class="icon">✍️</span>Redactar documento</button>
       <div class="nav-section">Configuración</div>
       <button class="nav-item" onclick="openModal('settingsModal')"><span class="icon">⚙️</span>Extracción con IA</button>
     </nav>
@@ -480,6 +482,70 @@ tr:hover td{background:var(--bg2)}
     </div>
 
     <!-- USUARIOS -->
+    <!-- REDACCIÓN LEGAL CON IA -->
+    <div id="view-redaccion" class="section">
+      <div class="page-header">
+        <div><div class="page-title">✍️ Redactar documento legal</div><div class="page-sub">La IA redacta con base en los hechos de tu caso</div></div>
+      </div>
+      <div class="page-content">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <!-- PANEL IZQUIERDO: configuración -->
+          <div>
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:12px">1. Tipo de documento</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="tipoDocGrid"></div>
+            </div>
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:12px">2. Destinatario y objetivo</div>
+              <div class="form-row"><label>Dirigido a</label><input type="text" id="rd_destinatario" placeholder="Ej: Comisaría de Familia Comuna 16 Belén"></div>
+              <div class="form-row"><label>Radicado / proceso relacionado</label><input type="text" id="rd_radicado" placeholder="Ej: 002-15088-26 MESA 1"></div>
+              <div class="form-row"><label>Objetivo principal del documento <span class="req">*</span></label>
+                <textarea id="rd_objetivo" placeholder="Describe en tus propias palabras qué quieres lograr con este documento. Ej: Solicitar que el Juzgado informe el estado del recurso de apelación radicado en septiembre de 2023 y que se me notifique cualquier actuación..." style="min-height:90px"></textarea>
+              </div>
+            </div>
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:12px">3. Hechos relevantes <span style="font-size:11px;font-weight:400;color:var(--text3)">(opcional — la IA usa los del expediente si no los indicas)</span></div>
+              <textarea id="rd_hechos" placeholder="Describe los hechos específicos que deben incluirse en este documento. Fechas, personas, evidencias disponibles. Sé específica.&#10;&#10;Ej: El 26 de abril de 2026 JELP dejó al menor TOMÁS solo en la reja sin adulto receptor. Tengo capturas de WhatsApp donde JELP le solicita las llaves del hogar materno al menor..." style="min-height:120px"></textarea>
+              <div style="font-size:11px;color:var(--text3);margin-top:6px">💡 Entre más específica seas, mejor será el documento. Incluye fechas, nombres, números de radicado y evidencias disponibles.</div>
+            </div>
+            <div class="card">
+              <div style="font-size:13px;font-weight:600;margin-bottom:12px">4. Pretensiones / peticiones concretas <span style="font-size:11px;font-weight:400;color:var(--text3)">(opcional)</span></div>
+              <textarea id="rd_pretensiones" placeholder="¿Qué pides exactamente? Ej: Que se remita el expediente, que se tome versión al testigo, que se notifique la decisión, etc." style="min-height:80px"></textarea>
+            </div>
+          </div>
+
+          <!-- PANEL DERECHO: resultado -->
+          <div>
+            <div class="card" style="height:100%;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap">
+                <div style="font-size:13px;font-weight:600">5. Documento generado</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button class="btn primary" id="btnGenerar" onclick="generarDocumento()">✨ Generar con IA</button>
+                  <button class="btn" id="btnGuardarDoc" onclick="guardarDocumentoRedactado()" style="display:none">💾 Guardar en expediente</button>
+                  <button class="btn" id="btnCopiar" onclick="copiarDocumento()" style="display:none">📋 Copiar</button>
+                </div>
+              </div>
+              <div id="rdStatus" style="display:none;padding:10px 12px;border-radius:var(--radius);font-size:13px;margin-bottom:10px"></div>
+              <div id="rdResult" style="flex:1;position:relative">
+                <div id="rdPlaceholder" style="text-align:center;padding:48px 20px;color:var(--text3)">
+                  <div style="font-size:36px;margin-bottom:12px">✍️</div>
+                  <div style="font-size:14px;font-weight:500;margin-bottom:6px">El documento aparecerá aquí</div>
+                  <div style="font-size:13px">Selecciona el tipo de documento, completa el objetivo y haz clic en "✨ Generar con IA"</div>
+                </div>
+                <textarea id="rdTexto" style="display:none;width:100%;min-height:520px;font-size:13px;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:16px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--bg);color:var(--text);resize:vertical" placeholder="El documento generado aparecerá aquí para que puedas editarlo..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Historial de documentos redactados -->
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Documentos redactados anteriormente</div>
+          <div id="rdHistorial"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="view-usuarios" class="section">
       <div class="page-header">
         <div><div class="page-title">Gestión de usuarios</div><div class="page-sub">Crea y administra accesos a tu expediente</div></div>
