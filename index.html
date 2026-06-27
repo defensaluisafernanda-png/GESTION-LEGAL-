@@ -580,7 +580,7 @@ tr:hover td{background:var(--bg2)}
       <div class="form-row"><label>Radicado</label><input type="text" id="d_radicado"></div>
     </div>
     <div class="form-row"><label>Resumen / relevancia legal</label><textarea id="d_resumen" placeholder="Contenido e importancia jurídica..."></textarea></div>
-    <div class="form-row"><label>Ubicación física / digital</label><input type="text" id="d_ubicacion" placeholder="Ej: Carpeta roja / Google Drive/Pruebas/"></div>
+    <div class="form-row"><label>Ubicación física / digital</label><input type="text" id="d_ubicacion" placeholder="Ej: Drive: defensaluisafernanda@gmail.com / Carpeta: 01. Fallos"></div>
     <div class="form-grid">
       <div class="form-row"><label>Plazo legal automático</label>
         <select id="d_plazo" onchange="calcDeadline()">
@@ -1372,6 +1372,17 @@ Extrae EXACTAMENTE estos campos en formato JSON (null si no encuentras el dato):
   IMPORTANTE: Un correo donde pides algo y no te han resuelto = "Pendiente respuesta". Un auto admisorio sin fallo = "Vigente". Un plazo que ya pasó sin respuesta = "Vencido".
 - plazo: SOLO UNO de: "Sin plazo", "15 días hábiles — Derecho de petición", "10 días hábiles — Urgente", "30 días hábiles — Judicial", "5 días hábiles — Recurso", "3 meses — Fiscalía"
 - vence: fecha vencimiento = fechaRad + plazo en formato YYYY-MM-DD. null si no hay plazo
+- ubicacion: ubicación exacta en Google Drive según la categoría del documento. Usa SIEMPRE este formato: "Drive: defensaluisafernanda@gmail.com / Carpeta: [XX. Nombre]". La correspondencia es:
+  "Fallos" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 01. Fallos"
+  "Medidas de protección" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 02. Medidas de protección"
+  "Derecho de petición" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 03. Derechos de petición"
+  "Actuaciones penales" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 04. Actuaciones penales"
+  "Documentos patrimoniales" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 05. Documentos patrimoniales"
+  "Clínico/pericial" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 06. Clínico-pericial"
+  "Actas y conciliaciones" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 07. Actas y conciliaciones"
+  "Comunicaciones" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 08. Comunicaciones"
+  "Trámites disciplinarios" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 09. Trámites disciplinarios"
+  "Otro" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 10. Otros"
 - resumen: síntesis en 2-3 oraciones — qué demuestra, personas involucradas, relevancia legal (máx 350 caracteres)
 - notas: observaciones — documentos relacionados, mérito ejecutivo, agravantes, advertencias (máx 250 caracteres)
 - acciones: array máximo 3 tareas que LUISA FERNANDA debe realizar. Formato: [{"titulo":"acción concreta","tipo":"Legal|Llamada|Correo|Documento|Visita","prioridad":"Urgente|Alta|Normal"}]
@@ -1527,6 +1538,8 @@ async function extractDocData(){
     if(extracted.notas){ document.getElementById('d_notas').value=extracted.notas; filled.push('Notas'); }
     // Fecha de vencimiento calculada por la IA
     if(extracted.vence){ document.getElementById('d_vence').value=extracted.vence; filled.push('Vencimiento'); }
+    // Ubicación en Google Drive
+    if(extracted.ubicacion){ document.getElementById('d_ubicacion').value=extracted.ubicacion; filled.push('Ubicación'); }
     // Plazo legal detectado
     if(extracted.plazo&&extracted.plazo!=='Sin plazo'){
       const plazoMap={'15 días hábiles — Derecho de petición':'15','10 días hábiles — Urgente':'10','30 días hábiles — Judicial':'30','5 días hábiles — Recurso':'5'};
@@ -1669,7 +1682,7 @@ const TIPOS_DOC=[
   {id:'desacato',label:'Incidente de Desacato',icon:'🔴',cat:'Fallos',desc:'Incumplimiento de orden judicial o medida de protección'},
   {id:'queja_disciplinaria',label:'Queja Disciplinaria',icon:'📌',cat:'Trámites disciplinarios',desc:'Ante Procuraduría o Personería por servidor público'},
   {id:'denuncia_penal',label:'Denuncia Penal',icon:'🚔',cat:'Actuaciones penales',desc:'Ante Fiscalía por conducta punible'},
-  {id:'correo_formal',label:'Correo Formal',icon:'📧',cat:'Comunicaciones',desc:'Comunicación oficial a entidad o persona'},
+  {id:'correo_formal',label:'Correo Electrónico',icon:'📧',cat:'Comunicaciones',desc:'Correo formal o informal a entidad, institución o persona'},
   {id:'recurso_reposicion',label:'Recurso de Reposición',icon:'🔄',cat:'Fallos',desc:'Impugnar decisión — 5 días hábiles'},
 ];
 
@@ -2155,7 +2168,7 @@ function renderView(id){
     case 'fallos':renderFallos();break;
     case 'procesos':renderProcesos();break;
     case 'usuarios':renderUsuarios();break;
-    case 'redaccion':renderTiposDoc();renderRdHistorial();break;
+    case 'redaccion':setTimeout(()=>{renderTiposDoc();renderRdHistorial();},50);break;
   }
 }
 function navigate(id){
