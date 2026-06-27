@@ -1514,6 +1514,7 @@ const TIPOS_DOC=[
   {id:'tutela',label:'Acción de Tutela',icon:'⚖️',cat:'Fallos',desc:'Protección inmediata de derechos fundamentales'},
   {id:'peticion',label:'Derecho de Petición',icon:'📋',cat:'Derecho de petición',desc:'Solicitud formal — 15 días hábiles de respuesta'},
   {id:'peticion_urgente',label:'D. Petición Urgente',icon:'🚨',cat:'Derecho de petición',desc:'Solicitud urgente — 10 días hábiles'},
+  {id:'hechos_sobrevinientes',label:'Hechos Sobrevinientes',icon:'📝',cat:'Medidas de protección',desc:'Hechos nuevos para incorporar al expediente administrativo'},
   {id:'desacato',label:'Incidente de Desacato',icon:'🔴',cat:'Fallos',desc:'Incumplimiento de orden judicial o medida de protección'},
   {id:'queja_disciplinaria',label:'Queja Disciplinaria',icon:'📌',cat:'Trámites disciplinarios',desc:'Ante Procuraduría o Personería por servidor público'},
   {id:'denuncia_penal',label:'Denuncia Penal',icon:'🚔',cat:'Actuaciones penales',desc:'Ante Fiscalía por conducta punible'},
@@ -1590,6 +1591,7 @@ function getTipoInstrucciones(tipo){
     denuncia_penal:'Estructura: 1) Datos del denunciante. 2) Hechos cronológicos con fecha, hora, lugar. 3) Personas involucradas. 4) Posibles conductas punibles sin afirmar que se cometieron. 5) Pruebas disponibles. Aplica: Ley 1257/2008, Ley 599/2000.',
     correo_formal:'Estructura: Asunto claro y específico. Saludo formal. Contexto mínimo indispensable. Hechos objetivos y cronológicos. Solicitud concreta. Cierre formal con datos de contacto. Tono profesional, directo, respetuoso. Sin lenguaje emocional.',
     recurso_reposicion:'Estructura: 1) Decisión recurrida (fecha, número, autoridad). 2) Fundamentos de hecho — por qué es equivocada. 3) Fundamentos de derecho — normas y jurisprudencia. 4) Pretensión concreta. Plazo: 5 días hábiles (Art. 318 C.G.P.).',
+    hechos_sobrevinientes:'Estructura: 1) Encabezado con datos del expediente (radicado, auto, fecha). 2) Objeto del escrito — informar hechos posteriores al auto de admisión, aclarar que no sustituye la valoración de la autoridad. 3) Hechos sobrevinientes numerados cronológicamente — cada hecho con fecha exacta, descripción objetiva, personas involucradas y anexo que lo respalda. Distinguir entre: (a) hechos acreditados documentalmente y (b) manifestaciones espontáneas del menor. 4) Cláusulas del acta de conciliación cuya valoración se solicita. 5) Aspectos cuya valoración se solicita — listado concreto. 6) Solicitudes formales numeradas: incorporación al expediente, radicación, respuesta motivada. 7) Relación de anexos. No atribuir calificaciones jurídicas definitivas. Citar Auto correspondiente, Ley 1257/2008, acta de conciliación. Tono: objetivo, técnico, respetuoso.',
   };
   return i[tipo]||'Redacta el documento de forma completa, objetiva y técnicamente sólida.';
 }
