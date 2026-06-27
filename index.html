@@ -1082,29 +1082,30 @@ async function saveDoc(){
   // ✅ VALIDACIÓN: nombre del documento vs nombre del archivo adjunto
   const fileInput=document.getElementById('d_file');
   if(fileInput.files&&fileInput.files[0]){
-    const fileName=fileInput.files[0].name;
-    // Limpiar ambos nombres para comparar: minúsculas, sin extensión, sin caracteres especiales
-    const cleanDocName=n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
-    const cleanFileName=fileName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\.[^.]+$/,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
-    // Verificar si comparten al menos 3 palabras significativas (más de 3 letras)
-    const docWords=cleanDocName.split(' ').filter(w=>w.length>3);
-    const fileWords=cleanFileName.split(' ').filter(w=>w.length>3);
-    const commonWords=docWords.filter(w=>fileWords.some(fw=>fw.includes(w)||w.includes(fw)));
-    if(commonWords.length===0&&docWords.length>0&&fileWords.length>0){
-      // Mostrar error bloqueante
+    const rawFileName=fileInput.files[0].name;
+    // Normalizar ambos: minúsculas, sin acentos, sin extensión, sin caracteres especiales, sin espacios extra
+    const normalize=str=>str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\.[^.]+$/,'').replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
+    const cleanDoc=normalize(n);
+    const cleanFile=normalize(rawFileName);
+    // Extraer todas las palabras de 3+ letras
+    const docWords=cleanDoc.split(' ').filter(w=>w.length>=3);
+    const fileWords=cleanFile.split(' ').filter(w=>w.length>=3);
+    // Buscar coincidencia: al menos 1 palabra del doc aparece en el archivo o viceversa
+    const hasMatch=docWords.some(dw=>fileWords.some(fw=>fw.includes(dw)||dw.includes(fw)));
+    // Si no hay ninguna coincidencia, bloquear siempre
+    if(!hasMatch){
       const errEl=document.getElementById('docNameMismatchError');
       errEl.innerHTML=`
-        <div style="font-size:13px;font-weight:600;margin-bottom:8px">⚠️ El nombre del documento y el archivo no coinciden</div>
-        <div style="font-size:12px;margin-bottom:4px"><strong>Nombre del documento:</strong><br>${n}</div>
-        <div style="font-size:12px;margin-bottom:10px"><strong>Archivo adjunto:</strong><br>${fileName}</div>
-        <div style="font-size:12px;color:var(--dangertext)">Por favor corrige el nombre del documento o cambia el archivo adjunto para que coincidan antes de guardar.</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--dangertext)">⚠️ El nombre del documento y el archivo adjunto no coinciden</div>
+        <div style="font-size:12px;margin-bottom:6px"><strong>Nombre del documento:</strong><br><span style="color:var(--text)">${n}</span></div>
+        <div style="font-size:12px;margin-bottom:10px"><strong>Archivo adjunto:</strong><br><span style="color:var(--text)">${rawFileName}</span></div>
+        <div style="font-size:12px;color:var(--dangertext);font-weight:500">Debes corregir el nombre del documento para que coincida con el archivo, o seleccionar un archivo diferente.</div>
       `;
       errEl.style.display='block';
       errEl.scrollIntoView({behavior:'smooth',block:'center'});
-      return;
-    }else{
-      document.getElementById('docNameMismatchError').style.display='none';
+      return; // BLOQUEA el guardado
     }
+    document.getElementById('docNameMismatchError').style.display='none';
   }
 
   const btn=document.getElementById('docSaveBtn');
