@@ -1985,9 +1985,9 @@ async function saveDoc(){
   const fileInput=document.getElementById('d_file');
     const rawFileName=fileInput.files[0].name;
     // Normalizar ambos: minúsculas, sin acentos, sin extensión, sin caracteres especiales, sin espacios extra
-    const normalize=str=>str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\.[^.]+$/,'').replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
-    const cleanDoc=normalize(n);
-    const cleanFile=normalize(rawFileName);
+    const normalizeFile=str=>str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\.[^.]+$/,'').replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
+    const cleanDoc=normalizeFile(n);
+    const cleanFile=normalizeFile(rawFileName);
     // Extraer todas las palabras de 3+ letras
     const docWords=cleanDoc.split(' ').filter(w=>w.length>=3);
     const fileWords=cleanFile.split(' ').filter(w=>w.length>=3);
