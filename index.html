@@ -926,22 +926,41 @@ function applyPermissions(permisos){
 async function loadData(){
   try{
     const targetId=isOwner()?currentUser.id:ownerId;
-    // Buscar fila existente
     const{data,error}=await sb.from('expediente').select('*').eq('user_id',targetId);
     if(error){console.error('Error cargando:',error.message);setSyncStatus('⚠ Error al cargar');}
     if(data&&data.length>0){
-      // Fila encontrada — cargar datos
-      db=data[0].data;
-      dbRowId=data[0].id;
-      if(!db.uploads)db.uploads=[];
-      if(!db.docs)db.docs=[];
-      if(!db.events)db.events=[];
-      if(!db.alerts)db.alerts=[];
-      if(!db.pending)db.pending=[];
-      if(!db.fallos)db.fallos=[];
-      if(!db.procesos)db.procesos=[];
+      const loaded=data[0].data;
+      // ✅ PROTECCIÓN: solo cargar si los datos tienen contenido real
+      // Si la fila existe pero está vacía, NO sobreescribir db con vacío
+      const hasRealData = loaded && (
+        (loaded.docs&&loaded.docs.length>0) ||
+        (loaded.events&&loaded.events.length>0) ||
+        (loaded.alerts&&loaded.alerts.length>0) ||
+        (loaded.pending&&loaded.pending.length>0) ||
+        (loaded.fallos&&loaded.fallos.length>0) ||
+        (loaded.procesos&&loaded.procesos.length>0)
+      );
+      if(hasRealData){
+        db=loaded;
+        dbRowId=data[0].id;
+        if(!db.uploads)db.uploads=[];
+        if(!db.docs)db.docs=[];
+        if(!db.events)db.events=[];
+        if(!db.alerts)db.alerts=[];
+        if(!db.pending)db.pending=[];
+        if(!db.fallos)db.fallos=[];
+        if(!db.procesos)db.procesos=[];
+      }else{
+        // Fila existe pero vacía — guardar el dbRowId pero NO tocar db
+        dbRowId=data[0].id;
+        // Si db actual tiene datos, guardarlos (recuperación)
+        const dbHasData=(db.docs&&db.docs.length>0)||(db.events&&db.events.length>0);
+        if(dbHasData){
+          await saveData();
+        }
+      }
     }else if(isOwner()){
-      // Primera vez — NO cargar seed, empezar vacío y guardar
+      // Primera vez — empezar vacío
       db={docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[]};
       dbRowId=null;
       await saveData();
@@ -954,6 +973,43 @@ async function loadData(){
 
 async function saveData(){
   if(!isOwner()&&currentPerfil?.rol==='lectura')return;
+
+  // ✅ PROTECCIÓN CRÍTICA: nunca guardar datos vacíos encima de datos existentes
+  // Si dbRowId existe (hay fila en Supabase), verificar que db tiene contenido
+  // antes de guardar. Si db está vacío pero hay una fila, algo salió mal — NO guardar.
+  if(dbRowId){
+    const dbIsEmpty = (!db.docs||db.docs.length===0) &&
+      (!db.events||db.events.length===0) &&
+      (!db.alerts||db.alerts.length===0) &&
+      (!db.pending||db.pending.length===0) &&
+      (!db.fallos||db.fallos.length===0) &&
+      (!db.procesos||db.procesos.length===0);
+
+    if(dbIsEmpty){
+      // Verificar si hay datos reales en Supabase antes de sobreescribir
+      try{
+        const targetId=isOwner()?currentUser.id:ownerId;
+        const{data:check}=await sb.from('expediente').select('data').eq('id',dbRowId).eq('user_id',targetId);
+        if(check&&check.length>0){
+          const remote=check[0].data;
+          const remoteHasData=remote&&(
+            (remote.docs&&remote.docs.length>0)||
+            (remote.events&&remote.events.length>0)||
+            (remote.pending&&remote.pending.length>0)
+          );
+          if(remoteHasData){
+            // Hay datos reales en Supabase — cargarlos en lugar de sobreescribir
+            db=remote;
+            if(!db.uploads)db.uploads=[];
+            setSyncStatus('Sincronizado ✓');
+            refreshAll();
+            return; // NO guardar — recuperar los datos remotos
+          }
+        }
+      }catch(e){ console.error('Error en verificación de seguridad:',e); }
+    }
+  }
+
   setSyncStatus('Guardando...');
   const bar=document.getElementById('syncBar');bar.classList.add('syncing');
   try{
@@ -961,11 +1017,9 @@ async function saveData(){
     const payload={data:db,updated_at:new Date().toISOString()};
 
     if(dbRowId){
-      // Actualizar fila existente
       const{error}=await sb.from('expediente').update(payload).eq('id',dbRowId).eq('user_id',targetId);
       if(error)throw new Error(error.message);
     }else{
-      // Verificar una vez más que no exista antes de insertar
       const{data:existing}=await sb.from('expediente').select('id').eq('user_id',targetId);
       if(existing&&existing.length>0){
         dbRowId=existing[0].id;
