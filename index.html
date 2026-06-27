@@ -1440,11 +1440,53 @@ async function extractWithClaudeText(text,filename){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:CLAUDE_PROMPT+'\n\nTexto del documento:\n'+text.substring(0,4000)}]})
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:900,messages:[{role:'user',content:CLAUDE_PROMPT+'\n\nTexto del documento:\n'+text.substring(0,4000)}]})
   });
   if(!res.ok) throw new Error('Error API: '+res.status);
   const data=await res.json();
-  return JSON.parse(data.content[0].text.trim().replace(/```json|```/g,'').trim());
+  return parseClaudeJSON(data.content[0].text);
+}
+
+function parseClaudeJSON(raw){
+  // Limpiar el texto: quitar markdown, backticks, texto antes/después del JSON
+  let txt=raw.trim();
+  txt=txt.replace(/```json|```/g,'').trim();
+  // Buscar el primer { y el último } para extraer solo el JSON
+  const start=txt.indexOf('{');
+  const end=txt.lastIndexOf('}');
+  if(start===-1||end===-1) throw new Error('No se encontró JSON en la respuesta');
+  txt=txt.substring(start,end+1);
+  // Limpiar caracteres problemáticos dentro de strings
+  // Reemplazar saltos de línea dentro de strings JSON
+  txt=txt.replace(/:\s*"([^"]*?)"/g,(match,val)=>{
+    const cleaned=val.replace(/\n/g,' ').replace(/\r/g,' ').replace(/\t/g,' ');
+    return ': "'+cleaned+'"';
+  });
+  try{
+    return JSON.parse(txt);
+  }catch(e){
+    // Último intento: extraer campos clave manualmente
+    console.warn('JSON parse falló, extrayendo campos manualmente:', e.message);
+    const extract=(field)=>{
+      const m=txt.match(new RegExp('"'+field+'"\\s*:\\s*"([^"]*)"'));
+      return m?m[1]:null;
+    };
+    return {
+      fecha:extract('fecha'),
+      fechaRad:extract('fechaRad'),
+      nombre:extract('nombre'),
+      entidad:extract('entidad'),
+      radicado:extract('radicado'),
+      cat:extract('cat'),
+      status:extract('status'),
+      plazo:extract('plazo'),
+      vence:extract('vence'),
+      ubicacion:extract('ubicacion'),
+      resumen:extract('resumen'),
+      notas:extract('notas'),
+      acciones:[]
+    };
+  }
 }
 
 async function extractWithClaudeImage(file){
@@ -1460,7 +1502,7 @@ async function extractWithClaudeImage(file){
   });
   if(!res.ok) throw new Error('Error API: '+res.status);
   const data=await res.json();
-  return JSON.parse(data.content[0].text.trim().replace(/```json|```/g,'').trim());
+  return parseClaudeJSON(data.content[0].text);
 }
 
 async function extractWithClaudePdfImage(file){
@@ -1483,7 +1525,7 @@ async function extractWithClaudePdfImage(file){
   });
   if(!res.ok) throw new Error('Error API: '+res.status);
   const data=await res.json();
-  return JSON.parse(data.content[0].text.trim().replace(/```json|```/g,'').trim());
+  return parseClaudeJSON(data.content[0].text);
 }
 
 async function extractPdfText(file){
