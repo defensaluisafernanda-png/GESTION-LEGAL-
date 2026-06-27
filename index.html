@@ -569,7 +569,7 @@ tr:hover td{background:var(--bg2)}
     <div class="form-row"><label>Nombre del documento <span class="req">*</span></label><input type="text" id="d_nombre" placeholder="Ej: Derecho de petición — Fiscalía 011"></div>
     <div class="form-grid">
       <div class="form-row"><label>Categoría</label>
-        <select id="d_cat"><option>Pruebas</option><option>Fallos</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Otro</option></select>
+        <select id="d_cat"><option>Pruebas</option><option>Fallos</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
       </div>
       <div class="form-row"><label>Estado</label>
         <select id="d_status"><option>Vigente</option><option>Pendiente respuesta</option><option>Respondido</option><option>Vencido</option><option>Archivado</option></select>
@@ -1127,7 +1127,7 @@ async function loadData(){
       }
     }else if(isOwner()){
       // Primera vez — empezar vacío
-      db={docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[]};
+      db={docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[],redactados:[]};
       dbRowId=null;
       await saveData();
     }
@@ -1346,7 +1346,17 @@ Extrae EXACTAMENTE estos campos en formato JSON (null si no encuentras el dato):
 - nombre: título completo del documento (máx 100 caracteres)
 - entidad: institución o autoridad que emitió o recibió el documento
 - radicado: número de radicado, expediente o identificación oficial
-- cat: SOLO UNA de: "Fallos", "Medidas de protección", "Derecho de petición", "Actuaciones penales", "Documentos patrimoniales", "Clínico/pericial", "Actas y conciliaciones", "Comunicaciones", "Otro"
+- cat: SOLO UNA de estas categorías exactas (elige la más específica):
+  "Fallos" → decisiones judiciales (autos, sentencias, resoluciones de fondo, providencias de jueces)
+  "Medidas de protección" → actuaciones de comisarías de familia (autos de protección, resoluciones VIF, medidas provisionales o definitivas)
+  "Derecho de petición" → solicitudes formales ante entidades públicas o privadas sin carácter judicial
+  "Actuaciones penales" → denuncias, querellas, actuaciones ante Fiscalía, procesos penales
+  "Documentos patrimoniales" → certificados de tradición, promesas de compraventa, avalúos, escrituras, títulos
+  "Clínico/pericial" → historias clínicas, dictámenes Medicina Legal, informes psicológicos, pericias, valoraciones de riesgo
+  "Actas y conciliaciones" → actas de conciliación extrajudicial, audiencias, acuerdos formales ante autoridad, solicitudes dentro de procesos administrativos
+  "Comunicaciones" → correos electrónicos, mensajes de WhatsApp, SMS, cartas, cualquier comunicación entre partes (formal o informal). IMPORTANTE: TODO correo electrónico y mensaje de chat va SIEMPRE en "Comunicaciones", sin excepción
+  "Trámites disciplinarios" → actuaciones ante Procuraduría, Personería, quejas disciplinarias, investigaciones contra servidores públicos
+  "Otro" → documentos que no encajan en ninguna categoría anterior
 - status: SOLO UNO de: "Vigente", "Pendiente respuesta", "Respondido", "Vencido", "Archivado"
 - plazo: SOLO UNO de: "Sin plazo", "15 días hábiles — Derecho de petición", "10 días hábiles — Urgente", "30 días hábiles — Judicial", "5 días hábiles — Recurso", "3 meses — Fiscalía"
 - vence: fecha vencimiento = fechaRad + plazo en formato YYYY-MM-DD. null si no hay plazo
@@ -1638,6 +1648,194 @@ async function fileToBase64(file){
     reader.readAsDataURL(file);
   });
 }
+
+// ===== MÓDULO REDACCIÓN LEGAL =====
+const TIPOS_DOC=[
+  {id:'tutela',label:'Acción de Tutela',icon:'⚖️',cat:'Fallos',desc:'Protección inmediata de derechos fundamentales'},
+  {id:'peticion',label:'Derecho de Petición',icon:'📋',cat:'Derecho de petición',desc:'Solicitud formal — 15 días hábiles de respuesta'},
+  {id:'peticion_urgente',label:'D. Petición Urgente',icon:'🚨',cat:'Derecho de petición',desc:'Solicitud urgente — 10 días hábiles'},
+  {id:'desacato',label:'Incidente de Desacato',icon:'🔴',cat:'Fallos',desc:'Incumplimiento de orden judicial o medida de protección'},
+  {id:'queja_disciplinaria',label:'Queja Disciplinaria',icon:'📌',cat:'Trámites disciplinarios',desc:'Ante Procuraduría o Personería por servidor público'},
+  {id:'denuncia_penal',label:'Denuncia Penal',icon:'🚔',cat:'Actuaciones penales',desc:'Ante Fiscalía por conducta punible'},
+  {id:'correo_formal',label:'Correo Formal',icon:'📧',cat:'Comunicaciones',desc:'Comunicación oficial a entidad o persona'},
+  {id:'recurso_reposicion',label:'Recurso de Reposición',icon:'🔄',cat:'Fallos',desc:'Impugnar decisión — 5 días hábiles'},
+];
+
+let rdTipoSeleccionado=null;
+
+function renderTiposDoc(){
+  const grid=document.getElementById('tipoDocGrid');
+  if(!grid) return;
+  grid.innerHTML=TIPOS_DOC.map(t=>`
+    <div onclick="seleccionarTipo('${t.id}')" id="tipo_${t.id}" style="cursor:pointer;padding:10px 12px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--bg);transition:all .15s">
+      <div style="font-size:18px;margin-bottom:4px">${t.icon}</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text)">${t.label}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4">${t.desc}</div>
+    </div>
+  `).join('');
+}
+
+function seleccionarTipo(id){
+  rdTipoSeleccionado=TIPOS_DOC.find(t=>t.id===id);
+  TIPOS_DOC.forEach(t=>{
+    const el=document.getElementById('tipo_'+t.id);
+    if(el){
+      el.style.borderColor=t.id===id?'var(--accent)':'var(--border)';
+      el.style.background=t.id===id?'var(--accentbg)':'var(--bg)';
+    }
+  });
+}
+
+function renderRdHistorial(){
+  const el=document.getElementById('rdHistorial');
+  if(!el) return;
+  if(!db.redactados||db.redactados.length===0){
+    el.innerHTML='<div style="font-size:13px;color:var(--text3);padding:12px 0">No hay documentos redactados aún.</div>';
+    return;
+  }
+  el.innerHTML=[...db.redactados].reverse().map(d=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:6px">
+      <span style="font-size:18px">${TIPOS_DOC.find(t=>t.id===d.tipo)?.icon||'📄'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${fmt(d.fecha)} — ${TIPOS_DOC.find(t=>t.id===d.tipo)?.label||d.tipo}</div>
+      </div>
+      <button class="btn sm" onclick="verDocumentoRedactado('${d.id}')">Ver</button>
+    </div>
+  `).join('');
+}
+
+function verDocumentoRedactado(id){
+  const d=(db.redactados||[]).find(x=>x.id===id);
+  if(!d) return;
+  document.getElementById('rdPlaceholder').style.display='none';
+  const txt=document.getElementById('rdTexto');
+  txt.style.display='block';
+  txt.value=d.texto;
+  document.getElementById('btnGuardarDoc').style.display='none';
+  document.getElementById('btnCopiar').style.display='inline-flex';
+  seleccionarTipo(d.tipo);
+  navigate('redaccion');
+}
+
+function getTipoInstrucciones(tipo){
+  const i={
+    tutela:'Estructura: 1) Encabezado con juez destinatario y datos del accionante. 2) Hechos numerados cronológicamente. 3) Derechos fundamentales vulnerados. 4) Pretensiones claras. 5) Pruebas disponibles. 6) Fundamentos de procedibilidad. Cita: Constitución Política Art. 86, Decreto 2591/1991.',
+    peticion:'Estructura: 1) Encabezado con entidad y datos del peticionario. 2) Hechos que motivan la petición. 3) Fundamento legal: Art. 23 CP, Ley 1755/2015. 4) Petición concreta. 5) Datos de notificación. La entidad tiene 15 días hábiles para responder.',
+    peticion_urgente:'Igual que derecho de petición pero con carácter URGENTE. Fundamenta la urgencia. Cita Art. 14 Ley 1755/2015 — término de 10 días hábiles. Incluye "DE CARÁCTER URGENTE" en el asunto.',
+    desacato:'Estructura: 1) Autoridad ante quien se presenta. 2) Orden incumplida (fecha, número, autoridad). 3) Descripción objetiva del incumplimiento con evidencias. 4) Solicitud de apertura de incidente. Cita Art. 52 Decreto 2591/1991.',
+    queja_disciplinaria:'Estructura: 1) Datos del quejoso y del investigado (nombre, cargo, entidad). 2) Hechos objetivos y cronológicos. 3) Normas presuntamente infringidas (Ley 734/2002). 4) Pruebas. 5) Solicitudes. Describe conductas objetivas, solicita investigación.',
+    denuncia_penal:'Estructura: 1) Datos del denunciante. 2) Hechos cronológicos con fecha, hora, lugar. 3) Personas involucradas. 4) Posibles conductas punibles (sin afirmar que se cometieron). 5) Pruebas. Aplica: Ley 1257/2008, Ley 599/2000.',
+    correo_formal:'Estructura: Asunto claro. Saludo formal. Contexto mínimo. Hechos objetivos. Solicitud concreta. Cierre formal con datos. Tono profesional, directo, respetuoso.',
+    recurso_reposicion:'Estructura: 1) Decisión recurrida (fecha, número, autoridad). 2) Fundamentos de hecho. 3) Fundamentos de derecho. 4) Pretensión concreta. Plazo: 5 días hábiles (Art. 318 C.G.P.).',
+  };
+  return i[tipo]||'Redacta el documento de forma completa, objetiva y técnicamente sólida.';
+}
+
+async function generarDocumento(){
+  if(!rdTipoSeleccionado){ alert('Selecciona el tipo de documento primero.'); return; }
+  const objetivo=document.getElementById('rd_objetivo').value.trim();
+  if(!objetivo){ alert('Describe el objetivo del documento.'); return; }
+  if(!CLAUDE_KEY){
+    const loaded=await loadClaudeKey();
+    if(!loaded){ alert('Configura tu API key en ⚙️ Extracción con IA.'); return; }
+  }
+  const btn=document.getElementById('btnGenerar');
+  const status=document.getElementById('rdStatus');
+  btn.disabled=true; btn.textContent='⏳ Redactando...';
+  status.style.display='block';
+  status.style.cssText='display:block;padding:10px 12px;border-radius:var(--radius);font-size:13px;margin-bottom:10px;background:var(--infobg);color:var(--infotext);border:0.5px solid var(--infoborder)';
+  status.textContent='Claude está redactando el documento con base en los hechos de tu caso...';
+  document.getElementById('rdPlaceholder').style.display='none';
+  document.getElementById('rdTexto').style.display='none';
+  const destinatario=document.getElementById('rd_destinatario').value.trim();
+  const radicado=document.getElementById('rd_radicado').value.trim();
+  const hechos=document.getElementById('rd_hechos').value.trim();
+  const pretensiones=document.getElementById('rd_pretensiones').value.trim();
+  const hoy=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+  const prompt=`Eres un abogado experto en derecho de familia colombiano. Redacta el documento legal indicado siguiendo estrictamente esta política:
+
+POLÍTICA DE REDACCIÓN:
+1. OBJETIVIDAD: Solo hechos identificables. Diferencia hechos conocidos, documentados, manifestaciones de terceros y solicitudes.
+2. NEUTRALIDAD: Sin lenguaje emocional, ofensivo, confrontativo. La fortaleza viene de los hechos.
+3. PRECISIÓN: Cada afirmación debe incluir fecha, hora, lugar, personas, soporte. Si falta un dato usa [COMPLETAR: descripción del dato].
+4. CRONOLOGÍA: Hechos en orden cronológico.
+5. SIN CONCLUSIONES ANTICIPADAS: Describe hechos, solicita que la autoridad valore. No afirmes que algo es delito o falta.
+6. FUNDAMENTO LEGAL: Para tutelas, derechos de petición y denuncias SÍ cita normas aplicables sin prejuzgar.
+7. DATOS FALTANTES: Usa [COMPLETAR: ___] NUNCA inventes datos.
+8. TONO: Profesional, técnico, respetuoso, firme, sereno, jurídicamente prudente.
+9. AUTOSUFICIENCIA: El documento debe comprenderse solo sin depender de conversaciones previas.
+
+DATOS DE LA PETICIONARIA:
+- Nombre: LUISA FERNANDA GARCÉS GARCÍA — C.C. 1.036.602.429
+- Calidad: víctima de violencia intrafamiliar, madre custodio del menor TOMÁS LÓPEZ GARCÉS
+- Agresor: JUAN ESTEBAN LÓPEZ PALACIO (C.C. 8.103.048)
+- Proceso principal: Radicado 002-15088-26 MESA 1 — Comisaría de Familia Comuna 16 Belén
+- Otros procesos: inasistencia alimentaria, proceso ejecutivo alimentos, disolución sociedad patrimonial, reclamación frutos civiles, proceso disciplinario, denuncia penal, custodia y visitas
+- Ciudad: Medellín, Antioquia — Fecha: ${hoy}
+
+TIPO DE DOCUMENTO: ${rdTipoSeleccionado.label}
+${destinatario?'DIRIGIDO A: '+destinatario:''}
+${radicado?'RADICADO RELACIONADO: '+radicado:''}
+OBJETIVO: ${objetivo}
+${hechos?'HECHOS A INCLUIR:\n'+hechos:''}
+${pretensiones?'PETICIONES CONCRETAS:\n'+pretensiones:''}
+
+INSTRUCCIONES ESPECÍFICAS: ${getTipoInstrucciones(rdTipoSeleccionado.id)}
+
+Redacta el documento completo, listo para presentar. Encabezado, cuerpo, peticiones y cierre formal.`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:4000,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok) throw new Error('Error API: '+res.status);
+    const data=await res.json();
+    const txt=document.getElementById('rdTexto');
+    txt.style.display='block';
+    txt.value=data.content[0].text;
+    status.style.cssText='display:block;padding:10px 12px;border-radius:var(--radius);font-size:13px;margin-bottom:10px;background:var(--successbg);color:var(--successtext);border:0.5px solid var(--successborder)';
+    status.textContent='✅ Documento generado. Revisa, edita lo que necesites y guárdalo en tu expediente.';
+    document.getElementById('btnGuardarDoc').style.display='inline-flex';
+    document.getElementById('btnCopiar').style.display='inline-flex';
+  }catch(e){
+    status.style.cssText='display:block;padding:10px 12px;border-radius:var(--radius);font-size:13px;margin-bottom:10px;background:var(--dangerbg);color:var(--dangertext);border:0.5px solid var(--dangerborder)';
+    status.textContent='⚠️ Error: '+e.message;
+  }
+  btn.disabled=false; btn.textContent='✨ Generar con IA';
+}
+
+async function guardarDocumentoRedactado(){
+  const texto=document.getElementById('rdTexto').value.trim();
+  if(!texto||!rdTipoSeleccionado) return;
+  const hoy=new Date().toISOString().split('T')[0];
+  const objetivo=document.getElementById('rd_objetivo').value.trim();
+  const nombre=(rdTipoSeleccionado.label+(objetivo?' — '+objetivo.substring(0,50):'')).substring(0,100);
+  if(!db.redactados) db.redactados=[];
+  db.redactados.push({id:'rd_'+Date.now(),tipo:rdTipoSeleccionado.id,nombre,texto,fecha:hoy});
+  db.docs.push({id:Date.now(),fecha:hoy,fechaRad:hoy,nombre,cat:rdTipoSeleccionado.cat,status:'Pendiente respuesta',entidad:document.getElementById('rd_destinatario').value.trim()||'',radicado:document.getElementById('rd_radicado').value.trim()||'',resumen:'Redactado con IA — '+rdTipoSeleccionado.label+'. '+objetivo.substring(0,150),ubicacion:'Módulo de redacción — Expediente Legal Digital',vence:'',notas:'Generado por IA, revisado por LFGG.',filePath:null,fileName:null});
+  await saveData();
+  renderRdHistorial();
+  renderDocs();
+  const status=document.getElementById('rdStatus');
+  status.style.cssText='display:block;padding:10px 12px;border-radius:var(--radius);font-size:13px;margin-bottom:10px;background:var(--successbg);color:var(--successtext);border:0.5px solid var(--successborder)';
+  status.textContent='✅ Guardado en el expediente y en el historial de redacción.';
+  document.getElementById('btnGuardarDoc').style.display='none';
+}
+
+function copiarDocumento(){
+  const txt=document.getElementById('rdTexto').value;
+  if(!txt) return;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn=document.getElementById('btnCopiar');
+    const orig=btn.textContent;
+    btn.textContent='✅ Copiado';
+    setTimeout(()=>btn.textContent=orig,2000);
+  });
+}
+
 
 // ===== FILE UPLOAD =====
 function handleDrop(event,inputId){
@@ -1945,6 +2143,7 @@ function renderView(id){
     case 'fallos':renderFallos();break;
     case 'procesos':renderProcesos();break;
     case 'usuarios':renderUsuarios();break;
+    case 'redaccion':renderTiposDoc();renderRdHistorial();break;
   }
 }
 function navigate(id){
