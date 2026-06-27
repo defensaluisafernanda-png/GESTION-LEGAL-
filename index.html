@@ -1440,7 +1440,7 @@ async function extractWithClaudeText(text,filename){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:900,messages:[{role:'user',content:CLAUDE_PROMPT+'\n\nTexto del documento:\n'+text.substring(0,4000)}]})
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:1200,messages:[{role:'user',content:CLAUDE_PROMPT+'\n\nTexto del documento:\n'+text.substring(0,4000)}]})
   });
   if(!res.ok) throw new Error('Error API: '+res.status);
   const data=await res.json();
@@ -1448,45 +1448,48 @@ async function extractWithClaudeText(text,filename){
 }
 
 function parseClaudeJSON(raw){
-  // Limpiar el texto: quitar markdown, backticks, texto antes/después del JSON
   let txt=raw.trim();
+  // Quitar markdown
   txt=txt.replace(/```json|```/g,'').trim();
-  // Buscar el primer { y el último } para extraer solo el JSON
+  // Extraer solo el bloque JSON
   const start=txt.indexOf('{');
   const end=txt.lastIndexOf('}');
   if(start===-1||end===-1) throw new Error('No se encontró JSON en la respuesta');
   txt=txt.substring(start,end+1);
-  // Limpiar caracteres problemáticos dentro de strings
-  // Reemplazar saltos de línea dentro de strings JSON
-  txt=txt.replace(/:\s*"([^"]*?)"/g,(match,val)=>{
-    const cleaned=val.replace(/\n/g,' ').replace(/\r/g,' ').replace(/\t/g,' ');
-    return ': "'+cleaned+'"';
-  });
-  try{
-    return JSON.parse(txt);
-  }catch(e){
-    // Último intento: extraer campos clave manualmente
-    console.warn('JSON parse falló, extrayendo campos manualmente:', e.message);
-    const extract=(field)=>{
-      const m=txt.match(new RegExp('"'+field+'"\\s*:\\s*"([^"]*)"'));
-      return m?m[1]:null;
-    };
-    return {
-      fecha:extract('fecha'),
-      fechaRad:extract('fechaRad'),
-      nombre:extract('nombre'),
-      entidad:extract('entidad'),
-      radicado:extract('radicado'),
-      cat:extract('cat'),
-      status:extract('status'),
-      plazo:extract('plazo'),
-      vence:extract('vence'),
-      ubicacion:extract('ubicacion'),
-      resumen:extract('resumen'),
-      notas:extract('notas'),
-      acciones:[]
-    };
-  }
+  // Intentar parsear directo
+  try{ return JSON.parse(txt); }catch(e1){}
+  // Limpiar caracteres problemáticos dentro de valores string
+  // Reemplaza saltos de línea, tabs y comillas dentro de valores
+  txt=txt
+    .replace(/\r\n/g,' ').replace(/\n/g,' ').replace(/\r/g,' ').replace(/\t/g,' ')
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g,' ');
+  // Intentar de nuevo tras limpieza básica
+  try{ return JSON.parse(txt); }catch(e2){}
+  // Limpieza agresiva: extraer campo por campo con regex
+  console.warn('JSON malformado, extrayendo campos individualmente');
+  const extractStr=(field)=>{
+    const m=txt.match(new RegExp('"'+field+'"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"'));
+    return m?m[1].replace(/\\n/g,' ').replace(/\\t/g,' '):null;
+  };
+  const extractNull=(field)=>{
+    const m=txt.match(new RegExp('"'+field+'"\\s*:\\s*null'));
+    return m?null:extractStr(field);
+  };
+  return {
+    fecha:extractNull('fecha'),
+    fechaRad:extractNull('fechaRad'),
+    nombre:extractStr('nombre'),
+    entidad:extractStr('entidad'),
+    radicado:extractNull('radicado'),
+    cat:extractStr('cat'),
+    status:extractStr('status'),
+    plazo:extractStr('plazo'),
+    vence:extractNull('vence'),
+    ubicacion:extractStr('ubicacion'),
+    resumen:extractStr('resumen'),
+    notas:extractStr('notas'),
+    acciones:[]
+  };
 }
 
 async function extractWithClaudeImage(file){
@@ -1495,7 +1498,7 @@ async function extractWithClaudeImage(file){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:[
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:1200,messages:[{role:'user',content:[
       {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
       {type:'text',text:CLAUDE_PROMPT}
     ]}]})
@@ -1518,7 +1521,7 @@ async function extractWithClaudePdfImage(file){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:[
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:1200,messages:[{role:'user',content:[
       {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
       {type:'text',text:CLAUDE_PROMPT}
     ]}]})
