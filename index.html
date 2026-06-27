@@ -2312,7 +2312,7 @@ async function saveProceso(){
   ['pr_name','pr_rad','pr_entidad','pr_fecha','pr_estado','pr_ultima','pr_contraparte','pr_next'].forEach(id=>document.getElementById(id).value='');
 }
 async function toggleDone(id){const p=db.pending.find(x=>x.id===id);if(p&&canEdit()){p.done=!p.done;await saveData();}}
-async function delItem(col,id){if(!canDelete()){alert('No tienes permisos para eliminar');return;}if(confirm('¿Eliminar este elemento?')){db[col]=db[col].filter(x=>x.id!==id);await saveData();}}
+async function delItem(col,id){if(!canDelete()){alert('No tienes permisos para eliminar');return;}if(confirm('¿Eliminar este elemento?')){db[col]=db[col].filter(x=>x.id!=id);await saveData();refreshAll();}}
 
 function openModal(id){
   if(id==='userModal')renderPermGrid();
