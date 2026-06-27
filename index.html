@@ -873,6 +873,13 @@ async function doReset(){
   showAuthOk('✓ Correo enviado a '+email+'. Revisa tu bandeja de entrada y sigue el enlace.');
   btn.disabled=false;
 }
+async function addPendingFromIA(titulo,tipo,prioridad){
+  const t=decodeURIComponent(titulo);
+  db.pending.push({id:Date.now(),title:t,type:tipo,priority:prioridad,due:'',related:'Generado por IA',notes:'Acción recomendada automáticamente al analizar el documento.',done:false});
+  await saveData();
+  alert('✅ Tarea agregada a Pendientes: '+t);
+}
+
 async function saveApiKey(){
   const key=document.getElementById('set_key').value.trim();
   const status=document.getElementById('set_status');
@@ -1259,19 +1266,31 @@ async function extractDocData(){
   btn.disabled=false; btn.textContent='✨ Llenar campos automáticamente';
 }
 
-const CLAUDE_PROMPT=`Eres un asistente legal colombiano. Analiza este documento legal colombiano y extrae estos campos en formato JSON.
+const CLAUDE_PROMPT=`Eres un abogado experto en derecho de familia colombiano con amplia experiencia en gestión documental de procesos legales complejos. Analiza el siguiente documento legal y extrae la información solicitada.
 
-Extrae exactamente estos campos (deja en null si no encuentras el dato):
-- fecha: fecha del documento en formato YYYY-MM-DD
-- fechaRad: fecha de radicación/envío en formato YYYY-MM-DD (puede ser diferente a fecha)
-- nombre: nombre o título del documento (máx 100 caracteres)
-- entidad: entidad que emite o recibe el documento (Comisaría, Fiscalía, Juzgado, etc.)
-- radicado: número de radicado, expediente o proceso
-- cat: SOLO una de estas opciones exactas: "Pruebas", "Fallos", "Medidas de protección", "Derecho de petición", "Actuaciones penales", "Documentos patrimoniales", "Clínico/pericial", "Actas y conciliaciones", "Comunicaciones", "Otro"
-- status: SOLO una de: "Vigente", "Pendiente respuesta", "Respondido", "Vencido", "Archivado"
-- resumen: resumen del contenido en 2-3 oraciones (máx 300 caracteres)
+CONTEXTO DEL PROCESO:
+- Víctima: LUISA FERNANDA GARCÉS GARCÍA (C.C. 1.036.602.429)
+- Agresor: JUAN ESTEBAN LÓPEZ PALACIO (C.C. 8.103.048)
+- Menor involucrado: TOMÁS LÓPEZ GARCÉS
+- Procesos: violencia intrafamiliar, inasistencia alimentaria, proceso ejecutivo alimentos, disolución sociedad patrimonial, reclamación frutos civiles, proceso disciplinario, denuncia penal, custodia y visitas.
 
-Responde SOLO con el JSON, sin texto adicional, sin markdown.`;
+Extrae EXACTAMENTE estos campos en formato JSON (null si no encuentras el dato):
+- fecha: fecha de emisión/firma en formato YYYY-MM-DD (prioriza: emisión > firma > radicación)
+- fechaRad: fecha de radicación/envío oficial en formato YYYY-MM-DD
+- nombre: título completo del documento (máx 100 caracteres)
+- entidad: institución o autoridad que emitió o recibió el documento
+- radicado: número de radicado, expediente o identificación oficial
+- cat: SOLO UNA de: "Fallos", "Medidas de protección", "Derecho de petición", "Actuaciones penales", "Documentos patrimoniales", "Clínico/pericial", "Actas y conciliaciones", "Comunicaciones", "Otro"
+- status: SOLO UNO de: "Vigente", "Pendiente respuesta", "Respondido", "Vencido", "Archivado"
+- plazo: SOLO UNO de: "Sin plazo", "15 días hábiles — Derecho de petición", "10 días hábiles — Urgente", "30 días hábiles — Judicial", "5 días hábiles — Recurso", "3 meses — Fiscalía"
+- vence: fecha vencimiento = fechaRad + plazo en formato YYYY-MM-DD. null si no hay plazo
+- resumen: síntesis en 2-3 oraciones — qué demuestra, personas involucradas, relevancia legal (máx 350 caracteres)
+- notas: observaciones — documentos relacionados, mérito ejecutivo, agravantes, advertencias (máx 250 caracteres)
+- acciones: array máximo 3 tareas que LUISA FERNANDA debe realizar. Formato: [{"titulo":"acción concreta","tipo":"Legal|Llamada|Correo|Documento|Visita","prioridad":"Urgente|Alta|Normal"}]
+
+PLAZOS LEGALES COLOMBIA: 15 días hábiles=Derecho de petición (Ley 1755/2015) | 10 días hábiles=cautelares/menores | 30 días hábiles=judicial (C.G.P.) | 5 días hábiles=recursos (Art.318 C.G.P.) | 3 meses=Fiscalía
+
+Responde SOLO con JSON válido, sin texto adicional, sin markdown.`;
 
 async function extractWithClaudeText(text,filename){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
@@ -1407,7 +1426,7 @@ async function extractDocData(){
 
     if(!extracted){ status.textContent='⚠️ No se pudo extraer información. Llena los campos manualmente.'; btn.disabled=false; btn.textContent='✨ Llenar campos automáticamente'; return; }
 
-    // Llenar campos
+    // Llenar campos principales
     let filled=[];
     if(extracted.fecha){ document.getElementById('d_fecha').value=extracted.fecha; filled.push('Fecha'); }
     if(extracted.fechaRad){ document.getElementById('d_fechaRad').value=extracted.fechaRad; filled.push('Fecha radicación'); }
@@ -1417,11 +1436,31 @@ async function extractDocData(){
     if(extracted.cat){ document.getElementById('d_cat').value=extracted.cat; filled.push('Categoría'); }
     if(extracted.status){ document.getElementById('d_status').value=extracted.status; filled.push('Estado'); }
     if(extracted.resumen){ document.getElementById('d_resumen').value=extracted.resumen; filled.push('Resumen'); }
+    if(extracted.notas){ document.getElementById('d_notas').value=extracted.notas; filled.push('Notas'); }
+    // Fecha de vencimiento calculada por la IA
+    if(extracted.vence){ document.getElementById('d_vence').value=extracted.vence; filled.push('Vencimiento'); }
+    // Plazo legal detectado
+    if(extracted.plazo&&extracted.plazo!=='Sin plazo'){
+      const plazoMap={'15 días hábiles — Derecho de petición':'15','10 días hábiles — Urgente':'10','30 días hábiles — Judicial':'30','5 días hábiles — Recurso':'5'};
+      if(plazoMap[extracted.plazo]) document.getElementById('d_plazo').value=plazoMap[extracted.plazo];
+    }
 
     if(filled.length>0){
-      status.textContent=`✅ Campos llenados: ${filled.join(', ')}. Revisa y corrige si es necesario.`;
+      status.textContent=`✅ ${filled.length} campos llenados: ${filled.join(', ')}. Revisa y corrige si es necesario.`;
       result.style.display='block';
-      result.innerHTML=`<div style="font-size:11px;color:var(--infotext)">💡 <strong>${filled.length} campos detectados automáticamente.</strong> Los campos vacíos no se detectaron — llénalos manualmente.</div>`;
+      // Mostrar acciones generadas
+      let accionesHtml='';
+      if(extracted.acciones&&extracted.acciones.length>0){
+        accionesHtml=`<div style="margin-top:10px;padding:10px 12px;background:var(--warningbg);border-radius:var(--radius);border-left:3px solid var(--warning)">
+          <div style="font-size:11px;font-weight:700;color:var(--warningtext);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">⚡ Acciones recomendadas por la IA</div>
+          ${extracted.acciones.map(a=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px">
+            <span class="badge ${a.prioridad==='Urgente'?'danger':a.prioridad==='Alta'?'warning':'neutral'}" style="font-size:10px;flex-shrink:0">${a.prioridad}</span>
+            <span>${a.titulo}</span>
+            <button class="btn sm" style="margin-left:auto;font-size:10px;padding:2px 7px;flex-shrink:0" onclick="addPendingFromIA('${encodeURIComponent(a.titulo)}','${a.tipo}','${a.prioridad}')">+ Agregar</button>
+          </div>`).join('')}
+        </div>`;
+      }
+      result.innerHTML=`<div style="font-size:11px;color:var(--infotext)">💡 <strong>${filled.length} campos detectados automáticamente.</strong> Los campos vacíos no se detectaron — llénalos manualmente.</div>${accionesHtml}`;
     }else{
       status.textContent='⚠️ No se detectaron campos. El documento puede no tener información clara. Llena los campos manualmente.';
     }
@@ -1432,35 +1471,17 @@ async function extractDocData(){
   btn.disabled=false; btn.textContent='✨ Llenar campos automáticamente';
 }
 
-async function extractWithClaudeText(text, filename){
-  const prompt=`Eres un asistente legal colombiano. Analiza el siguiente texto de un documento legal colombiano y extrae estos campos en formato JSON.
-
-Texto del documento:
-${text.substring(0,4000)}
-
-Extrae exactamente estos campos (deja en null si no encuentras el dato):
-- fecha: fecha del documento en formato YYYY-MM-DD
-- fechaRad: fecha de radicación/envío en formato YYYY-MM-DD (puede ser diferente a fecha)
-- nombre: nombre o título del documento (máx 100 caracteres)
-- entidad: entidad que emite o recibe el documento (Comisaría, Fiscalía, Juzgado, etc.)
-- radicado: número de radicado, expediente o proceso
-- cat: categoría del documento, SOLO una de estas opciones exactas: "Pruebas", "Fallos", "Medidas de protección", "Derecho de petición", "Actuaciones penales", "Documentos patrimoniales", "Clínico/pericial", "Actas y conciliaciones", "Comunicaciones", "Otro"
-- status: SOLO una de estas opciones: "Vigente", "Pendiente respuesta", "Respondido", "Vencido", "Archivado"
-- resumen: resumen del contenido en 2-3 oraciones (máx 300 caracteres)
-
-Responde SOLO con el JSON, sin texto adicional, sin markdown, sin explicaciones.
-Ejemplo: {"fecha":"2026-06-01","fechaRad":null,"nombre":"Auto 1217","entidad":"Comisaría de Familia Comuna 16 Belén","radicado":"002-15088-26","cat":"Medidas de protección","status":"Vigente","resumen":"Auto que admite solicitud de medida de protección por violencia intrafamiliar."}`;
-
+async function extractWithClaudeText(text,filename){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:800,messages:[{role:'user',content:CLAUDE_PROMPT+'\n\nTexto del documento:\n'+text.substring(0,4000)}]})
   });
   if(!res.ok) throw new Error('Error API: '+res.status);
   const data=await res.json();
-  const txt=data.content[0].text.trim();
-  return JSON.parse(txt.replace(/```json|```/g,'').trim());
+  return JSON.parse(data.content[0].text.trim().replace(/```json|```/g,'').trim());
 }
+
 
 async function extractWithClaudeImage(file){
   const base64=await fileToBase64(file);
