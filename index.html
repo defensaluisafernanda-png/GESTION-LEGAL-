@@ -221,19 +221,68 @@ tr:hover td{background:var(--bg2)}
 .empty{text-align:center;padding:48px 20px;color:var(--text3)}
 .empty-icon{font-size:36px;margin-bottom:10px;display:block;opacity:.4}
 
-/* MOBILE */
+/* SIDEBAR COLLAPSIBLE — todos los dispositivos */
+.sidebar-toggle-btn{
+  position:fixed;top:12px;left:12px;z-index:300;
+  width:36px;height:36px;border-radius:var(--radius);
+  background:var(--accent);color:#fff;border:none;
+  font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.2);transition:all .2s;
+  display:none;
+}
+.sidebar-toggle-btn:hover{background:var(--accent2)}
+
+/* Estado colapsado del sidebar en desktop/iPad */
+.sidebar.collapsed{
+  width:0!important;min-width:0!important;
+  overflow:hidden;border-right:none;
+  transition:width .25s ease,min-width .25s ease;
+}
+.sidebar{transition:width .25s ease,min-width .25s ease;}
+.main{transition:all .25s ease;}
+
+/* Botón de colapsar dentro del sidebar — siempre visible en desktop */
+.sidebar-collapse-btn{
+  width:100%;padding:8px 10px;border:none;background:none;
+  color:var(--text3);font-size:12px;cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+  border-top:0.5px solid var(--border);
+  margin-top:4px;transition:all .15s;
+}
+.sidebar-collapse-btn:hover{background:var(--bg2);color:var(--text)}
+
+/* Botón flotante para reabrir cuando está colapsado */
+#reopenBtn{
+  position:fixed;top:12px;left:12px;z-index:300;
+  width:40px;height:40px;border-radius:var(--radius);
+  background:var(--accent);color:#fff;border:none;
+  font-size:20px;cursor:pointer;
+  display:none;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.25);transition:background .15s;
+}
+#reopenBtn:hover{background:var(--accent2)}
+#reopenBtn.visible{display:flex}
+
+/* MOBILE (iPhone) */
 .mobile-toggle{display:none;padding:10px 14px;background:none;border:none;font-size:20px;color:var(--text);cursor:pointer}
 @media(max-width:700px){
   .app-shell{flex-direction:column;height:auto}
-  .sidebar{width:100%;min-width:0;border-right:none;border-bottom:0.5px solid var(--border);max-height:52px;overflow:hidden;transition:max-height .25s}
-  .sidebar.open{max-height:100vh}
+  .sidebar{width:100%!important;min-width:0!important;border-right:none;border-bottom:0.5px solid var(--border);max-height:52px;overflow:hidden;transition:max-height .25s!important}
+  .sidebar.open{max-height:100vh!important}
+  .sidebar.collapsed{width:100%!important;max-height:52px!important;overflow:hidden}
   .mobile-toggle{display:block}
   .sidebar-header{display:flex;align-items:center;justify-content:space-between}
+  .sidebar-collapse-btn{display:none}
+  #reopenBtn{display:none!important}
   .main{overflow-y:auto;max-height:calc(100vh - 52px)}
   .form-grid{grid-template-columns:1fr}
   .page-header{padding:14px 14px 0}
   .page-content{padding:0 14px 20px}
   .stats-row{grid-template-columns:1fr 1fr}
+}
+/* TABLET iPad */
+@media(min-width:701px) and (max-width:1100px){
+  .stats-row{grid-template-columns:repeat(3,1fr)}
 }
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -273,6 +322,7 @@ tr:hover td{background:var(--bg2)}
 
 <!-- APP -->
 <div id="appShell">
+<button id="reopenBtn" onclick="toggleSidebarDesktop()" title="Abrir menú">☰</button>
 <div class="app-shell">
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
@@ -305,6 +355,7 @@ tr:hover td{background:var(--bg2)}
       <button class="btn-footer neutral" onclick="manualLock()">🔒 Bloquear sesión</button>
       <button class="btn-footer neutral" onclick="openModal('changePwdModal')">🔑 Cambiar contraseña</button>
       <button class="btn-footer red" onclick="doLogout()">← Cerrar sesión</button>
+      <button class="sidebar-collapse-btn" onclick="toggleSidebarDesktop()" title="Colapsar menú">◀ Colapsar menú</button>
     </div>
   </div>
 
@@ -1253,6 +1304,17 @@ function navigate(id){
   if(window.innerWidth<=700)document.getElementById('sidebar').classList.remove('open');
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
+function toggleSidebarDesktop(){
+  if(window.innerWidth<=700) return; // en móvil usa el otro toggle
+  const sidebar=document.getElementById('sidebar');
+  const reopenBtn=document.getElementById('reopenBtn');
+  sidebar.classList.toggle('collapsed');
+  if(sidebar.classList.contains('collapsed')){
+    reopenBtn.classList.add('visible');
+  }else{
+    reopenBtn.classList.remove('visible');
+  }
+}
 
 function updateNav(){
   const today=new Date();today.setHours(0,0,0,0);
