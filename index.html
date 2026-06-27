@@ -392,14 +392,14 @@ tr:hover td{background:var(--bg2)}
           <input class="search" type="search" placeholder="🔍 Buscar..." id="docSearch" oninput="renderDocs()">
           <select id="docCat" onchange="renderDocs()">
             <option value="">Todas las categorías</option>
-            <option>Pruebas</option><option>Fallos</option><option>Medidas de protección</option>
+            <option>Fallos</option><option>Medidas de protección</option>
             <option>Derecho de petición</option><option>Actuaciones penales</option>
             <option>Documentos patrimoniales</option><option>Clínico/pericial</option>
-            <option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Otro</option>
+            <option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option>
           </select>
           <select id="docStatus" onchange="renderDocs()">
             <option value="">Todos los estados</option>
-            <option>Vigente</option><option>Pendiente respuesta</option><option>Respondido</option><option>Vencido</option><option>Archivado</option>
+            <option>Vigente</option><option>Pendiente respuesta</option><option>Respondido</option><option>Vencido</option><option>Archivado</option><option>No aplica</option>
           </select>
         </div>
         <div class="table-wrap"><table><thead><tr>
@@ -569,10 +569,10 @@ tr:hover td{background:var(--bg2)}
     <div class="form-row"><label>Nombre del documento <span class="req">*</span></label><input type="text" id="d_nombre" placeholder="Ej: Derecho de petición — Fiscalía 011"></div>
     <div class="form-grid">
       <div class="form-row"><label>Categoría</label>
-        <select id="d_cat"><option>Pruebas</option><option>Fallos</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
+        <select id="d_cat"><option>Fallos</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
       </div>
       <div class="form-row"><label>Estado</label>
-        <select id="d_status"><option>Vigente</option><option>Pendiente respuesta</option><option>Respondido</option><option>Vencido</option><option>Archivado</option></select>
+        <select id="d_status"><option>Vigente</option><option>Pendiente respuesta</option><option>Respondido</option><option>Vencido</option><option>Archivado</option><option>No aplica</option><option>No aplica</option></select>
       </div>
     </div>
     <div class="form-grid">
@@ -630,7 +630,7 @@ tr:hover td{background:var(--bg2)}
     <div class="modal-title">📎 Subir archivo independiente</div>
     <div class="form-row"><label>Nombre / descripción <span class="req">*</span></label><input type="text" id="up_nombre" placeholder="Ej: Video del ascensor — feb 2020"></div>
     <div class="form-row"><label>Categoría</label>
-      <select id="up_cat"><option>Pruebas</option><option>Fallos</option><option>Medidas de protección</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Comunicaciones</option><option>Otro</option></select>
+      <select id="up_cat"><option>Fallos</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
     </div>
     <div class="form-row"><label>Archivo (máx. 50MB)</label>
       <div class="file-upload-area" onclick="document.getElementById('up_file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'up_file')">
@@ -870,8 +870,8 @@ function deadlineBadge(s){
 function sanitizeFileName(name){
   return name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]/g,'_').replace(/_+/g,'_').substring(0,100);
 }
-const CAT_BADGE={Pruebas:'info',Fallos:'purple','Medidas de protección':'warning','Derecho de petición':'danger','Actuaciones penales':'neutral','Documentos patrimoniales':'success','Clínico/pericial':'info','Actas y conciliaciones':'success',Comunicaciones:'neutral',Otro:'neutral'};
-const STATUS_BADGE={Vigente:'success','Pendiente respuesta':'warning',Respondido:'info',Vencido:'danger',Archivado:'neutral'};
+const CAT_BADGE={Fallos:'purple','Medidas de protección':'warning','Derecho de petición':'danger','Actuaciones penales':'neutral','Documentos patrimoniales':'success','Clínico/pericial':'info','Actas y conciliaciones':'success',Comunicaciones:'info','Trámites disciplinarios':'danger',Otro:'neutral'};
+const STATUS_BADGE={Vigente:'success','Pendiente respuesta':'warning',Respondido:'info',Vencido:'danger',Archivado:'neutral','No aplica':'neutral'};
 const COMP_BADGE={Cumplido:'success','Parcialmente cumplido':'warning',Incumplido:'danger','Pendiente de ejecución':'neutral'};
 
 function isOwner(){return currentUser?.email===OWNER_EMAIL;}
@@ -1357,7 +1357,19 @@ Extrae EXACTAMENTE estos campos en formato JSON (null si no encuentras el dato):
   "Comunicaciones" → correos electrónicos, mensajes de WhatsApp, SMS, cartas, cualquier comunicación entre partes (formal o informal). IMPORTANTE: TODO correo electrónico y mensaje de chat va SIEMPRE en "Comunicaciones", sin excepción
   "Trámites disciplinarios" → actuaciones ante Procuraduría, Personería, quejas disciplinarias, investigaciones contra servidores públicos
   "Otro" → documentos que no encajan en ninguna categoría anterior
-- status: SOLO UNO de: "Vigente", "Pendiente respuesta", "Respondido", "Vencido", "Archivado"
+- status: SOLO UNO de: "Vigente", "Pendiente respuesta", "Respondido", "Vencido", "Archivado", "No aplica"
+  Para determinar el estado, sigue este orden estricto de preguntas:
+  PASO 1: ¿Es formulario, plantilla, instructivo o herramienta de gestión (no un trámite)? → "No aplica"
+  PASO 2: ¿Ya hay una respuesta o decisión emitida (oficio de respuesta, fallo, resolución final)? → "Respondido"
+  PASO 3: ¿Es una solicitud, petición, recurso o correo donde se pide algo y se espera respuesta?
+    PASO 3.1: ¿Ya pasó el plazo legal para responder? (calcula sumando días hábiles desde fechaRad)
+      SÍ → "Vencido"
+      NO → "Pendiente respuesta"
+  PASO 4: ¿Es un auto, providencia o actuación judicial/administrativa en trámite (no resuelta)? → "Vigente"
+  PASO 5: ¿El trámite fue cerrado o archivado oficialmente? → "Archivado"
+  PASO 6 (por defecto): Si nada anterior aplica → "Vigente"
+  PRIORIDAD si hay duda: VENCIDO > PENDIENTE RESPUESTA > VIGENTE > RESPONDIDO > ARCHIVADO > NO APLICA
+  IMPORTANTE: Un correo donde pides algo y no te han resuelto = "Pendiente respuesta". Un auto admisorio sin fallo = "Vigente". Un plazo que ya pasó sin respuesta = "Vencido".
 - plazo: SOLO UNO de: "Sin plazo", "15 días hábiles — Derecho de petición", "10 días hábiles — Urgente", "30 días hábiles — Judicial", "5 días hábiles — Recurso", "3 meses — Fiscalía"
 - vence: fecha vencimiento = fechaRad + plazo en formato YYYY-MM-DD. null si no hay plazo
 - resumen: síntesis en 2-3 oraciones — qué demuestra, personas involucradas, relevancia legal (máx 350 caracteres)
