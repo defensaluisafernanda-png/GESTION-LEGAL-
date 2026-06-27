@@ -894,7 +894,7 @@ async function saveApiKey(){
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,messages:[{role:'user',content:'ok'}]})
+      body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:10,messages:[{role:'user',content:'ok'}]})
     });
     if(!res.ok&&res.status===401){ status.style.background='var(--dangerbg)';status.style.color='var(--dangertext)';status.style.border='0.5px solid var(--dangerborder)';status.textContent='⚠️ API key incorrecta. Verifica que la copiaste completa.'; return; }
     const saved=await saveClaudeKey(key);
@@ -1277,7 +1277,7 @@ async function extractWithClaudeText(text,filename){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:CLAUDE_PROMPT+'\n\nTexto del documento:\n'+text.substring(0,4000)}]})
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:CLAUDE_PROMPT+'\n\nTexto del documento:\n'+text.substring(0,4000)}]})
   });
   if(!res.ok) throw new Error('Error API: '+res.status);
   const data=await res.json();
@@ -1290,7 +1290,7 @@ async function extractWithClaudeImage(file){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:[
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:[
       {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
       {type:'text',text:CLAUDE_PROMPT}
     ]}]})
@@ -1313,7 +1313,7 @@ async function extractWithClaudePdfImage(file){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:[
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:[
       {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
       {type:'text',text:CLAUDE_PROMPT}
     ]}]})
@@ -1454,7 +1454,7 @@ Ejemplo: {"fecha":"2026-06-01","fechaRad":null,"nombre":"Auto 1217","entidad":"C
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:prompt}]})
   });
   if(!res.ok) throw new Error('Error API: '+res.status);
   const data=await res.json();
@@ -1468,7 +1468,7 @@ async function extractWithClaudeImage(file){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:[
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:[
       {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
       {type:'text',text:`Eres un asistente legal colombiano. Analiza esta imagen de un documento legal colombiano y extrae estos campos en formato JSON.
 
@@ -1506,7 +1506,7 @@ async function extractWithClaudePdfImage(file){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:[
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:[
       {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
       {type:'text',text:`Eres un asistente legal colombiano. Analiza esta imagen de la primera página de un documento legal colombiano (PDF escaneado) y extrae estos campos en formato JSON.
 
