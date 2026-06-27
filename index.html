@@ -847,6 +847,12 @@ async function doChangePwd(){
 }
 
 async function doLogout(){
+  // ✅ Recordatorio de respaldo antes de cerrar sesión
+  const hasData=(db.docs&&db.docs.length>0)||(db.events&&db.events.length>0)||(db.pending&&db.pending.length>0);
+  if(hasData){
+    const backup=confirm('¿Deseas descargar un respaldo de tus datos antes de cerrar sesión?\n\nSe descargará un archivo JSON con todo tu expediente. Recomendado.');
+    if(backup) exportData();
+  }
   clearTimeout(inactTimer);
   await sb.auth.signOut();
   currentUser=null;currentPerfil=null;db={docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[]};dbRowId=null;ownerId=null;
