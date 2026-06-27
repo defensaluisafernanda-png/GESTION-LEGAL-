@@ -1625,6 +1625,9 @@ function openDocModal(editId=null){
   document.getElementById('d_id').value=editId||'';
   document.getElementById('filePreviewDoc').innerHTML='';
   document.getElementById('d_file').value='';
+  document.getElementById('extractBox').style.display='none';
+  document.getElementById('extractResult').style.display='none';
+  document.getElementById('extractStatus').textContent='';
 
   if(isEdit){
     const doc=db.docs.find(d=>d.id===editId);
