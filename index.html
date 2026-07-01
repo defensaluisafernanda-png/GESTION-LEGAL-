@@ -2326,14 +2326,17 @@ function renderProcesos(){
 
 // ===== SAVE FUNCTIONS =====
 function calcDiasHabilesDesde(fechaInicio,dias){
-  let d=new Date(fechaInicio+'T00:00:00'),added=0;
+  const partes=fechaInicio.split('-');
+  let d=new Date(parseInt(partes[0]),parseInt(partes[1])-1,parseInt(partes[2]));
+  let added=0;
   const fest=new Set([...getFestivosCol(d.getFullYear()),...getFestivosCol(d.getFullYear()+1)]);
   while(added<dias){
     d.setDate(d.getDate()+1);
-    const wd=d.getDay(),iso=d.toISOString().split('T')[0];
+    const wd=d.getDay();
+    const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     if(wd!==0&&wd!==6&&!fest.has(iso))added++;
   }
-  return d.toISOString().split('T')[0];
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
 function getFestivosCol(year){
@@ -2369,14 +2372,17 @@ function calcDeadline(){
   const venceField=document.getElementById('d_vence');
   if(pl==='manual'){venceField.value='';venceField.focus();return;}
   if(!pl||!fr)return;
-  let d=new Date(fr+'T00:00:00'),added=0,dias=parseInt(pl);
+  const partes=fr.split('-');
+  let d=new Date(parseInt(partes[0]),parseInt(partes[1])-1,parseInt(partes[2]));
+  let added=0,dias=parseInt(pl);
   const fest=new Set([...getFestivosCol(d.getFullYear()),...getFestivosCol(d.getFullYear()+1)]);
   while(added<dias){
     d.setDate(d.getDate()+1);
-    const wd=d.getDay(),iso=d.toISOString().split('T')[0];
+    const wd=d.getDay();
+    const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     if(wd!==0&&wd!==6&&!fest.has(iso))added++;
   }
-  venceField.value=d.toISOString().split('T')[0];
+  venceField.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 async function saveEvent(){
   const t=document.getElementById('ev_title').value.trim(),d=document.getElementById('ev_date').value;
