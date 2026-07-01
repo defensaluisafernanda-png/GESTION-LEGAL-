@@ -1341,11 +1341,25 @@ async function extractDocData(){
     if(extracted.status){ document.getElementById('d_status').value=extracted.status; filled.push('Estado'); }
     if(extracted.resumen){ document.getElementById('d_resumen').value=extracted.resumen; filled.push('Resumen'); }
     if(extracted.notas){ document.getElementById('d_notas').value=extracted.notas; filled.push('Notas'); }
-    if(extracted.vence){ document.getElementById('d_vence').value=extracted.vence; filled.push('Vencimiento'); }
     if(extracted.ubicacion){ document.getElementById('d_ubicacion').value=extracted.ubicacion; filled.push('Ubicación'); }
+    // Plazo y vencimiento
+    const plazoMap={'15 días hábiles — Derecho de petición':'15','10 días hábiles — Urgente':'10','30 días hábiles — Judicial':'30','5 días hábiles — Recurso':'5','2 días hábiles':'2','3 días hábiles':'3'};
     if(extracted.plazo&&extracted.plazo!=='Sin plazo'){
-      const plazoMap={'15 días hábiles — Derecho de petición':'15','10 días hábiles — Urgente':'10','30 días hábiles — Judicial':'30','5 días hábiles — Recurso':'5'};
-      if(plazoMap[extracted.plazo]) document.getElementById('d_plazo').value=plazoMap[extracted.plazo];
+      const dias=plazoMap[extracted.plazo];
+      if(dias) document.getElementById('d_plazo').value=dias;
+      // Si la IA no calculó el vence O lo calculó sin festivos, recalcularlo con festivos colombianos
+      const fechaBase=extracted.fechaRad||extracted.fecha;
+      if(fechaBase&&dias){
+        const venceCalculado=calcDiasHabilesDesde(fechaBase,parseInt(dias));
+        document.getElementById('d_vence').value=venceCalculado;
+        filled.push('Vencimiento');
+      }else if(extracted.vence){
+        document.getElementById('d_vence').value=extracted.vence;
+        filled.push('Vencimiento');
+      }
+    }else if(extracted.vence){
+      document.getElementById('d_vence').value=extracted.vence;
+      filled.push('Vencimiento');
     }
 
     if(filled.length>0){
@@ -2311,6 +2325,17 @@ function renderProcesos(){
 }
 
 // ===== SAVE FUNCTIONS =====
+function calcDiasHabilesDesde(fechaInicio,dias){
+  let d=new Date(fechaInicio+'T00:00:00'),added=0;
+  const fest=new Set([...getFestivosCol(d.getFullYear()),...getFestivosCol(d.getFullYear()+1)]);
+  while(added<dias){
+    d.setDate(d.getDate()+1);
+    const wd=d.getDay(),iso=d.toISOString().split('T')[0];
+    if(wd!==0&&wd!==6&&!fest.has(iso))added++;
+  }
+  return d.toISOString().split('T')[0];
+}
+
 function getFestivosCol(year){
   // Fijos
   const f=[`${year}-01-01`,`${year}-05-01`,`${year}-07-20`,`${year}-08-07`,`${year}-12-08`,`${year}-12-25`];
