@@ -1271,14 +1271,17 @@ async function handleFileSelected(input){
   const ext=file.name.split('.').pop().toLowerCase();
   const extractBox=document.getElementById('extractBox');
   const extractStatus=document.getElementById('extractStatus');
-  const supported=['pdf','jpg','jpeg','png','heic','webp','doc','docx','xlsx','xls','csv','txt','mp4','mov','avi','mkv','mp3','m4a'];
-  if(supported.includes(ext)){
-    extractBox.style.display='block';
-    const tipo=ext==='pdf'?'PDF':['jpg','jpeg','png','heic','webp'].includes(ext)?'imagen':['mp4','mov','avi','mkv','webm'].includes(ext)?'video':['xlsx','xls','csv'].includes(ext)?'hoja de cálculo':ext==='txt'?'archivo de texto':'documento';
-    extractStatus.textContent=`Se detectó un ${tipo} — haz clic en "✨ Llenar campos automáticamente" para extraer los datos con IA.`;
-    document.getElementById('extractResult').style.display='none';
+  document.getElementById('extractResult').style.display='none';
+  // Mostrar caja para todos los archivos
+  extractBox.style.display='block';
+  const noLeibles=['xlsx','xls','xlsm','xlsb','mp4','mov','avi','mkv','webm','mp3','m4a','wav','zip','rar'];
+  if(noLeibles.includes(ext)){
+    extractStatus.textContent='ℹ️ Este tipo de archivo ('+ext.toUpperCase()+') no puede ser leído por la IA. Llena los campos manualmente.';
+    document.getElementById('btnExtract').style.display='none';
   }else{
-    extractBox.style.display='none';
+    const tipo=ext==='pdf'?'PDF':['jpg','jpeg','png','heic','webp'].includes(ext)?'imagen':['csv','txt'].includes(ext)?'archivo de texto':'documento';
+    extractStatus.textContent='Se detectó un '+tipo+' — haz clic en "✨ Llenar campos automáticamente" para extraer los datos con IA.';
+    document.getElementById('btnExtract').style.display='inline-flex';
   }
 }
 
