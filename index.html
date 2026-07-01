@@ -616,7 +616,6 @@ tr:hover td{background:var(--bg2)}
       </div>
     </div>
     <div class="form-row"><label>Notas adicionales</label><textarea id="d_notas" placeholder="Observaciones, conexiones con otros documentos..."></textarea></div>
-    <div id="docNameMismatchError" style="display:none;background:var(--dangerbg);border:0.5px solid var(--dangerborder);border-radius:var(--radius);padding:12px 14px;margin-top:4px"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('docModal')">Cancelar</button>
       <button class="btn primary" id="docSaveBtn" onclick="saveDoc()">✓ Guardar</button>
@@ -1416,7 +1415,7 @@ CONTEXTO DEL PROCESO:
 Extrae EXACTAMENTE estos campos en formato JSON (null si no encuentras el dato):
 - fecha: fecha de emisión/firma en formato YYYY-MM-DD (prioriza: emisión > firma > radicación)
 - fechaRad: fecha de radicación/envío oficial en formato YYYY-MM-DD
-- nombre: título completo del documento (máx 100 caracteres)
+- nombre: nombre estandarizado del documento en formato: "Tipo — Entidad — Fecha" (máx 100 caracteres). Ejemplos: "Derecho de Petición — Fiscalía 011 Local Envigado — 23/06/2026", "Auto 1217 — Comisaría Familia Comuna 16 Belén — 01/06/2026", "Correo — Hospital La María E.S.E. — 01/07/2026". Si no puedes identificar todos los elementos, usa los que tengas disponibles.
 - entidad: institución o autoridad que emitió o recibió el documento
 - radicado: número de radicado, expediente o identificación oficial
 - cat: SOLO UNA de estas categorías exactas (elige la más específica):
@@ -1897,30 +1896,8 @@ async function saveDoc(){
     if(!continuar) return;
   }
 
-  // ✅ VALIDACIÓN: nombre del documento vs nombre del archivo adjunto
+  // Obtener fileInput para uso posterior
   const fileInput=document.getElementById('d_file');
-  if(fileInput.files&&fileInput.files[0]){
-    const rawFileName=fileInput.files[0].name;
-    const normalizeFile=str=>str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\.[^.]+$/,'').replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
-    const cleanDoc=normalizeFile(n);
-    const cleanFile=normalizeFile(rawFileName);
-    const docWords=cleanDoc.split(' ').filter(w=>w.length>=3);
-    const fileWords=cleanFile.split(' ').filter(w=>w.length>=3);
-    const hasMatch=docWords.some(dw=>fileWords.some(fw=>fw.includes(dw)||dw.includes(fw)));
-    if(!hasMatch){
-      const errEl=document.getElementById('docNameMismatchError');
-      errEl.innerHTML=`
-        <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--dangertext)">⚠️ El nombre del documento y el archivo adjunto no coinciden</div>
-        <div style="font-size:12px;margin-bottom:6px"><strong>Nombre del documento:</strong><br><span style="color:var(--text)">${n}</span></div>
-        <div style="font-size:12px;margin-bottom:10px"><strong>Archivo adjunto:</strong><br><span style="color:var(--text)">${rawFileName}</span></div>
-        <div style="font-size:12px;color:var(--dangertext);font-weight:500">Debes corregir el nombre del documento para que coincida con el archivo, o seleccionar un archivo diferente.</div>
-      `;
-      errEl.style.display='block';
-      errEl.scrollIntoView({behavior:'smooth',block:'center'});
-      return;
-    }
-    document.getElementById('docNameMismatchError').style.display='none';
-  }
 
   const btn=document.getElementById('docSaveBtn');
   btn.disabled=true;btn.textContent='Guardando...';
