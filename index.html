@@ -1853,30 +1853,33 @@ async function saveDoc(){
   const f=document.getElementById('d_fecha').value;
   if(!n||!f){alert('Nombre y fecha son obligatorios');return;}
 
-  // ✅ DETECCIÓN DE DUPLICADOS
+  // ✅ DETECCIÓN DE DUPLICADOS — solo por nombre muy similar (90%+) Y misma categoría
   const editId=document.getElementById('d_id').value;
   const isEdit=editId!=='';
-  const radicadoNuevo=document.getElementById('d_radicado').value.trim();
+  const catNueva=document.getElementById('d_cat').value;
+  const fechaNueva=document.getElementById('d_fecha').value;
 
   const normalize=str=>str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
   const nombreNorm=normalize(n);
 
   const duplicados=db.docs.filter(d=>{
-    if(isEdit&&d.id==editId) return false; // no comparar consigo mismo al editar
+    if(isEdit&&d.id==editId) return false;
+    // Solo comparar documentos de la misma categoría
+    if(d.cat!==catNueva) return false;
     const dnorm=normalize(d.nombre||'');
-    // Coincidencia por radicado exacto
-    if(radicadoNuevo&&d.radicado&&radicadoNuevo===d.radicado) return true;
-    // Coincidencia por nombre: 70%+ de palabras en común
-    const palabrasNuevas=nombreNorm.split(' ').filter(w=>w.length>3);
-    const palabrasExist=dnorm.split(' ').filter(w=>w.length>3);
-    if(palabrasNuevas.length===0) return false;
-    const coinciden=palabrasNuevas.filter(w=>palabrasExist.some(e=>e.includes(w)||w.includes(e)));
-    return coinciden.length/palabrasNuevas.length>=0.7;
+    // Palabras significativas (más de 4 letras) excluyendo palabras genéricas
+    const stopWords=new Set(['para','ante','como','este','esta','esto','radicado','numero','auto','oficio','carta','correo','documento','fecha','junio','julio','agosto','enero','febrero','marzo','abril','mayo','septiembre','octubre','noviembre','diciembre']);
+    const palabrasNuevas=nombreNorm.split(' ').filter(w=>w.length>4&&!stopWords.has(w));
+    const palabrasExist=dnorm.split(' ').filter(w=>w.length>4&&!stopWords.has(w));
+    if(palabrasNuevas.length===0||palabrasExist.length===0) return false;
+    // Requiere 90%+ de coincidencia para considerarlo duplicado
+    const coinciden=palabrasNuevas.filter(w=>palabrasExist.some(e=>e===w));
+    return coinciden.length/palabrasNuevas.length>=0.9;
   });
 
   if(duplicados.length>0){
-    const lista=duplicados.map(d=>`• ${d.nombre}${d.radicado?' (Rad: '+d.radicado+')':''} — ${fmt(d.fecha)}`).join('\n');
-    const continuar=confirm(`⚠️ POSIBLE DOCUMENTO DUPLICADO\n\nSe encontró ${duplicados.length} documento(s) similar(es) ya registrado(s):\n\n${lista}\n\n¿El documento que estás guardando es diferente a los anteriores y deseas continuar?`);
+    const lista=duplicados.map(d=>`• ${d.nombre} — ${fmt(d.fecha)}`).join('\n');
+    const continuar=confirm(`⚠️ POSIBLE DOCUMENTO DUPLICADO\n\nSe encontró un documento con nombre muy similar ya registrado:\n\n${lista}\n\n¿Este documento es diferente y deseas continuar guardando?`);
     if(!continuar) return;
   }
 
