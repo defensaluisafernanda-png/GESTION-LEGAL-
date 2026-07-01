@@ -600,9 +600,9 @@ tr:hover td{background:var(--bg2)}
       <div class="file-upload-area" id="dropZoneDoc" onclick="document.getElementById('d_file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'d_file')">
         <div style="font-size:28px">📂</div>
         <p style="font-size:13px;color:var(--text3);margin-top:6px">Arrastra aquí o haz clic para seleccionar</p>
-        <p style="font-size:11px;color:var(--text3);margin-top:4px">PDF · Word (.doc/.docx) · JPG · PNG · HEIC</p>
+        <p style="font-size:11px;color:var(--text3);margin-top:4px">PDF · Word · Excel (.xlsx/.csv) · TXT · JPG · PNG · HEIC</p>
       </div>
-      <input type="file" id="d_file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic,.webp" onchange="handleFileSelected(this)">
+      <input type="file" id="d_file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic,.webp,.xlsx,.xls,.csv,.txt" onchange="handleFileSelected(this)">
       <div id="filePreviewDoc" style="margin-top:6px"></div>
       <div id="existingFileInfo" style="display:none;margin-top:6px;padding:8px 12px;background:var(--successbg);border-radius:var(--radius);font-size:12px;color:var(--successtext)"></div>
       <!-- Extracción automática -->
@@ -638,7 +638,7 @@ tr:hover td{background:var(--bg2)}
         <p style="font-size:13px;color:var(--text3);margin-top:6px">Arrastra aquí o haz clic</p>
         <p style="font-size:11px;color:var(--text3);margin-top:4px">PDF · Word · Imágenes · Videos</p>
       </div>
-      <input type="file" id="up_file" style="display:none" onchange="showSelectedFile(this,'filePreviewUp')">
+      <input type="file" id="up_file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic,.webp,.xlsx,.xls,.csv,.txt" onchange="showSelectedFile(this,'filePreviewUp')">
       <div id="filePreviewUp" style="margin-top:6px"></div>
     </div>
     <div class="form-row"><label>Notas</label><textarea id="up_notas" placeholder="Contexto o relevancia del archivo..."></textarea></div>
@@ -1271,10 +1271,10 @@ async function handleFileSelected(input){
   const ext=file.name.split('.').pop().toLowerCase();
   const extractBox=document.getElementById('extractBox');
   const extractStatus=document.getElementById('extractStatus');
-  const supported=['pdf','jpg','jpeg','png','heic','webp','doc','docx'];
+  const supported=['pdf','jpg','jpeg','png','heic','webp','doc','docx','xlsx','xls','csv','txt'];
   if(supported.includes(ext)){
     extractBox.style.display='block';
-    const tipo=ext==='pdf'?'PDF':['jpg','jpeg','png','heic','webp'].includes(ext)?'imagen':'documento Word';
+    const tipo=ext==='pdf'?'PDF':['jpg','jpeg','png','heic','webp'].includes(ext)?'imagen':['xlsx','xls','csv'].includes(ext)?'hoja de cálculo':ext==='txt'?'archivo de texto':'documento Word';
     extractStatus.textContent=`Se detectó un ${tipo} — haz clic en "✨ Llenar campos automáticamente" para extraer los datos con IA.`;
     document.getElementById('extractResult').style.display='none';
   }else{
@@ -1323,6 +1323,17 @@ async function extractDocData(){
       }else{
         extracted=await extractWithClaudePdfImage(file);
       }
+    }else if(['txt','csv'].includes(ext)){
+      // TXT y CSV — leer como texto plano
+      const text=await file.text().catch(()=>'');
+      if(text.length>10) extracted=await extractWithClaudeText(text.substring(0,4000),file.name);
+      else{ status.textContent='⚠️ Archivo vacío o ilegible. Llena los campos manualmente.'; btn.disabled=false; btn.textContent='✨ Llenar campos automáticamente'; return; }
+    }else if(['xlsx','xls'].includes(ext)){
+      // Excel — extraer texto básico del nombre del archivo
+      status.textContent='ℹ️ Los archivos Excel no se pueden leer automáticamente. Llena los campos manualmente.';
+      result.style.display='none';
+      btn.disabled=false; btn.textContent='✨ Llenar campos automáticamente';
+      return;
     }else{
       const text=await file.text().catch(()=>'');
       if(text.length>50) extracted=await extractWithClaudeText(text,file.name);
