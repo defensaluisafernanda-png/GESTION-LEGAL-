@@ -596,13 +596,13 @@ tr:hover td{background:var(--bg2)}
       </div>
       <div class="form-row"><label>Fecha de vencimiento</label><input type="date" id="d_vence"></div>
     </div>
-    <div class="form-row"><label>📎 Adjuntar archivo (PDF, Word, imagen — máx. 50MB)</label>
+    <div class="form-row"><label>📎 Adjuntar archivo (PDF, Word, imagen — máx. 500MB)</label>
       <div class="file-upload-area" id="dropZoneDoc" onclick="document.getElementById('d_file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'d_file')">
         <div style="font-size:28px">📂</div>
         <p style="font-size:13px;color:var(--text3);margin-top:6px">Arrastra aquí o haz clic para seleccionar</p>
-        <p style="font-size:11px;color:var(--text3);margin-top:4px">PDF · Word · Excel (.xlsx/.csv) · TXT · JPG · PNG · HEIC</p>
+        <p style="font-size:11px;color:var(--text3);margin-top:4px">PDF · Word · Excel · Imágenes · Videos · TXT · y más</p>
       </div>
-      <input type="file" id="d_file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic,.webp,.xlsx,.xls,.csv,.txt" onchange="handleFileSelected(this)">
+      <input type="file" id="d_file" style="display:none" accept="*/*" onchange="handleFileSelected(this)">
       <div id="filePreviewDoc" style="margin-top:6px"></div>
       <div id="existingFileInfo" style="display:none;margin-top:6px;padding:8px 12px;background:var(--successbg);border-radius:var(--radius);font-size:12px;color:var(--successtext)"></div>
       <!-- Extracción automática -->
@@ -632,13 +632,13 @@ tr:hover td{background:var(--bg2)}
     <div class="form-row"><label>Categoría</label>
       <select id="up_cat"><option>Fallos</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
     </div>
-    <div class="form-row"><label>Archivo (máx. 50MB)</label>
+    <div class="form-row"><label>Archivo (máx. 500MB)</label>
       <div class="file-upload-area" onclick="document.getElementById('up_file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'up_file')">
         <div style="font-size:28px">📂</div>
         <p style="font-size:13px;color:var(--text3);margin-top:6px">Arrastra aquí o haz clic</p>
         <p style="font-size:11px;color:var(--text3);margin-top:4px">PDF · Word · Imágenes · Videos</p>
       </div>
-      <input type="file" id="up_file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic,.webp,.xlsx,.xls,.csv,.txt" onchange="showSelectedFile(this,'filePreviewUp')">
+      <input type="file" id="up_file" style="display:none" accept="*/*" onchange="showSelectedFile(this,'filePreviewUp')">
       <div id="filePreviewUp" style="margin-top:6px"></div>
     </div>
     <div class="form-row"><label>Notas</label><textarea id="up_notas" placeholder="Contexto o relevancia del archivo..."></textarea></div>
@@ -1271,10 +1271,10 @@ async function handleFileSelected(input){
   const ext=file.name.split('.').pop().toLowerCase();
   const extractBox=document.getElementById('extractBox');
   const extractStatus=document.getElementById('extractStatus');
-  const supported=['pdf','jpg','jpeg','png','heic','webp','doc','docx','xlsx','xls','csv','txt'];
+  const supported=['pdf','jpg','jpeg','png','heic','webp','doc','docx','xlsx','xls','csv','txt','mp4','mov','avi','mkv','mp3','m4a'];
   if(supported.includes(ext)){
     extractBox.style.display='block';
-    const tipo=ext==='pdf'?'PDF':['jpg','jpeg','png','heic','webp'].includes(ext)?'imagen':['xlsx','xls','csv'].includes(ext)?'hoja de cálculo':ext==='txt'?'archivo de texto':'documento Word';
+    const tipo=ext==='pdf'?'PDF':['jpg','jpeg','png','heic','webp'].includes(ext)?'imagen':['mp4','mov','avi','mkv','webm'].includes(ext)?'video':['xlsx','xls','csv'].includes(ext)?'hoja de cálculo':ext==='txt'?'archivo de texto':'documento';
     extractStatus.textContent=`Se detectó un ${tipo} — haz clic en "✨ Llenar campos automáticamente" para extraer los datos con IA.`;
     document.getElementById('extractResult').style.display='none';
   }else{
@@ -1925,7 +1925,7 @@ async function saveDoc(){
     let filePath=null,fileName=null;
     if(fileInput.files&&fileInput.files[0]){
       const file=fileInput.files[0];
-      if(file.size>50*1024*1024){alert('El archivo no puede superar 50MB');btn.disabled=false;btn.textContent='✓ Guardar';return;}
+      if(file.size>500*1024*1024){alert('El archivo no puede superar 500MB');btn.disabled=false;btn.textContent='✓ Guardar';return;}
       filePath=await uploadFileToSupabase(file,'docs');
       fileName=file.name;
     }
@@ -1982,7 +1982,7 @@ async function saveUpload(){
   const btn=document.getElementById('upSaveBtn');btn.disabled=true;btn.textContent='Subiendo...';
   try{
     const file=fileInput.files[0];
-    if(file.size>50*1024*1024){alert('El archivo no puede superar 50MB');btn.disabled=false;btn.textContent='⬆ Subir';return;}
+    if(file.size>500*1024*1024){alert('El archivo no puede superar 500MB');btn.disabled=false;btn.textContent='⬆ Subir';return;}
     const filePath=await uploadFileToSupabase(file,'uploads');
     db.uploads.push({id:Date.now(),nombre:n,cat:document.getElementById('up_cat').value,notas:document.getElementById('up_notas').value.trim(),filePath,fileName:file.name,fileSize:file.size,date:new Date().toISOString().split('T')[0]});
     await saveData();closeModal('uploadModal');
