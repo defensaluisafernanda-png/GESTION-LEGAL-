@@ -616,6 +616,13 @@ tr:hover td{background:var(--bg2)}
       </div>
     </div>
     <div class="form-row"><label>Notas adicionales</label><textarea id="d_notas" placeholder="Observaciones, conexiones con otros documentos..."></textarea></div>
+    <!-- Documentos relacionados -->
+    <div class="form-row">
+      <label>📎 Documentos relacionados <span style="font-size:11px;font-weight:400;color:var(--text3)">(la IA los sugiere automáticamente)</span></label>
+      <div id="relacionadosBox" style="background:var(--bg2);border-radius:var(--radius);padding:10px 12px;min-height:40px">
+        <div id="relacionadosList" style="font-size:12px;color:var(--text3)">Guarda el documento para ver sugerencias de documentos relacionados.</div>
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('docModal')">Cancelar</button>
       <button class="btn primary" id="docSaveBtn" onclick="saveDoc()">✓ Guardar</button>
@@ -1804,6 +1811,93 @@ function copiarDocumento(){
   });
 }
 
+// ===== DOCUMENTOS RELACIONADOS =====
+function sugerirRelacionados(docId){
+  const doc=db.docs.find(d=>d.id==docId);
+  if(!doc||db.docs.length<2) return;
+
+  const normalize=str=>(str||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+
+  // Extraer radicados del documento (pueden ser varios separados por ;  , o espacio)
+  const radNuevo=(doc.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>4);
+  const entidadNorm=normalize(doc.entidad);
+  const nombreNorm=normalize(doc.nombre);
+  const resumenNorm=normalize(doc.resumen);
+
+  // Palabras clave del caso
+  const palabrasClave=['juan esteban','lopez palacio','tomas','garces','comisaria','fiscalia','juzgado','002-15088','26195','1217','conciliacion','medida de proteccion','tutela'];
+
+  const sugeridos=db.docs.filter(d=>{
+    if(d.id==docId) return false;
+    if((doc.relacionados||[]).includes(d.id)) return false; // ya relacionado
+
+    let score=0;
+    const dNombre=normalize(d.nombre);
+    const dEntidad=normalize(d.entidad);
+    const dResumen=normalize(d.resumen);
+    const dRads=(d.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>4);
+
+    // Radicado en común — peso alto
+    if(radNuevo.length>0&&dRads.length>0){
+      const radComun=radNuevo.some(r=>dRads.some(dr=>dr===r||dr.includes(r)||r.includes(dr)));
+      if(radComun) score+=5;
+    }
+    // Misma entidad
+    if(entidadNorm&&dEntidad&&entidadNorm===dEntidad) score+=2;
+    // Palabras clave del caso en común
+    palabrasClave.forEach(pc=>{
+      if((nombreNorm+resumenNorm).includes(pc)&&(dNombre+dResumen).includes(pc)) score+=1;
+    });
+
+    return score>=2;
+  }).sort((a,b)=>{
+    // Ordenar por score descendente
+    return 0;
+  }).slice(0,5);
+
+  renderSugeridos(docId, sugeridos);
+}
+
+function renderSugeridos(docId, sugeridos){
+  const lista=document.getElementById('relacionadosList');
+  if(!lista) return;
+  if(sugeridos.length===0){
+    lista.innerHTML='<span style="color:var(--text3);font-size:12px">No se encontraron documentos relacionados automáticamente.</span>';
+    return;
+  }
+  lista.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">💡 La IA encontró ${sugeridos.length} documento(s) posiblemente relacionado(s):</div>`+
+  sugeridos.map(d=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border)">
+      <input type="checkbox" id="rel_${d.id}" style="flex-shrink:0;width:15px;height:15px;cursor:pointer">
+      <label for="rel_${d.id}" style="flex:1;cursor:pointer">
+        <div style="font-size:12px;font-weight:500;color:var(--text)">${d.nombre}</div>
+        <div style="font-size:11px;color:var(--text3)">${d.entidad||''} ${d.radicado?'· '+d.radicado:''} · ${fmt(d.fecha)}</div>
+      </label>
+    </div>
+  `).join('')+
+  `<button class="btn sm primary" style="margin-top:10px" onclick="guardarRelacionados(${docId},[${sugeridos.map(d=>d.id).join(',')}])">✓ Vincular seleccionados</button>`;
+}
+
+async function guardarRelacionados(docId, candidatos){
+  const seleccionados=candidatos.filter(id=>document.getElementById('rel_'+id)?.checked);
+  if(seleccionados.length===0){ alert('Selecciona al menos un documento para vincular.'); return; }
+  const doc=db.docs.find(d=>d.id==docId);
+  if(!doc) return;
+  if(!doc.relacionados) doc.relacionados=[];
+  seleccionados.forEach(id=>{
+    if(!doc.relacionados.includes(id)) doc.relacionados.push(id);
+    // Vincular en ambas direcciones
+    const otro=db.docs.find(d=>d.id==id);
+    if(otro){
+      if(!otro.relacionados) otro.relacionados=[];
+      if(!otro.relacionados.includes(docId)) otro.relacionados.push(docId);
+    }
+  });
+  await saveData();
+  const lista=document.getElementById('relacionadosList');
+  if(lista) lista.innerHTML=`<span style="color:var(--successtext);font-size:12px">✅ ${seleccionados.length} documento(s) vinculado(s) correctamente.</span>`;
+}
+
 // ===== FILE UPLOAD =====
 function handleDrop(event,inputId){
   event.preventDefault();event.currentTarget.classList.remove('drag');
@@ -1960,6 +2054,7 @@ async function saveDoc(){
           ubicacion:document.getElementById('d_ubicacion').value.trim(),
           vence:vence,
           notas:document.getElementById('d_notas').value.trim(),
+          relacionados:existing.relacionados||[],
           ...(filePath?{filePath,fileName}:{})
         };
         if(vence && vence!==oldVence){
@@ -1971,12 +2066,14 @@ async function saveDoc(){
       }
     }else{
       const docId=Date.now();
-      const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),filePath,fileName};
+      const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),relacionados:[],filePath,fileName};
       db.docs.push(doc);
       if(vence){
         db.events.push({id:docId+1,title:'📅 Vence: '+n,date:vence,time:'',type:'deadline',lugar:'',rad:'',notes:'Vencimiento automático del documento: '+n,docId:docId});
         db.alerts.push({id:docId+2,title:'Vencimiento: '+n,date:vence,level:'warning',consequence:'Revisar acción requerida.',action:'',docId:docId});
       }
+      // Sugerir documentos relacionados automáticamente
+      setTimeout(()=>sugerirRelacionados(docId),500);
     }
 
     await saveData();
@@ -2259,6 +2356,23 @@ function viewDoc(id){
       </div>
       <button class="btn sm primary" onclick="openFile('${d.filePath}')">📂 Ver / descargar</button>
     </div>`:'<div style="padding:10px 14px;background:var(--bg2);border-radius:var(--radius);font-size:12px;color:var(--text3)">📎 Sin archivo adjunto</div>'}
+
+    ${(d.relacionados&&d.relacionados.length>0)?`
+    <div style="margin-top:14px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px">📎 Documentos relacionados</div>
+      ${d.relacionados.map(rid=>{
+        const rel=db.docs.find(x=>x.id==rid);
+        if(!rel) return '';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:var(--radius);margin-bottom:6px">
+          <span class="badge ${CAT_BADGE[rel.cat]||'neutral'}" style="font-size:10px;flex-shrink:0">${rel.cat}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rel.nombre}</div>
+            <div style="font-size:11px;color:var(--text3)">${rel.entidad||''} · ${fmt(rel.fecha)}</div>
+          </div>
+          <button class="btn sm" onclick="closeModal('viewDocModal');viewDoc(${rel.id})">Ver →</button>
+        </div>`;
+      }).join('')}
+    </div>`:''}
   `;
   openModal('viewDocModal');
 }
