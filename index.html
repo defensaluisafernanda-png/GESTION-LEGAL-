@@ -2266,15 +2266,27 @@ function renderDashboard(){
 }
 
 function renderDocs(){
-  const q=(document.getElementById('docSearch')?.value||'').toLowerCase();
+  const rawQ=(document.getElementById('docSearch')?.value||'').trim();
   const cat=document.getElementById('docCat')?.value||'';
   const st=document.getElementById('docStatus')?.value||'';
+  // Normalizar búsqueda: sin acentos, sin mayúsculas, sin caracteres especiales
+  const normStr=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+  const q=normStr(rawQ);
   let docs=[...db.docs].filter(d=>{
     if(cat&&d.cat!==cat)return false;
     if(st&&d.status!==st)return false;
-    if(q&&![d.nombre,d.resumen,d.entidad,d.radicado,d.notas].join(' ').toLowerCase().includes(q))return false;
+    if(q){
+      // Buscar en todos los campos normalizados
+      const haystack=normStr([d.nombre,d.resumen,d.entidad,d.radicado,d.notas,d.ubicacion,d.cat,d.status].join(' '));
+      if(!haystack.includes(q))return false;
+    }
     return true;
-  }).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  }).sort((a,b)=>{
+    // Proteger contra fechas nulas
+    const fa=a.fecha||'';
+    const fb=b.fecha||'';
+    return fb.localeCompare(fa);
+  });
   const tb=document.getElementById('docsTable');if(!tb)return;
   const canEd=canEdit();const canDel=canDelete();
   tb.innerHTML=docs.length===0?`<tr><td colspan="9"><div class="empty"><span class="empty-icon">📄</span>Sin documentos</div></td></tr>`:docs.map(d=>`<tr style="cursor:pointer" onclick="viewDoc(${d.id})" title="Ver detalle">
