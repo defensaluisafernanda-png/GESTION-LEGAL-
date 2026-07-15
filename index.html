@@ -2135,7 +2135,7 @@ function renderDashboard(){
     <div class="stat success"><div class="stat-label">Archivos subidos</div><div class="stat-value">${db.uploads.length}</div><div class="stat-sub">en la nube</div></div>
   `;
   const deadlines=db.docs.filter(d=>d.vence&&daysLeft(d.vence)>=0).sort((a,b)=>a.vence.localeCompare(b.vence)).slice(0,5);
-  document.getElementById('dashDeadlines').innerHTML=deadlines.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">🎉</span>Sin vencimientos próximos</div>':deadlines.map(d=>`<div class="card" style="margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${d.nombre}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>${deadlineBadge(d.vence)}</div></div>`).join('');
+  document.getElementById('dashDeadlines').innerHTML=deadlines.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">🎉</span>Sin vencimientos próximos</div>':deadlines.map(d=>`<div class="card" style="margin-bottom:8px;padding:10px 14px;display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div><div style="display:flex;align-items:center;gap:6px;margin-top:5px"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>${deadlineBadge(d.vence)}</div>${d.entidad?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${d.entidad}</div>`:''}</div><button class="btn sm" onclick="navigate('documentos');setTimeout(()=>viewDoc(${d.id}),100)">📄 Ver</button></div>`).join('');
   const urgent=db.pending.filter(p=>!p.done&&p.priority==='Urgente').slice(0,5);
   document.getElementById('dashUrgent').innerHTML=urgent.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">✅</span>Sin tareas urgentes</div>':urgent.map(p=>`<div class="card" style="border-left:3px solid var(--danger);margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${p.title}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${p.type}${p.due?' · Límite: '+fmt(p.due):''}${p.related?' · '+p.related:''}</div></div>`).join('');
 }
@@ -2267,7 +2267,31 @@ function renderAlerts(){
   const sorted=[...db.alerts].sort((a,b)=>a.date.localeCompare(b.date));
   el.innerHTML=sorted.length===0?`<div class="empty"><span class="empty-icon">🔔</span>Sin alertas</div>`:sorted.map(a=>{
     const d=daysLeft(a.date);const past=d!==null&&d<0;const lvl=past?'danger':a.level;
-    return`<div class="card" style="border-left:3px solid var(--${lvl})"><div class="card-header"><div><div class="card-title">${a.title}</div><div class="card-meta">Vence ${fmt(a.date)} — ${past?`VENCIDO hace ${Math.abs(d)}d`:d===0?'HOY':`en ${d} día(s)`}</div></div><div style="display:flex;gap:6px"><span class="badge ${lvl}">${a.level==='danger'?'Crítico':a.level==='warning'?'Importante':'Informativo'}</span>${canDelete()?`<button class="btn sm danger" onclick="delItem('alerts',${a.id})">🗑</button>`:''}</div></div>${a.consequence?`<div class="card-section"><div class="card-section-title">Consecuencia legal</div>${a.consequence}</div>`:''}${a.action?`<div style="margin-top:8px;font-size:13px"><strong>Acción:</strong> ${a.action}</div>`:''}</div>`;
+    // Buscar documento relacionado
+    const doc=a.docId?db.docs.find(x=>x.id==a.docId):null;
+    const docInfo=doc?`<div style="margin-top:8px;padding:8px 10px;background:var(--bg2);border-radius:var(--radius);display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div style="min-width:0">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Documento relacionado</div>
+        <div style="font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${doc.nombre}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${doc.entidad||''} ${doc.radicado?'· Rad: '+doc.radicado:''}</div>
+      </div>
+      <button class="btn sm" onclick="viewDoc(${doc.id})" style="flex-shrink:0">📄 Ver</button>
+    </div>`:a.docId?'':'';
+    return`<div class="card" style="border-left:3px solid var(--${lvl})">
+      <div class="card-header">
+        <div>
+          <div class="card-title">${a.title}</div>
+          <div class="card-meta">Vence ${fmt(a.date)} — ${past?`<strong style="color:var(--danger)">VENCIDO hace ${Math.abs(d)} día(s)</strong>`:d===0?'<strong style="color:var(--danger)">HOY</strong>':`en ${d} día(s)`}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="badge ${lvl}">${past?'Vencido':a.level==='danger'?'Crítico':a.level==='warning'?'Importante':'Informativo'}</span>
+          ${canDelete()?`<button class="btn sm danger" onclick="delItem('alerts',${a.id})">🗑</button>`:''}
+        </div>
+      </div>
+      ${a.consequence?`<div class="card-section"><div class="card-section-title">Consecuencia legal</div>${a.consequence}</div>`:''}
+      ${a.action?`<div style="margin-top:8px;font-size:13px"><strong>Acción requerida:</strong> ${a.action}</div>`:''}
+      ${docInfo}
+    </div>`;
   }).join('');
 }
 
