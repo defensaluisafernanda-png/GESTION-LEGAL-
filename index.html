@@ -389,7 +389,7 @@ tr:hover td{background:var(--bg2)}
       </div>
       <div class="page-content">
         <div class="toolbar">
-          <input class="search" type="search" placeholder="🔍 Buscar..." id="docSearch" oninput="renderDocs()">
+          <input class="search" type="search" placeholder="🔍 Buscar por nombre, entidad, radicado..." id="docSearch" oninput="renderDocs()">
           <select id="docCat" onchange="renderDocs()">
             <option value="">Todas las categorías</option>
             <option>Fallos</option><option>Tutelas</option><option>Medidas de protección</option>
@@ -401,6 +401,8 @@ tr:hover td{background:var(--bg2)}
             <option value="">Todos los estados</option>
             <option>Vigente</option><option>Pendiente respuesta</option><option>No respondido</option><option>Respondido</option><option>Ejecutoriado</option><option>Documento probatorio</option><option>Vencido</option><option>Archivado</option><option>No aplica</option>
           </select>
+          <button class="btn sm" onclick="limpiarFiltros()" title="Limpiar filtros">✕ Limpiar</button>
+          <span id="docsCount" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
         </div>
         <div class="table-wrap"><table><thead><tr>
           <th>Fecha</th><th>Documento</th><th>Categoría</th><th>Entidad</th><th>Radicado</th><th>Estado</th><th>Vence</th><th>Archivo</th><th>Acciones</th>
@@ -566,7 +568,7 @@ tr:hover td{background:var(--bg2)}
       <div class="form-row"><label>Fecha del documento <span class="req">*</span></label><input type="date" id="d_fecha"></div>
       <div class="form-row"><label>Fecha radicación / envío</label><input type="date" id="d_fechaRad"></div>
     </div>
-    <div class="form-row"><label>Nombre del documento <span class="req">*</span></label><input type="text" id="d_nombre" placeholder="Ej: Derecho de petición — Fiscalía 011"></div>
+    <div class="form-row"><label>Nombre del documento <span class="req">*</span></label><input type="text" id="d_nombre" placeholder="Ej: Derecho de petición — Fiscalía 011" oninput="buscarRelacionadosPrevio()"></div>
     <div class="form-grid">
       <div class="form-row"><label>Categoría</label>
         <select id="d_cat"><option>Fallos</option><option>Tutelas</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
@@ -618,9 +620,9 @@ tr:hover td{background:var(--bg2)}
     <div class="form-row"><label>Notas adicionales</label><textarea id="d_notas" placeholder="Observaciones, conexiones con otros documentos..."></textarea></div>
     <!-- Documentos relacionados -->
     <div class="form-row">
-      <label>📎 Documentos relacionados <span style="font-size:11px;font-weight:400;color:var(--text3)">(la IA los sugiere automáticamente)</span></label>
+      <label>📎 Documentos relacionados <span style="font-size:11px;font-weight:400;color:var(--text3)">(sugeridos automáticamente al escribir el nombre)</span></label>
       <div id="relacionadosBox" style="background:var(--bg2);border-radius:var(--radius);padding:10px 12px;min-height:40px">
-        <div id="relacionadosList" style="font-size:12px;color:var(--text3)">Guarda el documento para ver sugerencias de documentos relacionados.</div>
+        <div id="relacionadosList" style="font-size:12px;color:var(--text3)">Escribe el nombre del documento y la app buscará documentos relacionados automáticamente.</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1412,6 +1414,8 @@ async function extractDocData(){
 
     if(filled.length>0){
       status.textContent=`✅ ${filled.length} campos llenados: ${filled.join(', ')}. Revisa y corrige si es necesario.`;
+      // Buscar documentos relacionados automáticamente
+      buscarRelacionadosPrevio();
       result.style.display='block';
       let accionesHtml='';
       if(extracted.acciones&&extracted.acciones.length>0){
@@ -1812,90 +1816,93 @@ function copiarDocumento(){
 }
 
 // ===== DOCUMENTOS RELACIONADOS =====
-function sugerirRelacionados(docId){
-  const doc=db.docs.find(d=>d.id==docId);
-  if(!doc||db.docs.length<2) return;
-
-  const normalize=str=>(str||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
-
-  // Extraer radicados del documento (pueden ser varios separados por ;  , o espacio)
-  const radNuevo=(doc.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>4);
-  const entidadNorm=normalize(doc.entidad);
-  const nombreNorm=normalize(doc.nombre);
-  const resumenNorm=normalize(doc.resumen);
-
-  // Palabras clave del caso
-  const palabrasClave=['juan esteban','lopez palacio','tomas','garces','comisaria','fiscalia','juzgado','002-15088','26195','1217','conciliacion','medida de proteccion','tutela'];
-
-  const sugeridos=db.docs.filter(d=>{
-    if(d.id==docId) return false;
-    if((doc.relacionados||[]).includes(d.id)) return false; // ya relacionado
-
-    let score=0;
-    const dNombre=normalize(d.nombre);
-    const dEntidad=normalize(d.entidad);
-    const dResumen=normalize(d.resumen);
-    const dRads=(d.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>4);
-
-    // Radicado en común — peso alto
-    if(radNuevo.length>0&&dRads.length>0){
-      const radComun=radNuevo.some(r=>dRads.some(dr=>dr===r||dr.includes(r)||r.includes(dr)));
-      if(radComun) score+=5;
+let _relTimer=null;
+function buscarRelacionadosPrevio(){
+  clearTimeout(_relTimer);
+  _relTimer=setTimeout(()=>{
+    const nombre=document.getElementById('d_nombre').value.trim();
+    const radicado=document.getElementById('d_radicado').value.trim();
+    const entidad=document.getElementById('d_entidad').value.trim();
+    const editId=document.getElementById('d_id').value;
+    if(!nombre&&!radicado){
+      const lista=document.getElementById('relacionadosList');
+      if(lista) lista.innerHTML='<span style="color:var(--text3);font-size:12px">Escribe el nombre o radicado para ver documentos relacionados.</span>';
+      return;
     }
-    // Misma entidad
-    if(entidadNorm&&dEntidad&&entidadNorm===dEntidad) score+=2;
-    // Palabras clave del caso en común
-    palabrasClave.forEach(pc=>{
-      if((nombreNorm+resumenNorm).includes(pc)&&(dNombre+dResumen).includes(pc)) score+=1;
-    });
-
-    return score>=2;
-  }).sort((a,b)=>{
-    // Ordenar por score descendente
-    return 0;
-  }).slice(0,5);
-
-  renderSugeridos(docId, sugeridos);
+    if(db.docs.length<1) return;
+    const normStr=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+    const rads=radicado.split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>4);
+    const nombreNorm=normStr(nombre);
+    const entidadNorm=normStr(entidad);
+    const palabrasClave=['juan esteban','lopez palacio','tomas','garces','comisaria','fiscalia','juzgado','002-15088','26195','1217','conciliacion','medida','tutela','peticion','alimentos','custodia'];
+    const sugeridos=db.docs.filter(d=>{
+      if(editId&&d.id==editId) return false;
+      let score=0;
+      const dRads=(d.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>4);
+      const dNombre=normStr(d.nombre);
+      const dEntidad=normStr(d.entidad);
+      const dResumen=normStr(d.resumen||'');
+      if(rads.length>0&&dRads.length>0){
+        if(rads.some(r=>dRads.some(dr=>dr===r||dr.includes(r)||r.includes(dr)))) score+=5;
+      }
+      if(entidadNorm&&dEntidad&&entidadNorm===dEntidad) score+=3;
+      palabrasClave.forEach(pc=>{
+        if(nombreNorm.includes(pc)&&(dNombre+dResumen).includes(pc)) score+=1;
+      });
+      return score>=2;
+    }).slice(0,6);
+    const lista=document.getElementById('relacionadosList');
+    if(!lista) return;
+    if(sugeridos.length===0){
+      lista.innerHTML='<span style="color:var(--text3);font-size:12px">No se encontraron documentos relacionados.</span>';
+      return;
+    }
+    lista.innerHTML=
+      `<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">💡 ${sugeridos.length} documento(s) posiblemente relacionado(s) — marca los que quieres vincular:</div>`+
+      sugeridos.map(d=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--border)">
+          <input type="checkbox" id="rprev_${d.id}" style="flex-shrink:0;width:15px;height:15px;cursor:pointer" checked>
+          <label for="rprev_${d.id}" style="flex:1;cursor:pointer">
+            <div style="font-size:12px;font-weight:500;color:var(--text)">${d.nombre}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">
+              <span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>
+              ${d.radicado?'· '+d.radicado:''} · ${fmt(d.fecha)}
+            </div>
+          </label>
+        </div>
+      `).join('')+
+      `<div style="font-size:11px;color:var(--accent);margin-top:8px">✓ Los marcados se vincularán automáticamente al guardar.</div>`;
+  }, 400);
 }
 
-function renderSugeridos(docId, sugeridos){
-  const lista=document.getElementById('relacionadosList');
-  if(!lista) return;
-  if(sugeridos.length===0){
-    lista.innerHTML='<span style="color:var(--text3);font-size:12px">No se encontraron documentos relacionados automáticamente.</span>';
-    return;
-  }
-  lista.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">💡 La IA encontró ${sugeridos.length} documento(s) posiblemente relacionado(s):</div>`+
-  sugeridos.map(d=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border)">
-      <input type="checkbox" id="rel_${d.id}" style="flex-shrink:0;width:15px;height:15px;cursor:pointer">
-      <label for="rel_${d.id}" style="flex:1;cursor:pointer">
-        <div style="font-size:12px;font-weight:500;color:var(--text)">${d.nombre}</div>
-        <div style="font-size:11px;color:var(--text3)">${d.entidad||''} ${d.radicado?'· '+d.radicado:''} · ${fmt(d.fecha)}</div>
-      </label>
-    </div>
-  `).join('')+
-  `<button class="btn sm primary" style="margin-top:10px" onclick="guardarRelacionados(${docId},[${sugeridos.map(d=>d.id).join(',')}])">✓ Vincular seleccionados</button>`;
+function getRelacionadosSeleccionados(){
+  const checks=document.querySelectorAll('[id^="rprev_"]');
+  const sel=[];
+  checks.forEach(cb=>{
+    if(cb.checked){
+      const id=parseInt(cb.id.replace('rprev_',''));
+      if(!isNaN(id)) sel.push(id);
+    }
+  });
+  return sel;
 }
 
-async function guardarRelacionados(docId, candidatos){
+function sugerirRelacionados(docId){}
+function renderSugeridos(docId,sugeridos){}
+
+async function guardarRelacionados(docId,candidatos){
   const seleccionados=candidatos.filter(id=>document.getElementById('rel_'+id)?.checked);
-  if(seleccionados.length===0){ alert('Selecciona al menos un documento para vincular.'); return; }
-  const doc=db.docs.find(d=>d.id==docId);
-  if(!doc) return;
-  if(!doc.relacionados) doc.relacionados=[];
+  if(!seleccionados.length){alert('Selecciona al menos un documento.');return;}
+  const doc=db.docs.find(d=>d.id==docId);if(!doc)return;
+  if(!doc.relacionados)doc.relacionados=[];
   seleccionados.forEach(id=>{
-    if(!doc.relacionados.includes(id)) doc.relacionados.push(id);
-    // Vincular en ambas direcciones
+    if(!doc.relacionados.includes(id))doc.relacionados.push(id);
     const otro=db.docs.find(d=>d.id==id);
-    if(otro){
-      if(!otro.relacionados) otro.relacionados=[];
-      if(!otro.relacionados.includes(docId)) otro.relacionados.push(docId);
-    }
+    if(otro){if(!otro.relacionados)otro.relacionados=[];if(!otro.relacionados.includes(docId))otro.relacionados.push(docId);}
   });
   await saveData();
   const lista=document.getElementById('relacionadosList');
-  if(lista) lista.innerHTML=`<span style="color:var(--successtext);font-size:12px">✅ ${seleccionados.length} documento(s) vinculado(s) correctamente.</span>`;
+  if(lista)lista.innerHTML=`<span style="color:var(--successtext);font-size:12px">✅ ${seleccionados.length} documento(s) vinculado(s).</span>`;
 }
 
 // ===== FILE UPLOAD =====
@@ -2066,8 +2073,14 @@ async function saveDoc(){
       }
     }else{
       const docId=Date.now();
-      const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),relacionados:[],filePath,fileName};
+      const relSeleccionados=getRelacionadosSeleccionados();
+      const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),relacionados:relSeleccionados,filePath,fileName};
       db.docs.push(doc);
+      // Vincular en ambas direcciones
+      relSeleccionados.forEach(id=>{
+        const otro=db.docs.find(d=>d.id==id);
+        if(otro){if(!otro.relacionados)otro.relacionados=[];if(!otro.relacionados.includes(docId))otro.relacionados.push(docId);}
+      });
       if(vence){
         db.events.push({id:docId+1,title:'📅 Vence: '+n,date:vence,time:'',type:'deadline',lugar:'',rad:'',notes:'Vencimiento automático del documento: '+n,docId:docId});
         db.alerts.push({id:docId+2,title:'Vencimiento: '+n,date:vence,level:'warning',consequence:'Revisar acción requerida.',action:'',docId:docId});
@@ -2265,28 +2278,45 @@ function renderDashboard(){
   document.getElementById('dashUrgent').innerHTML=urgent.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">✅</span>Sin tareas urgentes</div>':urgent.map(p=>`<div class="card" style="border-left:3px solid var(--danger);margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${p.title}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${p.type}${p.due?' · Límite: '+fmt(p.due):''}${p.related?' · '+p.related:''}</div></div>`).join('');
 }
 
+function limpiarFiltros(){
+  document.getElementById('docSearch').value='';
+  document.getElementById('docCat').value='';
+  document.getElementById('docStatus').value='';
+  renderDocs();
+}
+
 function renderDocs(){
   const rawQ=(document.getElementById('docSearch')?.value||'').trim();
   const cat=document.getElementById('docCat')?.value||'';
   const st=document.getElementById('docStatus')?.value||'';
-  // Normalizar búsqueda: sin acentos, sin mayúsculas, sin caracteres especiales
   const normStr=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
   const q=normStr(rawQ);
   let docs=[...db.docs].filter(d=>{
     if(cat&&d.cat!==cat)return false;
     if(st&&d.status!==st)return false;
     if(q){
-      // Buscar en todos los campos normalizados
       const haystack=normStr([d.nombre,d.resumen,d.entidad,d.radicado,d.notas,d.ubicacion,d.cat,d.status].join(' '));
       if(!haystack.includes(q))return false;
     }
     return true;
   }).sort((a,b)=>{
-    // Proteger contra fechas nulas
     const fa=a.fecha||'';
     const fb=b.fecha||'';
     return fb.localeCompare(fa);
   });
+  // Mostrar contador de resultados
+  const count=document.getElementById('docsCount');
+  if(count){
+    const total=db.docs.length;
+    const filtrado=docs.length;
+    if(rawQ||cat||st){
+      count.textContent=`${filtrado} de ${total} documento(s)`;
+      count.style.color=filtrado===0?'var(--danger)':'var(--text3)';
+    }else{
+      count.textContent=`${total} documento(s)`;
+      count.style.color='var(--text3)';
+    }
+  }
   const tb=document.getElementById('docsTable');if(!tb)return;
   const canEd=canEdit();const canDel=canDelete();
   tb.innerHTML=docs.length===0?`<tr><td colspan="9"><div class="empty"><span class="empty-icon">📄</span>Sin documentos</div></td></tr>`:docs.map(d=>`<tr style="cursor:pointer" onclick="viewDoc(${d.id})" title="Ver detalle">
