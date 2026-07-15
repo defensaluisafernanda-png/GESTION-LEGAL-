@@ -392,7 +392,7 @@ tr:hover td{background:var(--bg2)}
           <input class="search" type="search" placeholder="🔍 Buscar..." id="docSearch" oninput="renderDocs()">
           <select id="docCat" onchange="renderDocs()">
             <option value="">Todas las categorías</option>
-            <option>Fallos</option><option>Medidas de protección</option>
+            <option>Fallos</option><option>Tutelas</option><option>Medidas de protección</option>
             <option>Derecho de petición</option><option>Actuaciones penales</option>
             <option>Documentos patrimoniales</option><option>Clínico/pericial</option>
             <option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option>
@@ -569,7 +569,7 @@ tr:hover td{background:var(--bg2)}
     <div class="form-row"><label>Nombre del documento <span class="req">*</span></label><input type="text" id="d_nombre" placeholder="Ej: Derecho de petición — Fiscalía 011"></div>
     <div class="form-grid">
       <div class="form-row"><label>Categoría</label>
-        <select id="d_cat"><option>Fallos</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
+        <select id="d_cat"><option>Fallos</option><option>Tutelas</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
       </div>
       <div class="form-row"><label>Estado</label>
         <select id="d_status"><option>Vigente</option><option>Pendiente respuesta</option><option>Respondido</option><option>Vencido</option><option>Archivado</option><option>No aplica</option><option>No aplica</option></select>
@@ -629,7 +629,7 @@ tr:hover td{background:var(--bg2)}
     <div class="modal-title">📎 Subir archivo independiente</div>
     <div class="form-row"><label>Nombre / descripción <span class="req">*</span></label><input type="text" id="up_nombre" placeholder="Ej: Video del ascensor — feb 2020"></div>
     <div class="form-row"><label>Categoría</label>
-      <select id="up_cat"><option>Fallos</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
+      <select id="up_cat"><option>Fallos</option><option>Tutelas</option><option>Tutelas</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
     </div>
     <div class="form-row"><label>Archivo (máx. 500MB)</label>
       <div class="file-upload-area" onclick="document.getElementById('up_file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'up_file')">
@@ -869,7 +869,7 @@ function deadlineBadge(s){
 function sanitizeFileName(name){
   return name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]/g,'_').replace(/_+/g,'_').substring(0,100);
 }
-const CAT_BADGE={Fallos:'purple','Medidas de protección':'warning','Derecho de petición':'danger','Actuaciones penales':'neutral','Documentos patrimoniales':'success','Clínico/pericial':'info','Actas y conciliaciones':'success',Comunicaciones:'info','Trámites disciplinarios':'danger',Otro:'neutral'};
+const CAT_BADGE={Fallos:'purple',Tutelas:'purple','Medidas de protección':'warning','Derecho de petición':'danger','Actuaciones penales':'neutral','Documentos patrimoniales':'success','Clínico/pericial':'info','Actas y conciliaciones':'success',Comunicaciones:'info','Trámites disciplinarios':'danger',Otro:'neutral'};
 const STATUS_BADGE={Vigente:'success','Pendiente respuesta':'warning',Respondido:'info',Vencido:'danger',Archivado:'neutral','No aplica':'neutral'};
 const COMP_BADGE={Cumplido:'success','Parcialmente cumplido':'warning',Incumplido:'danger','Pendiente de ejecución':'neutral'};
 
@@ -1419,7 +1419,8 @@ Extrae EXACTAMENTE estos campos en formato JSON (null si no encuentras el dato):
 - entidad: institución o autoridad que emitió o recibió el documento
 - radicado: número de radicado, expediente o identificación oficial
 - cat: SOLO UNA de estas categorías exactas (elige la más específica):
-  "Fallos" → decisiones judiciales (autos, sentencias, resoluciones de fondo, providencias de jueces)
+  "Fallos" → decisiones judiciales definitivas (sentencias, resoluciones de fondo)
+  "Tutelas" → acciones de tutela, autos de tutela, fallos de tutela, impugnaciones (autos, sentencias, resoluciones de fondo, providencias de jueces)
   "Medidas de protección" → actuaciones de comisarías de familia (autos de protección, resoluciones VIF, medidas provisionales o definitivas)
   "Derecho de petición" → solicitudes formales ante entidades públicas o privadas sin carácter judicial
   "Actuaciones penales" → denuncias, querellas, actuaciones ante Fiscalía, procesos penales
@@ -1446,6 +1447,7 @@ Extrae EXACTAMENTE estos campos en formato JSON (null si no encuentras el dato):
 - vence: fecha vencimiento = fechaRad + plazo en formato YYYY-MM-DD. null si no hay plazo
 - ubicacion: ubicación exacta en Google Drive según la categoría del documento. Usa SIEMPRE este formato: "Drive: defensaluisafernanda@gmail.com / Carpeta: [XX. Nombre]". La correspondencia es:
   "Fallos" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 01. Fallos"
+  "Tutelas" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 01. Fallos"
   "Medidas de protección" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 02. Medidas de protección"
   "Derecho de petición" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 03. Derechos de petición"
   "Actuaciones penales" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 04. Actuaciones penales"
