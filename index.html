@@ -1004,6 +1004,8 @@ function exportData(){
   a.href=URL.createObjectURL(blob);
   a.download='expediente_legal_'+new Date().toISOString().split('T')[0]+'.json';
   a.click();
+  // Registrar fecha del respaldo
+  localStorage.setItem('lastBackupDate',new Date().toISOString().split('T')[0]);
 }
 
 function handleImport(e){
@@ -1098,6 +1100,32 @@ async function enterApp(user){
   resetInactTimer();
   refreshAll();
   setSyncStatus('Sincronizado ✓');
+
+  // ✅ KEEP-ALIVE: ping silencioso para evitar que Supabase pause el proyecto
+  setTimeout(async()=>{
+    try{ await sb.from('expediente').select('id').limit(1); }catch(e){}
+  }, 3000);
+
+  // ✅ RECORDATORIO DE RESPALDO SEMANAL
+  if(isOwner()){
+    const lastBackup=localStorage.getItem('lastBackupDate');
+    const hoy=new Date().toISOString().split('T')[0];
+    if(lastBackup){
+      const diasDesde=Math.floor((new Date(hoy)-new Date(lastBackup))/(1000*60*60*24));
+      if(diasDesde>=7){
+        setTimeout(()=>{
+          const hacer=confirm(`⚠️ RECORDATORIO DE RESPALDO\n\nHan pasado ${diasDesde} días desde tu último respaldo (${lastBackup}).\n\nTus documentos son críticos. ¿Deseas descargar un respaldo ahora?\n\nSe descargará un archivo JSON con todo tu expediente.`);
+          if(hacer){
+            exportData();
+            localStorage.setItem('lastBackupDate',hoy);
+          }
+        },2000);
+      }
+    }else{
+      // Primera vez — registrar fecha de hoy como último respaldo
+      localStorage.setItem('lastBackupDate',hoy);
+    }
+  }
 }
 
 function applyPermissions(permisos){
