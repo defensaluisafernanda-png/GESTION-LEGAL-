@@ -402,6 +402,7 @@ tr:hover td{background:var(--bg2)}
             <option>Vigente</option><option>Pendiente respuesta</option><option>No respondido</option><option>Respondido</option><option>Ejecutoriado</option><option>Documento probatorio</option><option>Vencido</option><option>Archivado</option><option>No aplica</option>
           </select>
           <button class="btn sm" onclick="limpiarFiltros()" title="Limpiar filtros">✕ Limpiar</button>
+          <button class="btn sm" onclick="escanearDuplicados()" title="Buscar posibles duplicados en el expediente">🔍 Buscar duplicados</button>
           <span id="docsCount" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
         </div>
         <div class="table-wrap"><table><thead><tr>
@@ -792,6 +793,17 @@ tr:hover td{background:var(--bg2)}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('userModal')">Cancelar</button>
       <button class="btn primary" id="userSaveBtn" onclick="createUser()">✓ Crear usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ESCÁNER DE DUPLICADOS -->
+<div class="overlay" id="dupModal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-title">🔍 Escáner de documentos duplicados</div>
+    <div id="dupContent" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('dupModal')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -2279,6 +2291,96 @@ function renderDashboard(){
   document.getElementById('dashDeadlines').innerHTML=deadlines.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">🎉</span>Sin vencimientos próximos</div>':deadlines.map(d=>`<div class="card" style="margin-bottom:8px;padding:10px 14px;display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div><div style="display:flex;align-items:center;gap:6px;margin-top:5px"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>${deadlineBadge(d.vence)}</div>${d.entidad?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${d.entidad}</div>`:''}</div><button class="btn sm" onclick="navigate('documentos');setTimeout(()=>viewDoc(${d.id}),100)">📄 Ver</button></div>`).join('');
   const urgent=db.pending.filter(p=>!p.done&&p.priority==='Urgente').slice(0,5);
   document.getElementById('dashUrgent').innerHTML=urgent.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">✅</span>Sin tareas urgentes</div>':urgent.map(p=>`<div class="card" style="border-left:3px solid var(--danger);margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${p.title}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${p.type}${p.due?' · Límite: '+fmt(p.due):''}${p.related?' · '+p.related:''}</div></div>`).join('');
+}
+
+function escanearDuplicados(){
+  const normStr=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+  const stopWords=new Set(['para','ante','como','este','esta','esto','radicado','numero','auto','oficio','carta','correo','documento','fecha','junio','julio','agosto','enero','febrero','marzo','abril','mayo','septiembre','octubre','noviembre','diciembre','2022','2023','2024','2025','2026']);
+
+  const grupos=[];
+  const yaAgrupados=new Set();
+
+  db.docs.forEach((doc,i)=>{
+    if(yaAgrupados.has(doc.id)) return;
+    const grupo=[doc];
+    const nombreNorm=normStr(doc.nombre);
+    const palabras=nombreNorm.split(' ').filter(w=>w.length>4&&!stopWords.has(w));
+    const rads=(doc.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>5);
+
+    db.docs.forEach((d2,j)=>{
+      if(i===j||yaAgrupados.has(d2.id)) return;
+      let score=0;
+      // Mismo nombre exacto o casi exacto
+      const d2Norm=normStr(d2.nombre);
+      if(nombreNorm===d2Norm) score+=10;
+      else{
+        // Radicado idéntico Y misma categoría
+        const d2Rads=(d2.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>5);
+        if(rads.length>0&&d2Rads.length>0&&doc.cat===d2.cat){
+          if(rads.some(r=>d2Rads.includes(r))) score+=4;
+        }
+        // Nombre muy similar (90%+) misma cat
+        if(palabras.length>0&&doc.cat===d2.cat){
+          const d2Palabras=d2Norm.split(' ').filter(w=>w.length>4&&!stopWords.has(w));
+          const coinciden=palabras.filter(w=>d2Palabras.includes(w));
+          if(coinciden.length/palabras.length>=0.9) score+=5;
+        }
+      }
+      if(score>=4){
+        grupo.push(d2);
+        yaAgrupados.add(d2.id);
+      }
+    });
+
+    if(grupo.length>1){
+      grupo.forEach(d=>yaAgrupados.add(d.id));
+      grupos.push(grupo);
+    }
+  });
+
+  const el=document.getElementById('dupContent');
+  if(grupos.length===0){
+    el.innerHTML=`<div style="text-align:center;padding:32px;color:var(--text3)">
+      <div style="font-size:36px;margin-bottom:12px">✅</div>
+      <div style="font-size:15px;font-weight:600">No se encontraron documentos duplicados</div>
+      <div style="font-size:13px;margin-top:6px">Todos tus ${db.docs.length} documentos parecen únicos.</div>
+    </div>`;
+  }else{
+    el.innerHTML=`<div style="font-size:13px;color:var(--warningtext);background:var(--warningbg);padding:10px 14px;border-radius:var(--radius);margin-bottom:16px;border:0.5px solid var(--warningborder)">
+      ⚠️ Se encontraron <strong>${grupos.length} grupo(s)</strong> de posibles duplicados. Revisa cada grupo y elimina el que no necesites con el botón 🗑. <strong>No se elimina nada automáticamente.</strong>
+    </div>`+
+    grupos.map((grupo,gi)=>`
+      <div style="border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Grupo ${gi+1} — ${grupo.length} documentos similares</div>
+        ${grupo.map(d=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--bg2);border-radius:var(--radius);margin-bottom:6px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:3px">
+                <span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>
+                · ${fmt(d.fecha)} ${d.radicado?'· Rad: '+d.radicado:''}
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+              <button class="btn sm" onclick="closeModal('dupModal');viewDoc(${d.id})">📄 Ver</button>
+              ${canDelete()?`<button class="btn sm danger" onclick="delItemDup(${d.id})">🗑</button>`:''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+  }
+  openModal('dupModal');
+}
+
+async function delItemDup(id){
+  if(!confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) return;
+  db.docs=db.docs.filter(d=>d.id!=id);
+  db.alerts=db.alerts.filter(a=>a.docId!=id);
+  db.events=db.events.filter(e=>e.docId!=id);
+  await saveData();
+  renderDocs();
+  escanearDuplicados(); // refrescar el escáner
 }
 
 function limpiarFiltros(){
