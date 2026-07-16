@@ -453,7 +453,7 @@ tr:hover td{background:var(--bg2)}
     <div id="view-pendientes" class="section">
       <div class="page-header">
         <div><div class="page-title">Tareas pendientes</div><div class="page-sub">Acciones legales por realizar</div></div>
-        <button class="btn primary" id="btnNewPend" onclick="openModal('pendModal')">+ Nueva tarea</button>
+        <button class="btn primary" id="btnNewPend" onclick="abrirNuevoPendiente()">+ Nueva tarea</button>
       </div>
       <div class="page-content">
         <div class="toolbar">
@@ -1960,6 +1960,9 @@ function openDocModal(editId=null){
   document.getElementById('extractBox').style.display='none';
   document.getElementById('extractResult').style.display='none';
   document.getElementById('extractStatus').textContent='';
+  // Limpiar documentos relacionados
+  const relLista=document.getElementById('relacionadosList');
+  if(relLista) relLista.innerHTML='<span style="color:var(--text3);font-size:12px">Escribe el nombre o radicado para ver documentos relacionados.</span>';
 
   if(isEdit){
     const doc=db.docs.find(d=>d.id===editId);
@@ -2602,6 +2605,13 @@ async function saveAlert(){
   await saveData();closeModal('alertModal');
   ['al_title','al_date','al_consequence','al_action'].forEach(id=>document.getElementById(id).value='');
 }
+function abrirNuevoPendiente(){
+  ['p_title','p_due','p_related','p_notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p_priority').value='Normal';
+  document.getElementById('p_type').value='Legal';
+  openModal('pendModal');
+}
+
 async function savePending(){
   const t=document.getElementById('p_title').value.trim();if(!t){alert('La descripción es obligatoria');return;}
   db.pending.push({id:Date.now(),title:t,type:document.getElementById('p_type').value,priority:document.getElementById('p_priority').value,due:document.getElementById('p_due').value,related:document.getElementById('p_related').value.trim(),notes:document.getElementById('p_notes').value.trim(),done:false});
