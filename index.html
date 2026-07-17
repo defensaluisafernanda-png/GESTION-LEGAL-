@@ -2362,8 +2362,9 @@ function escanearDuplicados(){
               </div>
             </div>
             <div style="display:flex;gap:6px;flex-shrink:0">
-              <button class="btn sm" onclick="closeModal('dupModal');viewDoc(${d.id})">📄 Ver</button>
-              ${canDelete()?`<button class="btn sm danger" onclick="delItemDup(${d.id})">🗑</button>`:''}
+              <button class="btn sm" onclick="verDocEnEscaner(${d.id})">📄 Ver ficha</button>
+              ${d.filePath?`<button class="btn sm" onclick="openFile('${d.filePath}')">📂 Archivo</button>`:''}
+              ${canDelete()?`<button class="btn sm danger" onclick="delItemDup(${d.id})">🗑 Eliminar</button>`:''}
             </div>
           </div>
         `).join('')}
@@ -2373,6 +2374,48 @@ function escanearDuplicados(){
   openModal('dupModal');
 }
 
+function verDocEnEscaner(id){
+  const d=db.docs.find(x=>x.id==id);
+  if(!d) return;
+  const el=document.getElementById('dupContent');
+  // Guardar el contenido actual para poder volver
+  const contenidoAnterior=el.innerHTML;
+  el.innerHTML=`
+    <button class="btn sm" onclick="escanearDuplicados()" style="margin-bottom:14px">← Volver al escáner</button>
+    <div style="font-size:16px;font-weight:700;margin-bottom:10px">${d.nombre}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:var(--bg2);padding:10px;border-radius:var(--radius)">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Fecha</div>
+        <div style="font-size:13px">${fmt(d.fecha)||'—'}</div>
+      </div>
+      <div style="background:var(--bg2);padding:10px;border-radius:var(--radius)">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Fecha radicación</div>
+        <div style="font-size:13px">${fmt(d.fechaRad)||'—'}</div>
+      </div>
+      <div style="background:var(--bg2);padding:10px;border-radius:var(--radius)">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Categoría</div>
+        <div><span class="badge ${CAT_BADGE[d.cat]||'neutral'}">${d.cat||'—'}</span></div>
+      </div>
+      <div style="background:var(--bg2);padding:10px;border-radius:var(--radius)">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Estado</div>
+        <div><span class="badge ${STATUS_BADGE[d.status]||'neutral'}">${d.status||'—'}</span></div>
+      </div>
+      <div style="background:var(--bg2);padding:10px;border-radius:var(--radius)">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Entidad</div>
+        <div style="font-size:13px">${d.entidad||'—'}</div>
+      </div>
+      <div style="background:var(--bg2);padding:10px;border-radius:var(--radius)">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Radicado</div>
+        <div style="font-size:12px;font-family:monospace">${d.radicado||'—'}</div>
+      </div>
+    </div>
+    ${d.resumen?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Resumen</div><div style="font-size:13px;color:var(--text2);background:var(--bg2);padding:10px;border-radius:var(--radius);line-height:1.6">${d.resumen}</div></div>`:''}
+    ${d.notas?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Notas</div><div style="font-size:13px;color:var(--text2);background:var(--bg2);padding:10px;border-radius:var(--radius)">${d.notas}</div></div>`:''}
+    ${d.filePath?`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--successbg);border-radius:var(--radius);margin-bottom:10px"><span style="font-size:12px;color:var(--successtext)">📎 ${d.fileName||'Archivo adjunto'}</span><button class="btn sm primary" onclick="openFile('${d.filePath}')">📂 Ver archivo</button></div>`:'<div style="font-size:12px;color:var(--text3);padding:8px">📎 Sin archivo adjunto</div>'}
+    ${canDelete()?`<button class="btn danger" style="width:100%;margin-top:8px" onclick="delItemDup(${d.id})">🗑 Eliminar este documento</button>`:''}
+  `;
+}
+
 async function delItemDup(id){
   if(!confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) return;
   db.docs=db.docs.filter(d=>d.id!=id);
@@ -2380,7 +2423,7 @@ async function delItemDup(id){
   db.events=db.events.filter(e=>e.docId!=id);
   await saveData();
   renderDocs();
-  escanearDuplicados(); // refrescar el escáner
+  escanearDuplicados();
 }
 
 function limpiarFiltros(){
