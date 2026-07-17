@@ -607,6 +607,7 @@ tr:hover td{background:var(--bg2)}
       </div>
       <input type="file" id="d_file" style="display:none" accept="*/*" onchange="handleFileSelected(this)">
       <div id="filePreviewDoc" style="margin-top:6px"></div>
+      <div id="fileExistsWarn" style="display:none;background:var(--warningbg);border:0.5px solid var(--warningborder);border-radius:var(--radius);padding:10px 14px;margin-top:6px;font-size:13px;color:var(--warningtext);line-height:1.6"></div>
       <div id="existingFileInfo" style="display:none;margin-top:6px;padding:8px 12px;background:var(--successbg);border-radius:var(--radius);font-size:12px;color:var(--successtext)"></div>
       <!-- Extracción automática -->
       <div id="extractBox" style="display:none;margin-top:10px;padding:12px 14px;background:var(--infobg);border:0.5px solid var(--infoborder);border-radius:var(--radius)">
@@ -1320,7 +1321,35 @@ async function handleFileSelected(input){
   const extractBox=document.getElementById('extractBox');
   const extractStatus=document.getElementById('extractStatus');
   document.getElementById('extractResult').style.display='none';
-  // Mostrar caja para todos los archivos
+  const fileWarn=document.getElementById('fileExistsWarn');
+
+  // ✅ VERIFICAR SI EL ARCHIVO YA EXISTE — por hash SHA-256 (100% exacto)
+  if(fileWarn){
+    fileWarn.style.display='block';
+    fileWarn.innerHTML='<span style="color:var(--warningtext);font-size:12px">🔍 Verificando si este archivo ya existe en el expediente...</span>';
+  }
+  try{
+    const hash=await calcFileHash(file);
+    const existente=db.docs.find(d=>d.fileHash&&d.fileHash===hash);
+    if(existente){
+      if(fileWarn){
+        fileWarn.innerHTML=`⚠️ <strong>Este archivo ya está registrado en el expediente:</strong><br>
+          <span style="font-size:12px;font-weight:500">${existente.nombre}</span><br>
+          <span style="font-size:11px;color:var(--warningtext)">${existente.entidad||''} · ${fmt(existente.fecha)}</span><br>
+          <button class="btn sm" style="margin-top:6px" onclick="closeModal('docModal');viewDoc(${existente.id})">📄 Ver documento existente</button>
+          <span style="font-size:11px;display:block;margin-top:6px">Puedes continuar guardando si es una versión diferente.</span>`;
+      }
+    }else{
+      if(fileWarn) fileWarn.style.display='none';
+    }
+    // Guardar hash en el input para usarlo al guardar
+    input._fileHash=hash;
+  }catch(e){
+    if(fileWarn) fileWarn.style.display='none';
+    console.warn('No se pudo calcular hash:',e);
+  }
+
+  // Mostrar caja de extracción IA
   extractBox.style.display='block';
   const noLeibles=['xlsx','xls','xlsm','xlsb','mp4','mov','avi','mkv','webm','mp3','m4a','wav','zip','rar'];
   if(noLeibles.includes(ext)){
@@ -1331,6 +1360,13 @@ async function handleFileSelected(input){
     extractStatus.textContent='Se detectó un '+tipo+' — haz clic en "✨ Llenar campos automáticamente" para extraer los datos con IA.';
     document.getElementById('btnExtract').style.display='inline-flex';
   }
+}
+
+async function calcFileHash(file){
+  const buffer=await file.arrayBuffer();
+  const hashBuffer=await crypto.subtle.digest('SHA-256',buffer);
+  const hashArray=Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
 async function extractDocData(){
@@ -1975,6 +2011,8 @@ function openDocModal(editId=null){
   // Limpiar documentos relacionados
   const relLista=document.getElementById('relacionadosList');
   if(relLista) relLista.innerHTML='<span style="color:var(--text3);font-size:12px">Escribe el nombre o radicado para ver documentos relacionados.</span>';
+  const fileWarn=document.getElementById('fileExistsWarn');
+  if(fileWarn) fileWarn.style.display='none';
 
   if(isEdit){
     const doc=db.docs.find(d=>d.id===editId);
@@ -2048,12 +2086,14 @@ async function saveDoc(){
   const btn=document.getElementById('docSaveBtn');
   btn.disabled=true;btn.textContent='Guardando...';
   try{
-    let filePath=null,fileName=null;
+    let filePath=null,fileName=null,fileSize=null,fileHash=null;
     if(fileInput.files&&fileInput.files[0]){
       const file=fileInput.files[0];
       if(file.size>500*1024*1024){alert('El archivo no puede superar 500MB');btn.disabled=false;btn.textContent='✓ Guardar';return;}
       filePath=await uploadFileToSupabase(file,'docs');
       fileName=file.name;
+      fileSize=file.size;
+      fileHash=fileInput._fileHash||null;
     }
 
     const vence=document.getElementById('d_vence').value;
@@ -2089,7 +2129,7 @@ async function saveDoc(){
     }else{
       const docId=Date.now();
       const relSeleccionados=getRelacionadosSeleccionados();
-      const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),relacionados:relSeleccionados,filePath,fileName};
+      const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),relacionados:relSeleccionados,filePath,fileName,fileSize,fileHash};
       db.docs.push(doc);
       // Vincular en ambas direcciones
       relSeleccionados.forEach(id=>{
@@ -2300,14 +2340,29 @@ function escanearDuplicados(){
   const stopWords=new Set(['para','ante','como','este','esta','esto','radicado','numero','auto','oficio','carta','correo','documento','fecha','junio','julio','agosto','enero','febrero','marzo','abril','mayo','septiembre','octubre','noviembre','diciembre','2022','2023','2024','2025','2026']);
   const grupos=[];
   const yaAgrupados=new Set();
+
+  // ✅ DETECCIÓN POR HASH — archivos idénticos aunque tengan nombres diferentes
+  const hashGroups={};
+  db.docs.forEach(doc=>{
+    if(!doc.fileHash||excluidos.has(doc.id)) return;
+    if(!hashGroups[doc.fileHash]) hashGroups[doc.fileHash]=[];
+    hashGroups[doc.fileHash].push(doc);
+  });
+  Object.values(hashGroups).forEach(grupo=>{
+    if(grupo.length>1){
+      grupo.forEach(d=>yaAgrupados.add(d.id));
+      grupos.push({docs:grupo,tipo:'archivo'});
+    }
+  });
   db.docs.forEach((doc,i)=>{
     if(yaAgrupados.has(doc.id)||excluidos.has(doc.id)) return;
     const grupo=[doc];
     const nombreNorm=normStr(doc.nombre);
     const palabras=nombreNorm.split(' ').filter(w=>w.length>4&&!stopWords.has(w));
     const rads=(doc.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>5);
+    const grupoDocs=[doc];
     db.docs.forEach((d2,j)=>{
-      if(i===j||yaAgrupados.has(d2.id)||excluidos.has(d2.id)) return;
+      if(d2.id==doc.id||yaAgrupados.has(d2.id)||excluidos.has(d2.id)) return;
       let score=0;
       const d2Norm=normStr(d2.nombre);
       if(nombreNorm===d2Norm) score+=10;
@@ -2320,9 +2375,9 @@ function escanearDuplicados(){
           if(coinciden.length/palabras.length>=0.9) score+=5;
         }
       }
-      if(score>=4){grupo.push(d2);yaAgrupados.add(d2.id);}
+      if(score>=4){grupoDocs.push(d2);yaAgrupados.add(d2.id);}
     });
-    if(grupo.length>1){grupo.forEach(d=>yaAgrupados.add(d.id));grupos.push(grupo);}
+    if(grupoDocs.length>1){grupoDocs.forEach(d=>yaAgrupados.add(d.id));grupos.push({docs:grupoDocs,tipo:'nombre'});}
   });
   const el=document.getElementById('dupContent');
   const excluidosInfo=excluidos.size>0?`<div id="dupExcluidosInfo" style="font-size:12px;color:var(--text3);margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--radius)">ℹ️ ${excluidos.size} documento(s) excluido(s) del escáner. <button class="btn sm" onclick="limpiarExclusiones()">Restablecer</button></div>`:`<div id="dupExcluidosInfo" style="display:none"></div>`;
@@ -2330,9 +2385,11 @@ function escanearDuplicados(){
     el.innerHTML=excluidosInfo+`<div style="text-align:center;padding:32px;color:var(--text3)"><div style="font-size:36px;margin-bottom:12px">✅</div><div style="font-size:15px;font-weight:600">No se encontraron documentos duplicados</div><div style="font-size:13px;margin-top:6px">Todos tus ${db.docs.length} documentos parecen únicos.</div></div>`;
   }else{
     el.innerHTML=excluidosInfo+`<div style="font-size:13px;color:var(--warningtext);background:var(--warningbg);padding:10px 14px;border-radius:var(--radius);margin-bottom:16px;border:0.5px solid var(--warningborder)">⚠️ Se encontraron <strong>${grupos.length} grupo(s)</strong> de posibles duplicados.</div>`+
-    grupos.map((grupo,gi)=>`<div data-grupo="${gi}" style="border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px">
-      <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Grupo ${gi+1} — ${grupo.length} documentos similares</div>
-      ${grupo.map(d=>`<div data-doc-id="${d.id}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--bg2);border-radius:var(--radius);margin-bottom:6px">
+    grupos.map((grupo,gi)=>{
+      const tag=grupo.tipo==='archivo'?'<span style="background:#7c3aed;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px">📎 Mismo archivo</span>':'<span style="background:var(--warning);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px">📝 Nombre similar</span>';
+      return `<div data-grupo="${gi}" style="border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Grupo ${gi+1} — ${grupo.docs.length} documentos ${tag}</div>
+      ${grupo.docs.map(d=>`<div data-doc-id="${d.id}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--bg2);border-radius:var(--radius);margin-bottom:6px">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:3px"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span> · ${fmt(d.fecha)} ${d.radicado?'· Rad: '+d.radicado:''}</div>
@@ -2344,7 +2401,8 @@ function escanearDuplicados(){
           ${canDelete()?`<button class="btn sm danger" onclick="delItemDup(${d.id})">🗑</button>`:''}
         </div>
       </div>`).join('')}
-    </div>`).join('');
+    </div>`;
+    }).join('');
   }
   openModal('dupModal');
 }
