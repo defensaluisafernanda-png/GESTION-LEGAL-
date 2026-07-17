@@ -1202,7 +1202,7 @@ async function loadData(){
       }
     }else if(isOwner()){
       // Primera vez — empezar vacío
-      db={docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[],redactados:[]};
+      db={docs:[],events:[],alerts:[],pending:[],fallos:[],procesos:[],uploads:[],redactados:[],noEsDuplicado:[]};
       dbRowId=null;
       await saveData();
     }
@@ -2294,85 +2294,61 @@ function renderDashboard(){
 }
 
 function escanearDuplicados(){
+  if(!db.noEsDuplicado) db.noEsDuplicado=[];
+  const excluidos=new Set(db.noEsDuplicado);
   const normStr=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
   const stopWords=new Set(['para','ante','como','este','esta','esto','radicado','numero','auto','oficio','carta','correo','documento','fecha','junio','julio','agosto','enero','febrero','marzo','abril','mayo','septiembre','octubre','noviembre','diciembre','2022','2023','2024','2025','2026']);
-
   const grupos=[];
   const yaAgrupados=new Set();
-
   db.docs.forEach((doc,i)=>{
-    if(yaAgrupados.has(doc.id)) return;
+    if(yaAgrupados.has(doc.id)||excluidos.has(doc.id)) return;
     const grupo=[doc];
     const nombreNorm=normStr(doc.nombre);
     const palabras=nombreNorm.split(' ').filter(w=>w.length>4&&!stopWords.has(w));
     const rads=(doc.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>5);
-
     db.docs.forEach((d2,j)=>{
-      if(i===j||yaAgrupados.has(d2.id)) return;
+      if(i===j||yaAgrupados.has(d2.id)||excluidos.has(d2.id)) return;
       let score=0;
-      // Mismo nombre exacto o casi exacto
       const d2Norm=normStr(d2.nombre);
       if(nombreNorm===d2Norm) score+=10;
       else{
-        // Radicado idéntico Y misma categoría
         const d2Rads=(d2.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>5);
-        if(rads.length>0&&d2Rads.length>0&&doc.cat===d2.cat){
-          if(rads.some(r=>d2Rads.includes(r))) score+=4;
-        }
-        // Nombre muy similar (90%+) misma cat
+        if(rads.length>0&&d2Rads.length>0&&doc.cat===d2.cat){if(rads.some(r=>d2Rads.includes(r))) score+=4;}
         if(palabras.length>0&&doc.cat===d2.cat){
           const d2Palabras=d2Norm.split(' ').filter(w=>w.length>4&&!stopWords.has(w));
           const coinciden=palabras.filter(w=>d2Palabras.includes(w));
           if(coinciden.length/palabras.length>=0.9) score+=5;
         }
       }
-      if(score>=4){
-        grupo.push(d2);
-        yaAgrupados.add(d2.id);
-      }
+      if(score>=4){grupo.push(d2);yaAgrupados.add(d2.id);}
     });
-
-    if(grupo.length>1){
-      grupo.forEach(d=>yaAgrupados.add(d.id));
-      grupos.push(grupo);
-    }
+    if(grupo.length>1){grupo.forEach(d=>yaAgrupados.add(d.id));grupos.push(grupo);}
   });
-
   const el=document.getElementById('dupContent');
+  const excluidosInfo=excluidos.size>0?`<div id="dupExcluidosInfo" style="font-size:12px;color:var(--text3);margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--radius)">ℹ️ ${excluidos.size} documento(s) excluido(s) del escáner. <button class="btn sm" onclick="limpiarExclusiones()">Restablecer</button></div>`:`<div id="dupExcluidosInfo" style="display:none"></div>`;
   if(grupos.length===0){
-    el.innerHTML=`<div style="text-align:center;padding:32px;color:var(--text3)">
-      <div style="font-size:36px;margin-bottom:12px">✅</div>
-      <div style="font-size:15px;font-weight:600">No se encontraron documentos duplicados</div>
-      <div style="font-size:13px;margin-top:6px">Todos tus ${db.docs.length} documentos parecen únicos.</div>
-    </div>`;
+    el.innerHTML=excluidosInfo+`<div style="text-align:center;padding:32px;color:var(--text3)"><div style="font-size:36px;margin-bottom:12px">✅</div><div style="font-size:15px;font-weight:600">No se encontraron documentos duplicados</div><div style="font-size:13px;margin-top:6px">Todos tus ${db.docs.length} documentos parecen únicos.</div></div>`;
   }else{
-    el.innerHTML=`<div style="font-size:13px;color:var(--warningtext);background:var(--warningbg);padding:10px 14px;border-radius:var(--radius);margin-bottom:16px;border:0.5px solid var(--warningborder)">
-      ⚠️ Se encontraron <strong>${grupos.length} grupo(s)</strong> de posibles duplicados. Revisa cada grupo y elimina el que no necesites con el botón 🗑. <strong>No se elimina nada automáticamente.</strong>
-    </div>`+
-    grupos.map((grupo,gi)=>`
-      <div style="border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px">
-        <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Grupo ${gi+1} — ${grupo.length} documentos similares</div>
-        ${grupo.map(d=>`
-          <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--bg2);border-radius:var(--radius);margin-bottom:6px">
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div>
-              <div style="font-size:11px;color:var(--text3);margin-top:3px">
-                <span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>
-                · ${fmt(d.fecha)} ${d.radicado?'· Rad: '+d.radicado:''}
-              </div>
-            </div>
-            <div style="display:flex;gap:6px;flex-shrink:0">
-              <button class="btn sm" onclick="verDocEnEscaner(${d.id})">📄 Ver ficha</button>
-              ${d.filePath?`<button class="btn sm" onclick="openFile('${d.filePath}')">📂 Archivo</button>`:''}
-              ${canDelete()?`<button class="btn sm danger" onclick="delItemDup(${d.id})">🗑 Eliminar</button>`:''}
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `).join('');
+    el.innerHTML=excluidosInfo+`<div style="font-size:13px;color:var(--warningtext);background:var(--warningbg);padding:10px 14px;border-radius:var(--radius);margin-bottom:16px;border:0.5px solid var(--warningborder)">⚠️ Se encontraron <strong>${grupos.length} grupo(s)</strong> de posibles duplicados.</div>`+
+    grupos.map((grupo,gi)=>`<div data-grupo="${gi}" style="border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Grupo ${gi+1} — ${grupo.length} documentos similares</div>
+      ${grupo.map(d=>`<div data-doc-id="${d.id}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--bg2);border-radius:var(--radius);margin-bottom:6px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span> · ${fmt(d.fecha)} ${d.radicado?'· Rad: '+d.radicado:''}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+          <button class="btn sm" onclick="verDocEnEscaner(${d.id})">📄 Ver</button>
+          ${d.filePath?`<button class="btn sm" onclick="openFile('${d.filePath}')">📂 Archivo</button>`:''}
+          <button class="btn sm" onclick="marcarNoEsDuplicado(${d.id})" style="background:var(--successbg);color:var(--successtext);border-color:var(--successborder)">✓ No es dup.</button>
+          ${canDelete()?`<button class="btn sm danger" onclick="delItemDup(${d.id})">🗑</button>`:''}
+        </div>
+      </div>`).join('')}
+    </div>`).join('');
   }
   openModal('dupModal');
 }
+
 
 function verDocEnEscaner(id){
   const d=db.docs.find(x=>x.id==id);
@@ -2413,7 +2389,31 @@ function verDocEnEscaner(id){
     ${d.notas?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Notas</div><div style="font-size:13px;color:var(--text2);background:var(--bg2);padding:10px;border-radius:var(--radius)">${d.notas}</div></div>`:''}
     ${d.filePath?`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--successbg);border-radius:var(--radius);margin-bottom:10px"><span style="font-size:12px;color:var(--successtext)">📎 ${d.fileName||'Archivo adjunto'}</span><button class="btn sm primary" onclick="openFile('${d.filePath}')">📂 Ver archivo</button></div>`:'<div style="font-size:12px;color:var(--text3);padding:8px">📎 Sin archivo adjunto</div>'}
     ${canDelete()?`<button class="btn danger" style="width:100%;margin-top:8px" onclick="delItemDup(${d.id})">🗑 Eliminar este documento</button>`:''}
+    <button class="btn" style="width:100%;margin-top:6px;background:var(--successbg);color:var(--successtext);border-color:var(--successborder)" onclick="marcarNoEsDuplicado(${d.id})">✓ Este documento NO es duplicado — excluir del escáner</button>
   `;
+}
+
+async function limpiarExclusiones(){
+  db.noEsDuplicado=[];
+  await saveData();
+  escanearDuplicados();
+}
+
+async function marcarNoEsDuplicado(id){
+  if(!db.noEsDuplicado) db.noEsDuplicado=[];
+  if(!db.noEsDuplicado.includes(id)) db.noEsDuplicado.push(id);
+  await saveData();
+  // Eliminar el elemento visualmente de inmediato sin re-ejecutar el escáner
+  const rows=document.querySelectorAll(`[data-doc-id="${id}"]`);
+  rows.forEach(r=>r.remove());
+  // Si el grupo quedó con solo 1 documento, ocultar el grupo completo
+  document.querySelectorAll('[data-grupo]').forEach(g=>{
+    const items=g.querySelectorAll('[data-doc-id]');
+    if(items.length===0) g.remove();
+  });
+  // Actualizar contador de excluidos
+  const exclEl=document.getElementById('dupExcluidosInfo');
+  if(exclEl) exclEl.textContent=`ℹ️ ${db.noEsDuplicado.length} documento(s) excluido(s) del escáner.`;
 }
 
 async function delItemDup(id){
