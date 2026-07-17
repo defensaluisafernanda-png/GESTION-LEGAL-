@@ -459,7 +459,7 @@ tr:hover td{background:var(--bg2)}
       <div class="page-content">
         <div class="toolbar">
           <select id="pendPri" onchange="renderPending()"><option value="">Todas</option><option>Urgente</option><option>Alta</option><option>Normal</option></select>
-          <select id="pendType" onchange="renderPending()"><option value="">Todos los tipos</option><option>Llamada</option><option>Correo</option><option>Visita</option><option>Documento</option><option>Legal</option></select>
+          <select id="pendType" onchange="renderPending()"><option value="">Todos los tipos</option><option>Llamada</option><option>Correo</option><option>Visita</option><option>Documento</option><option>Legal</option><option>Consulta web</option></select>
           <select id="pendDone" onchange="renderPending()"><option value="">Todas</option><option value="false">Por hacer</option><option value="true">Completadas</option></select>
         </div>
         <div id="pendingContent"></div>
@@ -705,7 +705,7 @@ tr:hover td{background:var(--bg2)}
     <div class="modal-title">✅ Nueva tarea pendiente</div>
     <div class="form-row"><label>Descripción <span class="req">*</span></label><input type="text" id="p_title"></div>
     <div class="form-grid">
-      <div class="form-row"><label>Tipo</label><select id="p_type"><option>Llamada</option><option>Correo</option><option>Visita</option><option>Documento</option><option>Legal</option></select></div>
+      <div class="form-row"><label>Tipo</label><select id="p_type"><option>Llamada</option><option>Correo</option><option>Visita</option><option>Documento</option><option>Legal</option><option>Consulta web</option></select></div>
       <div class="form-row"><label>Prioridad</label><select id="p_priority"><option>Urgente</option><option>Alta</option><option>Normal</option></select></div>
     </div>
     <div class="form-grid">
@@ -1546,7 +1546,7 @@ Extrae EXACTAMENTE estos campos en formato JSON (null si no encuentras el dato):
   "Otro" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 10. Otros"
 - resumen: síntesis en 2-3 oraciones — qué demuestra, personas involucradas, relevancia legal (máx 350 caracteres)
 - notas: observaciones — documentos relacionados, mérito ejecutivo, agravantes, advertencias (máx 250 caracteres)
-- acciones: array máximo 3 tareas que LUISA FERNANDA debe realizar. Formato: [{"titulo":"acción concreta","tipo":"Legal|Llamada|Correo|Documento|Visita","prioridad":"Urgente|Alta|Normal"}]
+- acciones: array máximo 3 tareas que LUISA FERNANDA debe realizar. Formato: [{"titulo":"acción concreta","tipo":"Legal|Llamada|Correo|Documento|Visita|Consulta web","prioridad":"Urgente|Alta|Normal"}]
 
 PLAZOS LEGALES COLOMBIA: 15 días hábiles=Derecho de petición (Ley 1755/2015) | 10 días hábiles=cautelares/menores | 30 días hábiles=judicial (C.G.P.) | 5 días hábiles=recursos (Art.318 C.G.P.) | 3 meses=Fiscalía
 
