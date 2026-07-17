@@ -399,7 +399,7 @@ tr:hover td{background:var(--bg2)}
           </select>
           <select id="docStatus" onchange="renderDocs()">
             <option value="">Todos los estados</option>
-            <option>Vigente</option><option>Pendiente respuesta</option><option>No respondido</option><option>Respondido</option><option>Ejecutoriado</option><option>Documento probatorio</option><option>Vencido</option><option>Archivado</option><option>No aplica</option>
+            <option>Vigente</option><option>Pendiente respuesta</option><option>No respondido</option><option>Respondido</option><option>Respondido parcialmente</option><option>Ejecutoriado</option><option>Documento probatorio</option><option>Vencido</option><option>Archivado</option><option>No aplica</option>
           </select>
           <button class="btn sm" onclick="limpiarFiltros()" title="Limpiar filtros">✕ Limpiar</button>
           <button class="btn sm" onclick="escanearDuplicados()" title="Buscar posibles duplicados en el expediente">🔍 Buscar duplicados</button>
@@ -575,7 +575,7 @@ tr:hover td{background:var(--bg2)}
         <select id="d_cat"><option>Fallos</option><option>Tutelas</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
       </div>
       <div class="form-row"><label>Estado</label>
-        <select id="d_status"><option>Vigente</option><option>Documento probatorio</option><option>Pendiente respuesta</option><option>No respondido</option><option>Respondido</option><option>Ejecutoriado</option><option>Vencido</option><option>Archivado</option><option>No aplica</option></select>
+        <select id="d_status"><option>Vigente</option><option>Documento probatorio</option><option>Pendiente respuesta</option><option>No respondido</option><option>Respondido</option><option>Respondido parcialmente</option><option>Ejecutoriado</option><option>Vencido</option><option>Archivado</option><option>No aplica</option></select>
       </div>
     </div>
     <div class="form-grid">
@@ -892,7 +892,7 @@ function sanitizeFileName(name){
   return name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]/g,'_').replace(/_+/g,'_').substring(0,100);
 }
 const CAT_BADGE={Fallos:'purple',Tutelas:'purple','Medidas de protección':'warning','Derecho de petición':'danger','Actuaciones penales':'neutral','Documentos patrimoniales':'success','Clínico/pericial':'info','Actas y conciliaciones':'success',Comunicaciones:'info','Trámites disciplinarios':'danger',Otro:'neutral'};
-const STATUS_BADGE={Vigente:'success','Pendiente respuesta':'warning','No respondido':'danger',Respondido:'info',Ejecutoriado:'success','Documento probatorio':'purple',Vencido:'danger',Archivado:'neutral','No aplica':'neutral'};
+const STATUS_BADGE={Vigente:'success','Pendiente respuesta':'warning','No respondido':'danger',Respondido:'info','Respondido parcialmente':'warning',Ejecutoriado:'success','Documento probatorio':'purple',Vencido:'danger',Archivado:'neutral','No aplica':'neutral'};
 const COMP_BADGE={Cumplido:'success','Parcialmente cumplido':'warning',Incumplido:'danger','Pendiente de ejecución':'neutral'};
 
 function isOwner(){return currentUser?.email===OWNER_EMAIL;}
@@ -1517,7 +1517,7 @@ Extrae EXACTAMENTE estos campos en formato JSON (null si no encuentras el dato):
   "Comunicaciones" → correos electrónicos, mensajes de WhatsApp, SMS, cartas, cualquier comunicación entre partes (formal o informal). IMPORTANTE: TODO correo electrónico y mensaje de chat va SIEMPRE en "Comunicaciones", sin excepción
   "Trámites disciplinarios" → actuaciones ante Procuraduría, Personería, quejas disciplinarias, investigaciones contra servidores públicos
   "Otro" → documentos que no encajan en ninguna categoría anterior
-- status: SOLO UNO de: "Vigente", "Pendiente respuesta", "No respondido", "Respondido", "Ejecutoriado", "Documento probatorio", "Vencido", "Archivado", "No aplica"
+- status: SOLO UNO de: "Vigente", "Pendiente respuesta", "No respondido", "Respondido", "Respondido parcialmente", "Ejecutoriado", "Documento probatorio", "Vencido", "Archivado", "No aplica"
   Para determinar el estado, sigue este orden estricto de preguntas:
   PASO 1: ¿Es formulario, plantilla, instructivo o herramienta de gestión (no un trámite)? → "No aplica"
   PASO 2: ¿Ya hay una respuesta o decisión emitida (oficio de respuesta, fallo, resolución final)? → "Respondido"
