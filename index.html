@@ -815,6 +815,7 @@ tr:hover td{background:var(--bg2)}
     <div id="viewDocContent"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('viewDocModal')">Cerrar</button>
+      <button class="btn primary" id="btnRegistrarRespuesta" style="display:none" onclick="registrarRespuesta()">📨 Registrar respuesta</button>
     </div>
   </div>
 </div>
@@ -2541,6 +2542,50 @@ function renderDocs(){
   </tr>`).join('');
 }
 
+async function registrarRespuesta(){
+  const btnResp=document.getElementById('btnRegistrarRespuesta');
+  const docId=parseInt(btnResp?.dataset?.docId);
+  if(!docId) return;
+  const docOrigen=db.docs.find(d=>d.id==docId);
+  if(!docOrigen) return;
+
+  // 1. Cambiar estado del documento original a "Respondido"
+  const idx=db.docs.findIndex(d=>d.id==docId);
+  if(idx>=0) db.docs[idx].status='Respondido';
+
+  // 2. Eliminar alerta de vencimiento del documento original
+  db.alerts=db.alerts.filter(a=>a.docId!=docId);
+  db.events=db.events.filter(e=>!(e.type==='deadline'&&e.docId==docId));
+
+  await saveData();
+  closeModal('viewDocModal');
+
+  // 3. Abrir formulario de nuevo documento prellenado para la respuesta
+  openDocModal();
+  setTimeout(()=>{
+    // Prellenar con datos relacionados al documento original
+    document.getElementById('d_nombre').value='Respuesta — '+docOrigen.nombre.substring(0,70);
+    document.getElementById('d_entidad').value=docOrigen.entidad||'';
+    document.getElementById('d_radicado').value=docOrigen.radicado||'';
+    document.getElementById('d_cat').value=docOrigen.cat||'';
+    document.getElementById('d_status').value='Respondido';
+    document.getElementById('d_fecha').value=new Date().toISOString().split('T')[0];
+    // Agregar el documento original como relacionado
+    const lista=document.getElementById('relacionadosList');
+    if(lista){
+      lista.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:7px 0">
+        <input type="checkbox" id="rprev_${docOrigen.id}" checked style="flex-shrink:0;width:15px;height:15px">
+        <label for="rprev_${docOrigen.id}" style="flex:1;font-size:12px">
+          <strong>${docOrigen.nombre}</strong><br>
+          <span style="color:var(--text3)">${docOrigen.entidad||''} · ${fmt(docOrigen.fecha)}</span>
+        </label>
+      </div>
+      <div style="font-size:11px;color:var(--accent);margin-top:4px">✓ Documento original vinculado automáticamente.</div>`;
+    }
+    buscarRelacionadosPrevio();
+  },300);
+}
+
 function viewDoc(id){
   const d=db.docs.find(x=>x.id===id);
   if(!d) return;
@@ -2622,6 +2667,17 @@ function viewDoc(id){
       }).join('')}
     </div>`:''}
   `;
+  // Mostrar botón "Registrar respuesta" si está pendiente o vencido
+  const btnResp=document.getElementById('btnRegistrarRespuesta');
+  if(btnResp){
+    const estadosPendientes=['Pendiente respuesta','No respondido','Vencido','Respondido parcialmente'];
+    if(estadosPendientes.includes(d.status)){
+      btnResp.style.display='inline-flex';
+      btnResp.dataset.docId=d.id;
+    }else{
+      btnResp.style.display='none';
+    }
+  }
   openModal('viewDocModal');
 }
 
