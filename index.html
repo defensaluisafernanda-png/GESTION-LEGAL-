@@ -2317,7 +2317,13 @@ function updateNav(){
 function renderDashboard(){
   const today=new Date();today.setHours(0,0,0,0);
   const in5=new Date(today);in5.setDate(in5.getDate()+5);
-  const crit=db.alerts.filter(a=>{const d=new Date(a.date+'T00:00:00');return d>=today&&d<=in5&&a.level==='danger';});
+  const estadosRespondidos=new Set(['Respondido','Respondido parcialmente','Ejecutoriado','Archivado','No aplica']);
+  const alertasFiltradas=db.alerts.filter(a=>{
+    if(!a.docId) return true;
+    const doc=db.docs.find(d=>d.id==a.docId);
+    return !doc||!estadosRespondidos.has(doc.status);
+  });
+  const crit=alertasFiltradas.filter(a=>{const d=new Date(a.date+'T00:00:00');return d>=today&&d<=in5&&a.level==='danger';});
   document.getElementById('dashBanners').innerHTML=crit.map(a=>`<div class="alert-banner danger">🚨 <div><strong>Alerta crítica:</strong> ${a.title} — vence ${fmt(a.date)}<br><small>${a.consequence||''}</small></div></div>`).join('');
   const hearings=db.events.filter(e=>e.type==='hearing'&&new Date(e.date+'T00:00:00')>=today).length;
   document.getElementById('statsRow').innerHTML=`
@@ -2328,7 +2334,7 @@ function renderDashboard(){
     <div class="stat"><div class="stat-label">Procesos</div><div class="stat-value">${db.procesos.length}</div><div class="stat-sub">activos</div></div>
     <div class="stat success"><div class="stat-label">Archivos subidos</div><div class="stat-value">${db.uploads.length}</div><div class="stat-sub">en la nube</div></div>
   `;
-  const deadlines=db.docs.filter(d=>d.vence&&daysLeft(d.vence)>=0).sort((a,b)=>a.vence.localeCompare(b.vence)).slice(0,5);
+  const deadlines=db.docs.filter(d=>d.vence&&!estadosRespondidos.has(d.status)).sort((a,b)=>a.vence.localeCompare(b.vence)).slice(0,5);
   document.getElementById('dashDeadlines').innerHTML=deadlines.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">🎉</span>Sin vencimientos próximos</div>':deadlines.map(d=>`<div class="card" style="margin-bottom:8px;padding:10px 14px;display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div><div style="display:flex;align-items:center;gap:6px;margin-top:5px"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>${deadlineBadge(d.vence)}</div>${d.entidad?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${d.entidad}</div>`:''}</div><button class="btn sm" onclick="navigate('documentos');setTimeout(()=>viewDoc(${d.id}),100)">📄 Ver</button></div>`).join('');
   const urgent=db.pending.filter(p=>!p.done&&p.priority==='Urgente').slice(0,5);
   document.getElementById('dashUrgent').innerHTML=urgent.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">✅</span>Sin tareas urgentes</div>':urgent.map(p=>`<div class="card" style="border-left:3px solid var(--danger);margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${p.title}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${p.type}${p.due?' · Límite: '+fmt(p.due):''}${p.related?' · '+p.related:''}</div></div>`).join('');
@@ -2710,7 +2716,15 @@ function renderArchivos(){
 
 function renderAlerts(){
   const el=document.getElementById('alertsContent');if(!el)return;
-  const sorted=[...db.alerts].sort((a,b)=>a.date.localeCompare(b.date));
+  const estadosRespondidos=new Set(['Respondido','Respondido parcialmente','Ejecutoriado','Archivado','No aplica']);
+  // Filtrar alertas de documentos ya respondidos
+  const alertasFiltradas=db.alerts.filter(a=>{
+    if(!a.docId) return true;
+    const doc=db.docs.find(d=>d.id==a.docId);
+    if(!doc) return true;
+    return !estadosRespondidos.has(doc.status);
+  });
+  const sorted=[...alertasFiltradas].sort((a,b)=>a.date.localeCompare(b.date));
   el.innerHTML=sorted.length===0?`<div class="empty"><span class="empty-icon">🔔</span>Sin alertas</div>`:sorted.map(a=>{
     const d=daysLeft(a.date);const past=d!==null&&d<0;const lvl=past?'danger':a.level;
     // Buscar documento relacionado
