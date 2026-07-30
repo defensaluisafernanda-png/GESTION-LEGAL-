@@ -798,6 +798,19 @@ tr:hover td{background:var(--bg2)}
   </div>
 </div>
 
+<!-- MODAL VINCULAR RESPUESTA EXISTENTE -->
+<div class="overlay" id="vincularRespModal">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-title">🔗 Vincular respuesta existente</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Selecciona el documento que es la respuesta al documento original. Quedarán vinculados automáticamente.</div>
+    <input class="search" type="search" placeholder="🔍 Buscar por nombre, entidad, radicado..." id="vincularSearch" oninput="renderVincularLista()" style="margin-bottom:12px;width:100%">
+    <div id="vincularLista" style="max-height:50vh;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('vincularRespModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL ESCÁNER DE DUPLICADOS -->
 <div class="overlay" id="dupModal">
   <div class="modal" style="max-width:640px">
@@ -815,7 +828,8 @@ tr:hover td{background:var(--bg2)}
     <div id="viewDocContent"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('viewDocModal')">Cerrar</button>
-      <button class="btn primary" id="btnRegistrarRespuesta" style="display:none" onclick="registrarRespuesta()">📨 Registrar respuesta</button>
+      <button class="btn" id="btnVincularRespuesta" style="display:none" onclick="vincularRespuestaExistente()">🔗 Vincular respuesta existente</button>
+      <button class="btn primary" id="btnRegistrarRespuesta" style="display:none" onclick="registrarRespuesta()">📨 Registrar respuesta nueva</button>
     </div>
   </div>
 </div>
@@ -2548,6 +2562,88 @@ function renderDocs(){
   </tr>`).join('');
 }
 
+function vincularRespuestaExistente(){
+  const btnVincular=document.getElementById('btnVincularRespuesta');
+  const docId=parseInt(btnVincular?.dataset?.docId);
+  if(!docId) return;
+  // Guardar el docId del documento origen para usarlo al seleccionar
+  document.getElementById('vincularSearch').value='';
+  document.getElementById('vincularSearch').dataset.docOrigenId=String(docId);
+  renderVincularLista();
+  closeModal('viewDocModal');
+  openModal('vincularRespModal');
+}
+
+function renderVincularLista(){
+  const search=document.getElementById('vincularSearch');
+  const docOrigenId=parseInt(search?.dataset?.docOrigenId);
+  const q=(search?.value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').trim();
+  const lista=document.getElementById('vincularLista');
+  if(!lista) return;
+
+  const docOrigen=db.docs.find(d=>d.id==docOrigenId);
+  // Mostrar todos los docs excepto el origen, ordenados por fecha desc
+  let docs=[...db.docs].filter(d=>{
+    if(d.id==docOrigenId) return false;
+    if(q){
+      const hay=(d.nombre+' '+(d.entidad||'')+' '+(d.radicado||'')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  if(docs.length===0){
+    lista.innerHTML='<div style="text-align:center;padding:24px;color:var(--text3)">No se encontraron documentos.</div>';
+    return;
+  }
+
+  lista.innerHTML=docs.map(d=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:0.5px solid var(--border);cursor:pointer" onclick="confirmarVinculo(${docOrigenId},${d.id})">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">
+          <span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>
+          <span class="badge ${STATUS_BADGE[d.status]||'neutral'}" style="font-size:10px">${d.status}</span>
+          · ${fmt(d.fecha)} ${d.entidad?'· '+d.entidad:''}
+        </div>
+      </div>
+      <button class="btn sm primary">Vincular →</button>
+    </div>
+  `).join('');
+}
+
+async function confirmarVinculo(docOrigenId, respuestaId){
+  const docOrigen=db.docs.find(d=>d.id==docOrigenId);
+  const docResp=db.docs.find(d=>d.id==respuestaId);
+  if(!docOrigen||!docResp) return;
+
+  const conf=confirm(`¿Vincular estos dos documentos?\n\n📄 Original: ${docOrigen.nombre}\n📨 Respuesta: ${docResp.nombre}\n\nEsto también cambiará el estado del documento original a "Respondido".`);
+  if(!conf) return;
+
+  // Cambiar estado del original a Respondido
+  const idxOrigen=db.docs.findIndex(d=>d.id==docOrigenId);
+  if(idxOrigen>=0) db.docs[idxOrigen].status='Respondido';
+
+  // Vincular en ambas direcciones
+  if(!db.docs[idxOrigen].relacionados) db.docs[idxOrigen].relacionados=[];
+  if(!db.docs[idxOrigen].relacionados.includes(respuestaId)) db.docs[idxOrigen].relacionados.push(respuestaId);
+
+  const idxResp=db.docs.findIndex(d=>d.id==respuestaId);
+  if(idxResp>=0){
+    if(!db.docs[idxResp].relacionados) db.docs[idxResp].relacionados=[];
+    if(!db.docs[idxResp].relacionados.includes(docOrigenId)) db.docs[idxResp].relacionados.push(docOrigenId);
+  }
+
+  // Eliminar alerta de vencimiento del original
+  db.alerts=db.alerts.filter(a=>a.docId!=docOrigenId);
+  db.events=db.events.filter(e=>!(e.type==='deadline'&&e.docId==docOrigenId));
+
+  await saveData();
+  closeModal('vincularRespModal');
+  renderDocs();
+  alert(`✅ Vinculados correctamente.\n\n"${docOrigen.nombre}" ahora está en estado Respondido y vinculado a la respuesta.`);
+}
+
 async function registrarRespuesta(){
   const btnResp=document.getElementById('btnRegistrarRespuesta');
   const docId=parseInt(btnResp?.dataset?.docId);
@@ -2673,16 +2769,23 @@ function viewDoc(id){
       }).join('')}
     </div>`:''}
   `;
-  // Mostrar botón "Registrar respuesta" si está pendiente o vencido
+  // Botón registrar respuesta — visible para TODOS excepto Respondido, Ejecutoriado, Archivado
   const btnResp=document.getElementById('btnRegistrarRespuesta');
   if(btnResp){
-    const estadosPendientes=['Pendiente respuesta','No respondido','Vencido','Respondido parcialmente'];
-    if(estadosPendientes.includes(d.status)){
+    const estadosNoAplica=new Set(['Respondido','Ejecutoriado','Archivado','No aplica']);
+    if(!estadosNoAplica.has(d.status)){
       btnResp.style.display='inline-flex';
-      btnResp.dataset.docId=d.id;
+      btnResp.dataset.docId=String(d.id);
     }else{
       btnResp.style.display='none';
+      btnResp.dataset.docId='';
     }
+  }
+  // Botón vincular respuesta existente — siempre visible
+  const btnVincular=document.getElementById('btnVincularRespuesta');
+  if(btnVincular){
+    btnVincular.style.display='inline-flex';
+    btnVincular.dataset.docId=String(d.id);
   }
   openModal('viewDocModal');
 }
