@@ -389,22 +389,35 @@ tr:hover td{background:var(--bg2)}
         <button class="btn primary" id="btnNewDoc2" onclick="openDocModal()">+ Nuevo documento</button>
       </div>
       <div class="page-content">
-        <div class="toolbar">
-          <input class="search" type="search" placeholder="🔍 Buscar por nombre, entidad, radicado..." id="docSearch" oninput="renderDocs()">
-          <select id="docCat" onchange="renderDocs()">
-            <option value="">Todas las categorías</option>
-            <option>Fallos</option><option>Tutelas</option><option>Medidas de protección</option>
-            <option>Derecho de petición</option><option>Actuaciones penales</option>
-            <option>Documentos patrimoniales</option><option>Clínico/pericial</option>
-            <option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option>
-          </select>
-          <select id="docStatus" onchange="renderDocs()">
-            <option value="">Todos los estados</option>
-            <option>Vigente</option><option>Pendiente respuesta</option><option>No respondido</option><option>Respondido</option><option>Respondido parcialmente</option><option>Ejecutoriado</option><option>Documento probatorio</option><option>Vencido</option><option>Archivado</option><option>No aplica</option>
-          </select>
-          <button class="btn sm" onclick="limpiarFiltros()" title="Limpiar filtros">✕ Limpiar</button>
-          <button class="btn sm" onclick="escanearDuplicados()" title="Buscar posibles duplicados en el expediente">🔍 Buscar duplicados</button>
-          <span id="docsCount" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+            <input class="search" type="search" placeholder="🔍 Buscar por nombre, entidad, radicado..." id="docSearch" oninput="renderDocs()" style="flex:1;min-width:200px">
+            <select id="docSort" onchange="renderDocs()">
+              <option value="fecha_desc">📅 Más reciente</option>
+              <option value="fecha_asc">📅 Más antigua</option>
+              <option value="nombre_asc">🔤 Nombre A→Z</option>
+              <option value="nombre_desc">🔤 Nombre Z→A</option>
+              <option value="vence_asc">⏰ Vence pronto</option>
+              <option value="cat_asc">📂 Categoría</option>
+              <option value="estado_asc">🔵 Estado</option>
+            </select>
+            <button class="btn sm" onclick="limpiarFiltros()" title="Limpiar filtros">✕ Limpiar</button>
+            <button class="btn sm" onclick="escanearDuplicados()">🔍 Duplicados</button>
+            <span id="docsCount" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <select id="docCat" onchange="renderDocs()" style="flex:1">
+              <option value="">Todas las categorías</option>
+              <option>Fallos</option><option>Tutelas</option><option>Medidas de protección</option>
+              <option>Derecho de petición</option><option>Actuaciones penales</option>
+              <option>Documentos patrimoniales</option><option>Clínico/pericial</option>
+              <option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option>
+            </select>
+            <select id="docStatus" onchange="renderDocs()" style="flex:1">
+              <option value="">Todos los estados</option>
+              <option>Vigente</option><option>Pendiente respuesta</option><option>No respondido</option><option>Respondido</option><option>Respondido parcialmente</option><option>Ejecutoriado</option><option>Documento probatorio</option><option>Vencido</option><option>Archivado</option><option>No aplica</option>
+            </select>
+          </div>
         </div>
         <div class="table-wrap"><table><thead><tr>
           <th>Fecha</th><th>Documento</th><th>Categoría</th><th>Entidad</th><th>Radicado</th><th>Estado</th><th>Vence</th><th>Archivo</th><th>Acciones</th>
@@ -2852,6 +2865,7 @@ function limpiarFiltros(){
   document.getElementById('docSearch').value='';
   document.getElementById('docCat').value='';
   document.getElementById('docStatus').value='';
+  document.getElementById('docSort').value='fecha_desc';
   renderDocs();
 }
 
@@ -2870,9 +2884,19 @@ function renderDocs(){
     }
     return true;
   }).sort((a,b)=>{
-    const fa=a.fecha||'';
-    const fb=b.fecha||'';
-    return fb.localeCompare(fa);
+    const sort=document.getElementById('docSort')?.value||'fecha_desc';
+    const fa=a.fecha||''; const fb=b.fecha||'';
+    const na=(a.nombre||'').toLowerCase(); const nb=(b.nombre||'').toLowerCase();
+    const va=a.vence||'9999-99-99'; const vb=b.vence||'9999-99-99';
+    switch(sort){
+      case 'fecha_asc':  return fa.localeCompare(fb);
+      case 'nombre_asc': return na.localeCompare(nb);
+      case 'nombre_desc':return nb.localeCompare(na);
+      case 'vence_asc':  return va.localeCompare(vb);
+      case 'cat_asc':    return (a.cat||'').localeCompare(b.cat||'');
+      case 'estado_asc': return (a.status||'').localeCompare(b.status||'');
+      default:           return fb.localeCompare(fa); // fecha_desc
+    }
   });
   // Mostrar contador de resultados
   const count=document.getElementById('docsCount');
