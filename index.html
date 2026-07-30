@@ -350,6 +350,7 @@ tr:hover td{background:var(--bg2)}
       <button class="nav-item" id="nav-usuarios" onclick="navigate('usuarios')" style="display:none"><span class="icon">👥</span>Usuarios</button>
       <div class="nav-section">Herramientas IA</div>
       <button class="nav-item" onclick="navigate('redaccion')"><span class="icon">✍️</span>Redactar documento</button>
+      <button class="nav-item" onclick="navigate('analisis')"><span class="icon">🔍</span>Análisis legal</button>
       <div class="nav-section">Configuración</div>
       <button class="nav-item" onclick="openModal('settingsModal')"><span class="icon">⚙️</span>Extracción con IA</button>
     </nav>
@@ -545,6 +546,88 @@ tr:hover td{background:var(--bg2)}
         <div>
           <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Documentos redactados anteriormente</div>
           <div id="rdHistorial"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANÁLISIS LEGAL CON IA -->
+    <div id="view-analisis" class="section">
+      <div class="page-header">
+        <div><div class="page-title">🔍 Análisis legal profundo</div><div class="page-sub">La IA analiza el documento seleccionado cruzando toda la información del expediente</div></div>
+      </div>
+      <div class="page-content">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <!-- PANEL IZQUIERDO -->
+          <div>
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:12px">1. Documento a analizar</div>
+              <div class="form-row">
+                <label>Buscar en el expediente</label>
+                <input type="text" id="an_buscar" placeholder="Escribe el nombre del documento..." oninput="renderAnBusqueda()">
+              </div>
+              <div id="an_resultados" style="max-height:200px;overflow-y:auto;border:0.5px solid var(--border);border-radius:var(--radius);margin-top:6px"></div>
+              <div id="an_seleccionado" style="display:none;margin-top:10px;padding:10px 12px;background:var(--accentbg);border-radius:var(--radius);border:1px solid var(--accent)">
+                <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px">Documento seleccionado</div>
+                <div id="an_sel_nombre" style="font-size:13px;font-weight:500"></div>
+                <div id="an_sel_info" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+                <button class="btn sm" style="margin-top:6px" onclick="limpiarAnalisis()">✕ Cambiar</button>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">2. Subir archivo del documento <span style="font-size:11px;font-weight:400;color:var(--text3)">(opcional pero recomendado)</span></div>
+              <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Si subes el archivo, la IA lee el contenido completo. Si no, analiza con los metadatos.</div>
+              <div class="file-upload-area" onclick="document.getElementById('an_file1').click()" style="padding:14px">
+                <div style="font-size:20px">📎</div>
+                <p style="font-size:12px;color:var(--text3);margin-top:4px">Clic para subir el documento principal</p>
+              </div>
+              <input type="file" id="an_file1" style="display:none" accept="*/*" onchange="handleAnFile(this,1)">
+              <div id="an_file1_preview" style="margin-top:6px"></div>
+            </div>
+
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">3. Documentos adicionales <span style="font-size:11px;font-weight:400;color:var(--text3)">(hasta 2, opcional)</span></div>
+              <div class="file-upload-area" onclick="document.getElementById('an_file2').click()" style="padding:10px;margin-bottom:8px">
+                <p style="font-size:12px;color:var(--text3)">📎 Documento adicional 1</p>
+              </div>
+              <input type="file" id="an_file2" style="display:none" accept="*/*" onchange="handleAnFile(this,2)">
+              <div id="an_file2_preview" style="margin-bottom:8px"></div>
+              <div class="file-upload-area" onclick="document.getElementById('an_file3').click()" style="padding:10px">
+                <p style="font-size:12px;color:var(--text3)">📎 Documento adicional 2</p>
+              </div>
+              <input type="file" id="an_file3" style="display:none" accept="*/*" onchange="handleAnFile(this,3)">
+              <div id="an_file3_preview"></div>
+            </div>
+
+            <div class="card">
+              <div style="font-size:13px;font-weight:600;margin-bottom:8px">4. Enfoque del análisis</div>
+              <div class="form-row">
+                <label>¿Qué quieres que analice especialmente?</label>
+                <textarea id="an_enfoque" placeholder="Ej: Analiza si hay incumplimiento de las medidas de protección, qué pruebas tengo para sustentar el incidente de desacato, y qué riesgos procesales veo para la audiencia del 13 de agosto..." style="min-height:90px"></textarea>
+              </div>
+              <button class="btn primary" id="btnAnalizar" onclick="ejecutarAnalisis()" style="width:100%;margin-top:4px">🔍 Analizar con IA</button>
+            </div>
+          </div>
+
+          <!-- PANEL DERECHO: resultado -->
+          <div>
+            <div class="card" style="min-height:500px;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <div style="font-size:13px;font-weight:600">Análisis generado</div>
+                <div style="display:flex;gap:6px">
+                  <button class="btn sm" id="btnCopiarAnalisis" onclick="copiarAnalisis()" style="display:none">📋 Copiar</button>
+                  <button class="btn sm" id="btnGuardarAnalisis" onclick="guardarAnalisisComoNota()" style="display:none">💾 Guardar como nota</button>
+                </div>
+              </div>
+              <div id="anStatus" style="display:none;padding:10px 12px;border-radius:var(--radius);font-size:13px;margin-bottom:10px"></div>
+              <div id="anPlaceholder" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);text-align:center;padding:32px">
+                <div style="font-size:40px;margin-bottom:12px">🔍</div>
+                <div style="font-size:14px;font-weight:500;margin-bottom:6px">El análisis aparecerá aquí</div>
+                <div style="font-size:13px">Selecciona un documento y haz clic en "Analizar con IA"</div>
+              </div>
+              <div id="anResultado" style="display:none;flex:1;overflow-y:auto;font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1685,6 +1768,265 @@ async function fileToBase64(file){
   });
 }
 
+// ===== MÓDULO ANÁLISIS LEGAL =====
+let anDocSeleccionado=null;
+let anArchivos={1:null,2:null,3:null};
+
+function renderAnBusqueda(){
+  const q=(document.getElementById('an_buscar')?.value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').trim();
+  const res=document.getElementById('an_resultados');
+  if(!res) return;
+  if(!q){res.innerHTML='<div style="padding:10px;font-size:12px;color:var(--text3)">Escribe al menos 2 caracteres para buscar...</div>';return;}
+  const docs=db.docs.filter(d=>{
+    const hay=(d.nombre+' '+(d.entidad||'')+' '+(d.radicado||'')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    return hay.includes(q);
+  }).slice(0,8);
+  if(docs.length===0){res.innerHTML='<div style="padding:10px;font-size:12px;color:var(--text3)">No se encontraron documentos.</div>';return;}
+  res.innerHTML=docs.map(d=>`
+    <div onclick="seleccionarDocAnalisis(${d.id})" style="padding:10px 12px;cursor:pointer;border-bottom:0.5px solid var(--border)" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+      <div style="font-size:12px;font-weight:500">${d.nombre}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">
+        <span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span> · ${fmt(d.fecha)} ${d.entidad?'· '+d.entidad:''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function seleccionarDocAnalisis(id){
+  const d=db.docs.find(x=>x.id==id);
+  if(!d) return;
+  anDocSeleccionado=d;
+  document.getElementById('an_resultados').innerHTML='';
+  document.getElementById('an_buscar').value='';
+  document.getElementById('an_seleccionado').style.display='block';
+  document.getElementById('an_sel_nombre').textContent=d.nombre;
+  document.getElementById('an_sel_info').textContent=`${d.cat} · ${d.status} · ${fmt(d.fecha)}${d.entidad?' · '+d.entidad:''}`;
+}
+
+function limpiarAnalisis(){
+  anDocSeleccionado=null;
+  anArchivos={1:null,2:null,3:null};
+  document.getElementById('an_seleccionado').style.display='none';
+  document.getElementById('an_buscar').value='';
+  [1,2,3].forEach(i=>{
+    document.getElementById('an_file'+i).value='';
+    document.getElementById('an_file'+i+'_preview').innerHTML='';
+  });
+  document.getElementById('anPlaceholder').style.display='flex';
+  document.getElementById('anResultado').style.display='none';
+  document.getElementById('anStatus').style.display='none';
+  document.getElementById('btnCopiarAnalisis').style.display='none';
+  document.getElementById('btnGuardarAnalisis').style.display='none';
+}
+
+async function handleAnFile(input,num){
+  const file=input.files&&input.files[0];
+  if(!file) return;
+  anArchivos[num]=file;
+  const preview=document.getElementById('an_file'+num+'_preview');
+  preview.innerHTML=`<div style="font-size:12px;color:var(--successtext);background:var(--successbg);padding:6px 10px;border-radius:var(--radius);margin-top:4px">✓ ${file.name} (${(file.size/1024).toFixed(0)}KB)</div>`;
+}
+
+async function ejecutarAnalisis(){
+  if(!anDocSeleccionado){alert('Selecciona un documento para analizar.');return;}
+  if(!CLAUDE_KEY){
+    const loaded=await loadClaudeKey();
+    if(!loaded){alert('Configura tu API key en ⚙️ Extracción con IA.');return;}
+  }
+  const btn=document.getElementById('btnAnalizar');
+  const status=document.getElementById('anStatus');
+  const placeholder=document.getElementById('anPlaceholder');
+  const resultado=document.getElementById('anResultado');
+  btn.disabled=true; btn.textContent='⏳ Analizando...';
+  status.style.cssText='display:block;padding:10px 12px;border-radius:var(--radius);font-size:13px;margin-bottom:10px;background:var(--infobg);color:var(--infotext);border:0.5px solid var(--infoborder)';
+  status.textContent='Leyendo documentos y preparando el análisis...';
+  placeholder.style.display='none';
+  resultado.style.display='none';
+
+  try{
+    const d=anDocSeleccionado;
+    // Construir contexto del expediente
+    const relacionados=(d.relacionados||[]).map(rid=>{
+      const r=db.docs.find(x=>x.id==rid);
+      if(!r) return '';
+      return `- "${r.nombre}" [${r.cat}/${r.status}] Fecha: ${r.fecha}${r.entidad?' | Entidad: '+r.entidad:''} | Radicado: ${r.radicado||'N/A'}\n  Resumen: ${r.resumen||'Sin resumen'}\n  Notas: ${r.notas||'Sin notas'}`;
+    }).filter(Boolean).join('\n\n');
+
+    // Contexto completo del expediente (todos los docs relevantes)
+    const todosRelacionados=db.docs.filter(dx=>dx.id!==d.id&&(
+      (d.radicado&&dx.radicado&&d.radicado.split(/[;,]/).some(r=>dx.radicado.includes(r.trim())))||
+      (d.entidad&&dx.entidad&&dx.entidad===d.entidad)
+    )).slice(0,8).map(dx=>`- "${dx.nombre}" [${dx.cat}/${dx.status}] ${fmt(dx.fecha)} | ${dx.resumen||''}`.substring(0,200)).join('\n');
+
+    const hoy=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+    const enfoque=document.getElementById('an_enfoque').value.trim();
+
+    // Leer archivos si fueron subidos
+    let contenidoArchivos='';
+    for(const num of [1,2,3]){
+      const file=anArchivos[num];
+      if(!file) continue;
+      const ext=file.name.split('.').pop().toLowerCase();
+      status.textContent=`Leyendo ${file.name}...`;
+      try{
+        if(['jpg','jpeg','png','heic','webp'].includes(ext)){
+          contenidoArchivos+=`\n[Archivo ${num}: ${file.name} — imagen adjunta para análisis visual]`;
+        }else if(ext==='pdf'){
+          let txt='';
+          try{ txt=await extractPdfText(file); }catch(e){}
+          if(txt.length>100) contenidoArchivos+=`\n\n[Contenido del archivo ${num}: ${file.name}]\n${txt.substring(0,3000)}`;
+          else contenidoArchivos+=`\n[Archivo ${num}: ${file.name} — PDF escaneado, análisis por imagen]`;
+        }else{
+          const txt=await file.text().catch(()=>'');
+          if(txt.length>50) contenidoArchivos+=`\n\n[Contenido del archivo ${num}: ${file.name}]\n${txt.substring(0,2000)}`;
+        }
+      }catch(e){ console.warn('Error leyendo archivo',num,e); }
+    }
+
+    status.textContent='La IA está analizando el documento...';
+
+    const prompt=`Eres un abogado experto en derecho de familia colombiano, especializado en violencia intrafamiliar, custodia y procesos ante Comisarías de Familia, Fiscalía y Juzgados de Familia.
+
+CONTEXTO DEL CASO:
+- Víctima / Analista: LUISA FERNANDA GARCÉS GARCÍA (C.C. 1.036.602.429)
+- Agresor: JUAN ESTEBAN LÓPEZ PALACIO (C.C. 8.103.048)  
+- Menor: TOMÁS LÓPEZ GARCÉS (TLG, 10 años)
+- Procesos activos: violencia intrafamiliar (Radicado 002-15088-26 MESA 1 — Comisaría Familia Comuna 16 Belén, AUDIENCIA FALLO 13/08/2026), inasistencia alimentaria, proceso ejecutivo alimentos, disolución sociedad patrimonial, reclamación frutos civiles, proceso disciplinario, denuncia penal, custodia y visitas.
+- Fecha del análisis: ${hoy}
+
+DOCUMENTO PRINCIPAL A ANALIZAR:
+Nombre: ${d.nombre}
+Categoría: ${d.cat}
+Estado: ${d.status}
+Fecha: ${fmt(d.fecha)}
+Radicado: ${d.radicado||'N/A'}
+Entidad: ${d.entidad||'N/A'}
+Resumen: ${d.resumen||'Sin resumen'}
+Notas: ${d.notas||'Sin notas'}
+${contenidoArchivos}
+
+DOCUMENTOS DIRECTAMENTE RELACIONADOS EN EL EXPEDIENTE:
+${relacionados||'Sin documentos directamente relacionados registrados'}
+
+OTROS DOCUMENTOS RELEVANTES DEL EXPEDIENTE:
+${todosRelacionados||'Sin otros documentos relevantes'}
+
+${enfoque?'ENFOQUE ESPECÍFICO SOLICITADO:\n'+enfoque:''}
+
+INSTRUCCIONES DE ANÁLISIS:
+Realiza un análisis legal profundo y estructurado siguiendo estos pasos:
+
+1. SÍNTESIS DEL DOCUMENTO
+   - Qué es, qué contiene, qué dice y qué significa jurídicamente
+   - Autoridad que lo emite y su competencia
+
+2. RELEVANCIA PARA EL CASO
+   - Cómo se conecta con el proceso principal (002-15088-26)
+   - Qué aporta probatoriamente
+   - Qué derechos o situaciones jurídicas afecta o protege
+
+3. HECHOS CLAVE IDENTIFICADOS
+   - Hechos concretos que se desprenden del documento
+   - Inconsistencias o contradicciones detectadas
+   - Elementos que requieren verificación
+
+4. ANÁLISIS JURÍDICO
+   - Normas aplicables (citar específicamente: artículos, leyes, jurisprudencia si aplica)
+   - Calificación jurídica de los hechos
+   - Fortalezas y debilidades desde el punto de vista legal
+
+5. RIESGOS Y OPORTUNIDADES
+   - Riesgos procesales identificados
+   - Oportunidades legales que se abren
+   - Plazos críticos si los hay
+
+6. ACCIONES RECOMENDADAS (ordenadas por urgencia)
+   - Acciones inmediatas (próximos 5 días)
+   - Acciones a corto plazo (próximas 2 semanas)
+   - Acciones estratégicas para la audiencia del 13/08/2026
+
+7. CONEXIONES CON OTROS DOCUMENTOS DEL EXPEDIENTE
+   - Cómo este documento se relaciona con los demás del expediente
+   - Qué documentos complementan o contradicen este
+
+Sé específico, técnico y práctico. Usa el contexto del caso real. No generalices.`;
+
+    // Preparar mensajes — incluir imágenes si las hay
+    const mensajes=[];
+    const contenidoMsg=[];
+
+    // Agregar imágenes si fueron subidas
+    for(const num of [1,2,3]){
+      const file=anArchivos[num];
+      if(!file) continue;
+      const ext=file.name.split('.').pop().toLowerCase();
+      if(['jpg','jpeg','png','heic','webp'].includes(ext)){
+        const b64=await fileToBase64(file);
+        contenidoMsg.push({type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}});
+      }
+    }
+    contenidoMsg.push({type:'text',text:prompt});
+
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:4000,messages:[{role:'user',content:contenidoMsg}]})
+    });
+    if(!res.ok) throw new Error('Error API: '+res.status);
+    const data=await res.json();
+    const texto=data.content[0].text;
+
+    resultado.textContent=texto;
+    resultado.style.display='block';
+    status.style.cssText='display:block;padding:10px 12px;border-radius:var(--radius);font-size:13px;margin-bottom:10px;background:var(--successbg);color:var(--successtext);border:0.5px solid var(--successborder)';
+    status.textContent='✅ Análisis completado. Revisa las recomendaciones y acciones sugeridas.';
+    document.getElementById('btnCopiarAnalisis').style.display='inline-flex';
+    document.getElementById('btnGuardarAnalisis').style.display='inline-flex';
+    document.getElementById('btnGuardarAnalisis').dataset.docId=String(d.id);
+    document.getElementById('btnGuardarAnalisis').dataset.texto=texto.substring(0,500);
+
+  }catch(e){
+    status.style.cssText='display:block;padding:10px 12px;border-radius:var(--radius);font-size:13px;margin-bottom:10px;background:var(--dangerbg);color:var(--dangertext);border:0.5px solid var(--dangerborder)';
+    status.textContent='⚠️ Error al analizar: '+e.message;
+    console.error(e);
+  }
+  btn.disabled=false; btn.textContent='🔍 Analizar con IA';
+}
+
+function copiarAnalisis(){
+  const txt=document.getElementById('anResultado').textContent;
+  if(!txt) return;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn=document.getElementById('btnCopiarAnalisis');
+    btn.textContent='✅ Copiado';
+    setTimeout(()=>btn.textContent='📋 Copiar',2000);
+  });
+}
+
+async function guardarAnalisisComoNota(){
+  const btn=document.getElementById('btnGuardarAnalisis');
+  const docId=parseInt(btn?.dataset?.docId);
+  if(!docId) return;
+  const texto=document.getElementById('anResultado').textContent;
+  const resumen=texto.substring(0,300)+'...';
+  const hoy=new Date().toISOString().split('T')[0];
+  // Guardar como pendiente de revisión
+  db.pending.push({
+    id:Date.now(),
+    title:'Revisar análisis legal: '+( anDocSeleccionado?.nombre||'').substring(0,60),
+    type:'Legal',
+    priority:'Alta',
+    due:hoy,
+    related:anDocSeleccionado?.nombre||'',
+    notes:'Análisis IA: '+resumen,
+    done:false
+  });
+  await saveData();
+  renderPending();
+  btn.textContent='✅ Guardado en Pendientes';
+  setTimeout(()=>btn.textContent='💾 Guardar como nota',2500);
+}
+
 // ===== MÓDULO REDACCIÓN LEGAL =====
 const TIPOS_DOC=[
   {id:'tutela',label:'Acción de Tutela',icon:'⚖️',cat:'Fallos',desc:'Protección inmediata de derechos fundamentales'},
@@ -2293,6 +2635,7 @@ function renderView(id){
     case 'procesos':renderProcesos();break;
     case 'usuarios':renderUsuarios();break;
     case 'redaccion':setTimeout(()=>{renderTiposDoc();renderRdHistorial();},50);break;
+    case 'analisis':limpiarAnalisis();break;
   }
 }
 function navigate(id){
