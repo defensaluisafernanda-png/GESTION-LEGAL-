@@ -477,9 +477,17 @@ tr:hover td{background:var(--bg2)}
       </div>
       <div class="page-content">
         <div class="toolbar">
-          <select id="pendPri" onchange="renderPending()"><option value="">Todas</option><option>Urgente</option><option>Alta</option><option>Normal</option></select>
+          <select id="pendPri" onchange="renderPending()"><option value="">Todas las prioridades</option><option>Urgente</option><option>Alta</option><option>Normal</option></select>
           <select id="pendType" onchange="renderPending()"><option value="">Todos los tipos</option><option>Llamada</option><option>Correo</option><option>Visita</option><option>Documento</option><option>Legal</option><option>Consulta web</option></select>
           <select id="pendDone" onchange="renderPending()"><option value="">Todas</option><option value="false">Por hacer</option><option value="true">Completadas</option></select>
+          <select id="pendSort" onchange="renderPending()">
+            <option value="urgencia">⚡ Más urgente primero</option>
+            <option value="fecha_asc">📅 Vence pronto</option>
+            <option value="fecha_desc">📅 Vence más tarde</option>
+            <option value="prioridad">🔴 Por prioridad</option>
+            <option value="tipo">📋 Por tipo</option>
+          </select>
+          <button class="btn sm" onclick="limpiarFiltrosPend()">✕ Limpiar</button>
         </div>
         <div id="pendingContent"></div>
       </div>
@@ -751,9 +759,13 @@ tr:hover td{background:var(--bg2)}
     <div class="form-row"><label>Notas adicionales</label><textarea id="d_notas" placeholder="Observaciones, conexiones con otros documentos..."></textarea></div>
     <!-- Documentos relacionados -->
     <div class="form-row">
-      <label>📎 Documentos relacionados <span style="font-size:11px;font-weight:400;color:var(--text3)">(sugeridos automáticamente al escribir el nombre)</span></label>
+      <label>📎 Documentos relacionados <span style="font-size:11px;font-weight:400;color:var(--text3)">(vincula documentos del expediente)</span></label>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <button class="btn sm" type="button" onclick="buscarRelacionadosPrevio()">🔍 Buscar automáticamente</button>
+        <button class="btn sm" type="button" onclick="abrirBuscadorRelacionados()">📂 Elegir manualmente</button>
+      </div>
       <div id="relacionadosBox" style="background:var(--bg2);border-radius:var(--radius);padding:10px 12px;min-height:40px">
-        <div id="relacionadosList" style="font-size:12px;color:var(--text3)">Escribe el nombre del documento y la app buscará documentos relacionados automáticamente.</div>
+        <div id="relacionadosList" style="font-size:12px;color:var(--text3)">Haz clic en "Buscar automáticamente" o "Elegir manualmente" para vincular documentos.</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -947,6 +959,20 @@ tr:hover td{background:var(--bg2)}
     <div id="vincularLista" style="max-height:50vh;overflow-y:auto"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('vincularRespModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BUSCADOR MANUAL DE RELACIONADOS -->
+<div class="overlay" id="buscadorRelModal">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-title">📂 Elegir documento relacionado</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Busca y selecciona los documentos que quieres vincular. Puedes seleccionar varios.</div>
+    <input class="search" type="search" id="buscadorRelSearch" placeholder="🔍 Buscar por nombre, entidad, radicado..." oninput="renderBuscadorRel()" style="width:100%;margin-bottom:10px">
+    <div id="buscadorRelLista" style="max-height:50vh;overflow-y:auto;border:0.5px solid var(--border);border-radius:var(--radius)"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('buscadorRelModal')">Cerrar</button>
+      <button class="btn primary" onclick="confirmarRelManual()">✓ Vincular seleccionados</button>
     </div>
   </div>
 </div>
@@ -2764,6 +2790,73 @@ function copiarDocumento(){
 
 // ===== DOCUMENTOS RELACIONADOS =====
 let _relTimer=null;
+function abrirBuscadorRelacionados(){
+  document.getElementById('buscadorRelSearch').value='';
+  renderBuscadorRel();
+  openModal('buscadorRelModal');
+}
+
+function renderBuscadorRel(){
+  const q=(document.getElementById('buscadorRelSearch')?.value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').trim();
+  const lista=document.getElementById('buscadorRelLista');
+  if(!lista) return;
+  // Obtener IDs ya seleccionados en la lista actual
+  const yaSeleccionados=new Set();
+  document.querySelectorAll('[id^="rprev_"]').forEach(cb=>{
+    if(cb.checked) yaSeleccionados.add(parseInt(cb.id.replace('rprev_','')));
+  });
+  let docs=[...db.docs].filter(d=>{
+    if(!q) return true;
+    const hay=(d.nombre+' '+(d.entidad||'')+' '+(d.radicado||'')+' '+(d.cat||'')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    return hay.includes(q);
+  }).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,30);
+
+  lista.innerHTML=docs.length===0?'<div style="padding:16px;text-align:center;color:var(--text3)">No se encontraron documentos.</div>':
+  docs.map(d=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:0.5px solid var(--border)">
+      <input type="checkbox" id="brel_${d.id}" ${yaSeleccionados.has(d.id)?'checked':''} style="flex-shrink:0;width:15px;height:15px;cursor:pointer">
+      <label for="brel_${d.id}" style="flex:1;cursor:pointer;min-width:0">
+        <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">
+          <span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>
+          · ${fmt(d.fecha)} ${d.entidad?'· '+d.entidad:''}
+        </div>
+      </label>
+    </div>
+  `).join('');
+}
+
+function confirmarRelManual(){
+  // Recoger los seleccionados del modal manual
+  const checks=document.querySelectorAll('[id^="brel_"]');
+  const seleccionados=[];
+  checks.forEach(cb=>{
+    if(cb.checked){
+      const id=parseInt(cb.id.replace('brel_',''));
+      if(!isNaN(id)) seleccionados.push(id);
+    }
+  });
+  if(seleccionados.length===0){alert('Selecciona al menos un documento.');return;}
+
+  // Mostrarlos en la lista de relacionados del formulario
+  const lista=document.getElementById('relacionadosList');
+  if(!lista) return;
+  lista.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">✅ ${seleccionados.length} documento(s) seleccionado(s) para vincular:</div>`+
+  seleccionados.map(id=>{
+    const d=db.docs.find(x=>x.id==id);
+    if(!d) return '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border)">
+      <input type="checkbox" id="rprev_${d.id}" checked style="flex-shrink:0;width:14px;height:14px">
+      <label for="rprev_${d.id}" style="flex:1;font-size:12px;cursor:pointer">
+        <strong>${d.nombre}</strong><br>
+        <span style="color:var(--text3);font-size:11px">${d.cat} · ${fmt(d.fecha)}</span>
+      </label>
+    </div>`;
+  }).join('')+
+  `<div style="font-size:11px;color:var(--accent);margin-top:6px">✓ Se vincularán automáticamente al guardar.</div>`;
+  closeModal('buscadorRelModal');
+}
+
 function buscarRelacionadosPrevio(){
   clearTimeout(_relTimer);
   _relTimer=setTimeout(()=>{
@@ -3797,20 +3890,43 @@ function renderCalendar(){
 }
 function changeMonth(d){calMonth+=d;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
 
+function limpiarFiltrosPend(){
+  document.getElementById('pendPri').value='';
+  document.getElementById('pendType').value='';
+  document.getElementById('pendDone').value='false';
+  document.getElementById('pendSort').value='urgencia';
+  renderPending();
+}
+
 function renderPending(){
   const pri=document.getElementById('pendPri')?.value||'';
   const typ=document.getElementById('pendType')?.value||'';
   const dn=document.getElementById('pendDone')?.value||'';
+  const sort=document.getElementById('pendSort')?.value||'urgencia';
   const order={Urgente:0,Alta:1,Normal:2};
-  let items=[...db.pending].filter(p=>{if(pri&&p.priority!==pri)return false;if(typ&&p.type!==typ)return false;if(dn==='false'&&p.done)return false;if(dn==='true'&&!p.done)return false;return true;}).sort((a,b)=>{
+  let items=[...db.pending].filter(p=>{
+    if(pri&&p.priority!==pri)return false;
+    if(typ&&p.type!==typ)return false;
+    if(dn==='false'&&p.done)return false;
+    if(dn==='true'&&!p.done)return false;
+    return true;
+  }).sort((a,b)=>{
     // Completados siempre al final
     if(a.done!==b.done) return a.done?1:-1;
-    // Primero por fecha de vencimiento (sin fecha al final)
     const fa=a.due||'9999-99-99';
     const fb=b.due||'9999-99-99';
-    if(fa!==fb) return fa.localeCompare(fb);
-    // Si misma fecha, ordenar por prioridad
-    return (order[a.priority]||2)-(order[b.priority]||2);
+    const oa=order[a.priority]||2;
+    const ob=order[b.priority]||2;
+    switch(sort){
+      case 'fecha_asc':  return fa.localeCompare(fb)||oa-ob;
+      case 'fecha_desc': return fb.localeCompare(fa)||oa-ob;
+      case 'prioridad':  return oa-ob||fa.localeCompare(fb);
+      case 'tipo':       return (a.type||'').localeCompare(b.type||'')||fa.localeCompare(fb);
+      default: // urgencia: prioridad + fecha combinadas
+        // Urgente sin fecha = arriba, luego por fecha, luego por prioridad
+        if(oa!==ob) return oa-ob;
+        return fa.localeCompare(fb);
+    }
   });
   const el=document.getElementById('pendingContent');if(!el)return;
   const canEd=canEdit();const canDel=canDelete();
