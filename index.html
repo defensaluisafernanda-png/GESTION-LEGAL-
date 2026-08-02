@@ -388,7 +388,10 @@ tr:hover td{background:var(--bg2)}
     <div id="view-documentos" class="section">
       <div class="page-header">
         <div><div class="page-title">Documentos</div><div class="page-sub">Registro completo del expediente</div></div>
-        <button class="btn primary" id="btnNewDoc2" onclick="openDocModal()">+ Nuevo documento</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn sm" onclick="imprimirDocumentos()" title="Exportar lista como PDF">📥 Exportar PDF</button>
+          <button class="btn primary" id="btnNewDoc2" onclick="openDocModal()">+ Nuevo documento</button>
+        </div>
       </div>
       <div class="page-content">
         <div style="margin-bottom:14px">
@@ -1816,6 +1819,95 @@ async function fileToBase64(file){
 }
 
 // ===== PANEL DE CONTROL DEL CASO =====
+function imprimirDocumentos(){
+  const q=(document.getElementById('docSearch')?.value||'').trim();
+  const cat=document.getElementById('docCat')?.value||'';
+  const st=document.getElementById('docStatus')?.value||'';
+  const sort=document.getElementById('docSort')?.value||'fecha_desc';
+  const normStr=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+  const qn=normStr(q);
+
+  let docs=[...db.docs].filter(d=>{
+    if(cat&&d.cat!==cat)return false;
+    if(st&&d.status!==st)return false;
+    if(qn){const h=normStr([d.nombre,d.resumen,d.entidad,d.radicado,d.notas,d.cat,d.status].join(' '));if(!h.includes(qn))return false;}
+    return true;
+  }).sort((a,b)=>{
+    const fa=a.fecha||'',fb=b.fecha||'',na=(a.nombre||'').toLowerCase(),nb=(b.nombre||'').toLowerCase();
+    switch(sort){
+      case 'fecha_asc':return fa.localeCompare(fb);
+      case 'nombre_asc':return na.localeCompare(nb);
+      case 'nombre_desc':return nb.localeCompare(na);
+      case 'vence_asc':return (a.vence||'9999').localeCompare(b.vence||'9999');
+      case 'cat_asc':return (a.cat||'').localeCompare(b.cat||'');
+      case 'estado_asc':return (a.status||'').localeCompare(b.status||'');
+      default:return fb.localeCompare(fa);
+    }
+  });
+
+  const filtrosActivos=[cat?'Categoría: '+cat:'',st?'Estado: '+st:'',q?'Búsqueda: '+q:''].filter(Boolean).join(' · ');
+  const hoy=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+
+  const ventana=window.open('','_blank');
+  ventana.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Expediente Legal — Lista de documentos</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:11px;color:#1a1a1a;margin:20px}
+    h1{font-size:16px;margin-bottom:4px;color:#1a1a1a}
+    .sub{font-size:11px;color:#666;margin-bottom:4px}
+    .filtros{font-size:10px;color:#666;margin-bottom:12px;padding:6px 8px;background:#f5f5f5;border-radius:4px}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th{background:#1a1a1a;color:#fff;padding:6px 8px;text-align:left;font-size:10px;font-weight:600}
+    td{padding:5px 8px;border-bottom:1px solid #e5e5e5;vertical-align:top}
+    tr:nth-child(even){background:#f9f9f9}
+    .badge{display:inline-block;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600}
+    .danger{background:#fee2e2;color:#dc2626}
+    .warning{background:#fef3c7;color:#d97706}
+    .success{background:#dcfce7;color:#16a34a}
+    .info{background:#dbeafe;color:#2563eb}
+    .purple{background:#ede9fe;color:#7c3aed}
+    .neutral{background:#f3f4f6;color:#6b7280}
+    .footer{margin-top:20px;font-size:9px;color:#999;border-top:1px solid #e5e5e5;padding-top:8px}
+    @media print{body{margin:10px}.footer{position:fixed;bottom:0;width:100%}}
+  </style></head><body>
+  <h1>⚖️ LUISA FERNANDA GARCÉS GARCÍA — C.C. 1.036.602.429</h1>
+  <div class="sub">Expediente Legal Digital — Lista de documentos</div>
+  <div class="sub">Generado el ${hoy} · Total: ${docs.length} documento(s)</div>
+  ${filtrosActivos?`<div class="filtros">Filtros aplicados: ${filtrosActivos}</div>`:''}
+  <table>
+    <tr>
+      <th style="width:25px">#</th>
+      <th style="width:28%">Nombre del documento</th>
+      <th style="width:13%">Categoría</th>
+      <th style="width:12%">Estado</th>
+      <th style="width:12%">Entidad</th>
+      <th style="width:13%">Radicado</th>
+      <th style="width:8%">Fecha</th>
+      <th style="width:9%">Vencimiento</th>
+    </tr>
+    ${docs.map((d,i)=>{
+      const badgeCat={Fallos:'purple',Tutelas:'purple','Medidas de protección':'warning','Derecho de petición':'danger','Actuaciones penales':'neutral','Documentos patrimoniales':'success','Clínico/pericial':'info','Actas y conciliaciones':'success',Comunicaciones:'info','Trámites disciplinarios':'danger',Otro:'neutral'}[d.cat]||'neutral';
+      const badgeSt={Vigente:'success','Pendiente respuesta':'warning','No respondido':'danger',Respondido:'info','Respondido parcialmente':'warning',Ejecutoriado:'success','Documento probatorio':'purple',Vencido:'danger',Archivado:'neutral','No aplica':'neutral'}[d.status]||'neutral';
+      const dias=d.vence?Math.ceil((new Date(d.vence)-new Date())/(1000*60*60*24)):null;
+      const venceStr=d.vence?`${d.vence.split('-').reverse().join('/')}${dias!==null&&dias<0?' ⚠️':''}` :'—';
+      return `<tr>
+        <td style="color:#999">${i+1}</td>
+        <td><strong>${d.nombre||'—'}</strong>${d.resumen?`<br><span style="font-size:9px;color:#666">${d.resumen.substring(0,80)}...</span>`:''}</td>
+        <td><span class="badge ${badgeCat}">${d.cat||'—'}</span></td>
+        <td><span class="badge ${badgeSt}">${d.status||'—'}</span></td>
+        <td style="font-size:10px">${d.entidad||'—'}</td>
+        <td style="font-size:9px;font-family:monospace">${d.radicado||'—'}</td>
+        <td style="font-size:10px">${d.fecha?d.fecha.split('-').reverse().join('/'):'—'}</td>
+        <td style="font-size:10px;color:${dias!==null&&dias<0?'#dc2626':dias!==null&&dias<=5?'#d97706':'inherit'}">${venceStr}</td>
+      </tr>`;
+    }).join('')}
+  </table>
+  <div class="footer">Expediente Legal Digital · defensaluisafernanda@gmail.com · Generado el ${hoy}</div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`);
+  ventana.document.close();
+}
+
 function renderPanel(){
   const el=document.getElementById('panelContent');
   if(!el) return;
