@@ -720,6 +720,13 @@ tr:hover td{background:var(--bg2)}
         </select>
       </div>
       <div class="form-row"><label>Fecha de vencimiento</label><input type="date" id="d_vence"></div>
+      <div class="form-row"><label>📅 Fecha de audiencia / citación / diligencia</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input type="date" id="d_diligencia_fecha" placeholder="Fecha de la diligencia">
+          <input type="time" id="d_diligencia_hora" placeholder="Hora">
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Si hay una audiencia, diligencia o citación programada, agrégala aquí — aparecerá automáticamente en el calendario.</div>
+      </div>
     </div>
     <div class="form-row"><label>📎 Adjuntar archivo (PDF, Word, imagen — máx. 500MB)</label>
       <div class="file-upload-area" id="dropZoneDoc" onclick="document.getElementById('d_file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'d_file')">
@@ -1607,6 +1614,15 @@ async function extractDocData(){
       document.getElementById('d_vence').value=extracted.vence;
       filled.push('Vencimiento');
     }
+    // Fecha y hora de diligencia
+    if(extracted.diligencia_fecha){
+      document.getElementById('d_diligencia_fecha').value=extracted.diligencia_fecha;
+      filled.push('Fecha diligencia');
+    }
+    if(extracted.diligencia_hora){
+      document.getElementById('d_diligencia_hora').value=extracted.diligencia_hora;
+      filled.push('Hora diligencia');
+    }
 
     if(filled.length>0){
       status.textContent=`✅ ${filled.length} campos llenados: ${filled.join(', ')}. Revisa y corrige si es necesario.`;
@@ -1680,6 +1696,8 @@ Extrae EXACTAMENTE estos campos en formato JSON (null si no encuentras el dato):
   IMPORTANTE: Un correo donde pides algo y no te han resuelto = "Pendiente respuesta". Un auto admisorio sin fallo = "Vigente". Un plazo que ya pasó sin respuesta = "Vencido".
 - plazo: SOLO UNO de: "Sin plazo", "15 días hábiles — Derecho de petición", "10 días hábiles — Urgente", "30 días hábiles — Judicial", "5 días hábiles — Recurso", "3 meses — Fiscalía"
 - vence: fecha vencimiento = fechaRad + plazo en formato YYYY-MM-DD. null si no hay plazo
+- diligencia_fecha: fecha de audiencia, citación, diligencia o comparecencia programada en formato YYYY-MM-DD. null si no hay. Buscar frases como "se cita para el", "comparezca el", "audiencia el", "fijada para el", "señalada para el"
+- diligencia_hora: hora de la diligencia en formato HH:MM. null si no se menciona
 - ubicacion: ubicación exacta en Google Drive según la categoría del documento. Usa SIEMPRE este formato: "Drive: defensaluisafernanda@gmail.com / Carpeta: [XX. Nombre]". La correspondencia es:
   "Fallos" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 01. Fallos"
   "Tutelas" → "Drive: defensaluisafernanda@gmail.com / Carpeta: 01. Fallos"
@@ -2894,6 +2912,8 @@ function openDocModal(editId=null){
   if(relLista) relLista.innerHTML='<span style="color:var(--text3);font-size:12px">Escribe el nombre o radicado para ver documentos relacionados.</span>';
   const fileWarn=document.getElementById('fileExistsWarn');
   if(fileWarn) fileWarn.style.display='none';
+  document.getElementById('d_diligencia_fecha').value='';
+  document.getElementById('d_diligencia_hora').value='';
 
   if(isEdit){
     const doc=db.docs.find(d=>d.id===editId);
@@ -2908,6 +2928,8 @@ function openDocModal(editId=null){
     document.getElementById('d_resumen').value=doc.resumen||'';
     document.getElementById('d_ubicacion').value=doc.ubicacion||'';
     document.getElementById('d_vence').value=doc.vence||'';
+    document.getElementById('d_diligencia_fecha').value=doc.diligFecha||'';
+    document.getElementById('d_diligencia_hora').value=doc.diligHora||'';
     document.getElementById('d_notas').value=doc.notas||'';
     document.getElementById('d_plazo').value='';
     // Mostrar archivo existente si tiene
@@ -2998,8 +3020,16 @@ async function saveDoc(){
           vence:vence,
           notas:document.getElementById('d_notas').value.trim(),
           relacionados:existing.relacionados||[],
+          diligFecha:document.getElementById('d_diligencia_fecha').value,
+          diligHora:document.getElementById('d_diligencia_hora').value,
           ...(filePath?{filePath,fileName}:{})
         };
+        // Actualizar evento de diligencia si cambió
+        const newDiligFecha=document.getElementById('d_diligencia_fecha').value;
+        db.events=db.events.filter(e=>!(e.type==='audiencia'&&e.docId==editId));
+        if(newDiligFecha){
+          db.events.push({id:Date.now()+10,title:'🏛️ '+n,date:newDiligFecha,time:document.getElementById('d_diligencia_hora').value||'',type:'audiencia',lugar:document.getElementById('d_entidad').value.trim()||'',rad:document.getElementById('d_radicado').value.trim()||'',notes:'Audiencia/citación del documento: '+n,docId:editId});
+        }
         if(vence && vence!==oldVence){
           db.events=db.events.filter(e=>!(e.type==='deadline'&&e.docId==editId));
           db.events.push({id:Date.now()+2,title:'📅 Vence: '+n,date:vence,time:'',type:'deadline',lugar:'',rad:'',notes:'Vencimiento automático del documento: '+n,docId:editId});
@@ -3010,7 +3040,9 @@ async function saveDoc(){
     }else{
       const docId=Date.now();
       const relSeleccionados=getRelacionadosSeleccionados();
-      const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),relacionados:relSeleccionados,filePath,fileName,fileSize,fileHash};
+      const diligFecha=document.getElementById('d_diligencia_fecha').value;
+      const diligHora=document.getElementById('d_diligencia_hora').value;
+      const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),relacionados:relSeleccionados,diligFecha,diligHora,filePath,fileName,fileSize,fileHash};
       db.docs.push(doc);
       // Vincular en ambas direcciones
       relSeleccionados.forEach(id=>{
@@ -3021,7 +3053,10 @@ async function saveDoc(){
         db.events.push({id:docId+1,title:'📅 Vence: '+n,date:vence,time:'',type:'deadline',lugar:'',rad:'',notes:'Vencimiento automático del documento: '+n,docId:docId});
         db.alerts.push({id:docId+2,title:'Vencimiento: '+n,date:vence,level:'warning',consequence:'Revisar acción requerida.',action:'',docId:docId});
       }
-      // Sugerir documentos relacionados automáticamente
+      // Agregar audiencia/citación al calendario automáticamente
+      if(diligFecha){
+        db.events.push({id:docId+10,title:'🏛️ '+n,date:diligFecha,time:diligHora||'',type:'audiencia',lugar:document.getElementById('d_entidad').value.trim()||'',rad:document.getElementById('d_radicado').value.trim()||'',notes:'Audiencia/citación del documento: '+n,docId:docId});
+      }
       setTimeout(()=>sugerirRelacionados(docId),500);
     }
 
