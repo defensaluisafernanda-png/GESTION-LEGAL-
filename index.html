@@ -351,6 +351,7 @@ tr:hover td{background:var(--bg2)}
       <div class="nav-section">Herramientas IA</div>
       <button class="nav-item" onclick="navigate('redaccion')"><span class="icon">✍️</span>Redactar documento</button>
       <button class="nav-item" onclick="navigate('analisis')"><span class="icon">🔍</span>Análisis legal</button>
+      <button class="nav-item" onclick="navigate('relaciones')"><span class="icon">🔗</span>Mapa de relaciones</button>
       <div class="nav-section">Configuración</div>
       <button class="nav-item" onclick="openModal('settingsModal')"><span class="icon">⚙️</span>Extracción con IA</button>
     </nav>
@@ -560,6 +561,18 @@ tr:hover td{background:var(--bg2)}
           <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Documentos redactados anteriormente</div>
           <div id="rdHistorial"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- HILOS DE PROCESO -->
+    <div id="view-relaciones" class="section">
+      <div class="page-header">
+        <div><div class="page-title">🔗 Hilos de proceso</div><div class="page-sub">Documentos agrupados por proceso — visualiza el hilo cronológico de cada trámite</div></div>
+        <button class="btn primary" onclick="analizarHilos()">🔍 Analizar y agrupar documentos</button>
+      </div>
+      <div class="page-content">
+        <div id="hilosStatus" style="display:none;padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:16px"></div>
+        <div id="hilosContainer"></div>
       </div>
     </div>
 
@@ -891,6 +904,17 @@ tr:hover td{background:var(--bg2)}
       <button class="btn" onclick="closeModal('userModal')">Cancelar</button>
       <button class="btn primary" id="userSaveBtn" onclick="createUser()">✓ Crear usuario</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL VER PDF EN HILO -->
+<div class="overlay" id="hiloPdfModal">
+  <div class="modal" style="max-width:800px;height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div id="hiloPdfTitulo" style="font-size:14px;font-weight:600;flex:1;margin-right:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <button class="btn" onclick="closeModal('hiloPdfModal')">✕ Cerrar</button>
+    </div>
+    <iframe id="hiloPdfFrame" style="flex:1;border:none;border-radius:var(--radius);background:var(--bg2)" src=""></iframe>
   </div>
 </div>
 
@@ -1781,6 +1805,207 @@ async function fileToBase64(file){
   });
 }
 
+// ===== MÓDULO HILOS DE PROCESO =====
+async function analizarHilos(){
+  const status=document.getElementById('hilosStatus');
+  const container=document.getElementById('hilosContainer');
+  status.style.cssText='display:block;padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:16px;background:var(--infobg);color:var(--infotext);border:0.5px solid var(--infoborder)';
+  status.textContent='⏳ Analizando y agrupando '+db.docs.length+' documentos...';
+  container.innerHTML='';
+
+  // Agrupar documentos por radicado y entidad
+  const grupos={};
+  const sinGrupo=[];
+  const asignados=new Set();
+
+  const normRad=r=>(r||'').replace(/[\s\-\.]/g,'').toLowerCase();
+
+  // Paso 1: agrupar por radicado exacto
+  db.docs.forEach(doc=>{
+    const rads=(doc.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>4);
+    rads.forEach(rad=>{
+      const key='rad_'+normRad(rad);
+      if(!grupos[key]) grupos[key]={key,tipo:'radicado',label:rad,docs:[],entidad:doc.entidad||''};
+      if(!grupos[key].docs.find(d=>d.id==doc.id)){
+        grupos[key].docs.push(doc);
+        asignados.add(doc.id);
+      }
+    });
+  });
+
+  // Paso 2: agrupar por entidad los que no tienen radicado
+  db.docs.forEach(doc=>{
+    if(asignados.has(doc.id)) return;
+    if(!doc.entidad) return;
+    const key='ent_'+doc.entidad.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'_').substring(0,30);
+    if(!grupos[key]) grupos[key]={key,tipo:'entidad',label:doc.entidad,docs:[],entidad:doc.entidad};
+    if(!grupos[key].docs.find(d=>d.id==doc.id)){
+      grupos[key].docs.push(doc);
+      asignados.add(doc.id);
+    }
+  });
+
+  // Paso 3: los que no tienen radicado ni entidad van solos
+  db.docs.forEach(doc=>{
+    if(!asignados.has(doc.id)) sinGrupo.push(doc);
+  });
+
+  // Filtrar grupos con más de 1 documento y ordenar por cantidad
+  const gruposValidos=Object.values(grupos)
+    .filter(g=>g.docs.length>0)
+    .sort((a,b)=>b.docs.length-a.docs.length);
+
+  // Ordenar docs dentro de cada grupo cronológicamente
+  gruposValidos.forEach(g=>{
+    g.docs.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    // Detectar patrones respuesta: doc con "Respuesta" en nombre o estado "Respondido"
+    g.docs.forEach((d,i)=>{
+      d._esRespuesta=d.nombre.toLowerCase().includes('respuesta')||
+        d.nombre.toLowerCase().includes('resp.')||
+        (i>0&&['Respondido','Respondido parcialmente'].includes(d.status)&&
+        ['Pendiente respuesta','No respondido','Vencido'].includes(g.docs[i-1]?.status));
+    });
+  });
+
+  status.textContent=`✅ Se identificaron ${gruposValidos.length} procesos/hilos con ${db.docs.length-sinGrupo.length} documentos agrupados. ${sinGrupo.length>0?sinGrupo.length+' documentos sin proceso identificado.':''}`;
+  status.style.background='var(--successbg)';
+  status.style.color='var(--successtext)';
+  status.style.borderColor='var(--successborder)';
+
+  renderHilos(gruposValidos, sinGrupo);
+}
+
+function renderHilos(grupos, sinGrupo){
+  const container=document.getElementById('hilosContainer');
+
+  container.innerHTML=grupos.map(g=>`
+    <div style="border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden">
+      <!-- Cabecera del hilo -->
+      <div style="background:var(--bg2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${g.tipo==='radicado'?'📁':'🏛️'} ${g.label}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${g.docs.length} documento(s) · ${g.tipo==='radicado'?'Radicado':'Entidad'}: ${g.entidad||g.label}</div>
+        </div>
+        <button class="btn sm" onclick="vincularHiloCompleto('${g.key}')">🔗 Vincular todos</button>
+      </div>
+      <!-- Documentos del hilo en orden cronológico -->
+      <div style="padding:12px 16px">
+        ${g.docs.map((d,i)=>`
+          <div style="display:flex;gap:12px;margin-bottom:${i<g.docs.length-1?'0':'0'}">
+            <!-- Línea de tiempo -->
+            <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:24px">
+              <div style="width:12px;height:12px;border-radius:50%;background:${d._esRespuesta?'var(--success)':STATUS_BADGE[d.status]==='danger'?'var(--danger)':STATUS_BADGE[d.status]==='warning'?'var(--warning)':'var(--accent)'};border:2px solid var(--bg);margin-top:8px;flex-shrink:0"></div>
+              ${i<g.docs.length-1?'<div style="width:2px;flex:1;background:var(--border);margin-top:2px;min-height:20px"></div>':''}
+            </div>
+            <!-- Contenido del documento -->
+            <div style="flex:1;padding:8px 10px;background:${d._esRespuesta?'var(--successbg)':'var(--bg)'};border:0.5px solid ${d._esRespuesta?'var(--successborder)':'var(--border)'};border-radius:var(--radius);margin-bottom:8px">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d._esRespuesta?'↩️ ':''} ${d.nombre}</div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:3px;display:flex;flex-wrap:wrap;gap:4px">
+                    <span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>
+                    <span class="badge ${STATUS_BADGE[d.status]||'neutral'}" style="font-size:10px">${d.status}</span>
+                    <span style="font-size:10px">📅 ${fmt(d.fecha)}</span>
+                    ${d.vence?`<span style="font-size:10px;color:var(--danger)">⏰ Vence: ${fmt(d.vence)}</span>`:''}
+                  </div>
+                  ${d.resumen?`<div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">${d.resumen.substring(0,120)}${d.resumen.length>120?'...':''}</div>`:''}
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+                  <button class="btn sm" onclick="closeModal('');viewDoc(${d.id})" style="font-size:10px;padding:3px 8px">📄 Ficha</button>
+                  ${d.filePath?`<button class="btn sm primary" onclick="verPdfEnHilo(${d.id})" style="font-size:10px;padding:3px 8px">📂 Ver PDF</button>`:''}
+                  ${i>0?`<button class="btn sm" onclick="marcarComoRespuesta(${d.id},${g.docs[i-1].id})" style="font-size:10px;padding:3px 8px;background:var(--successbg);color:var(--successtext);border-color:var(--successborder)" title="Marcar como respuesta del documento anterior">↩️ Es respuesta</button>`:''}
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('')+
+  (sinGrupo.length>0?`
+    <div style="border:1px dashed var(--border);border-radius:var(--radius);padding:14px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:600;color:var(--text3);margin-bottom:10px">📄 Documentos sin proceso identificado (${sinGrupo.length})</div>
+      ${sinGrupo.map(d=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div>
+            <div style="font-size:11px;color:var(--text3)"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span> · ${fmt(d.fecha)}</div>
+          </div>
+          ${d.filePath?`<button class="btn sm" onclick="verPdfEnHilo(${d.id})" style="font-size:10px">📂 PDF</button>`:''}
+          <button class="btn sm" onclick="viewDoc(${d.id})" style="font-size:10px">📄 Ver</button>
+        </div>
+      `).join('')}
+    </div>
+  `:'');
+}
+
+async function verPdfEnHilo(docId){
+  const doc=db.docs.find(d=>d.id==docId);
+  if(!doc||!doc.filePath) return;
+  const url=await getFileUrl(doc.filePath);
+  if(!url) return;
+  document.getElementById('hiloPdfTitulo').textContent=doc.nombre;
+  document.getElementById('hiloPdfFrame').src=url;
+  openModal('hiloPdfModal');
+}
+
+async function marcarComoRespuesta(respId, origenId){
+  const docResp=db.docs.find(d=>d.id==respId);
+  const docOrigen=db.docs.find(d=>d.id==origenId);
+  if(!docResp||!docOrigen) return;
+  if(!confirm(`¿Marcar "${docResp.nombre}" como respuesta de "${docOrigen.nombre}"?\n\nEsto cambiará el estado del documento original a "Respondido" y los vinculará.`)) return;
+
+  // Cambiar estado del original
+  const idxO=db.docs.findIndex(d=>d.id==origenId);
+  if(idxO>=0&&['Pendiente respuesta','No respondido','Vencido','Respondido parcialmente'].includes(db.docs[idxO].status)){
+    db.docs[idxO].status='Respondido';
+  }
+  // Vincular
+  const idxR=db.docs.findIndex(d=>d.id==respId);
+  if(idxO>=0){if(!db.docs[idxO].relacionados)db.docs[idxO].relacionados=[];if(!db.docs[idxO].relacionados.includes(respId))db.docs[idxO].relacionados.push(respId);}
+  if(idxR>=0){if(!db.docs[idxR].relacionados)db.docs[idxR].relacionados=[];if(!db.docs[idxR].relacionados.includes(origenId))db.docs[idxR].relacionados.push(origenId);}
+  // Eliminar alerta del original
+  db.alerts=db.alerts.filter(a=>a.docId!=origenId);
+  await saveData();
+  analizarHilos();
+}
+
+async function vincularHiloCompleto(grupoKey){
+  const status=document.getElementById('hilosStatus');
+  // Re-analizar para obtener el grupo actual
+  const grupos={};
+  const normRad=r=>(r||'').replace(/[\s\-\.]/g,'').toLowerCase();
+  db.docs.forEach(doc=>{
+    const rads=(doc.radicado||'').split(/[;,]/).map(r=>r.trim()).filter(r=>r.length>4);
+    rads.forEach(rad=>{
+      const key='rad_'+normRad(rad);
+      if(!grupos[key]) grupos[key]={key,docs:[]};
+      if(!grupos[key].docs.find(d=>d.id==doc.id)) grupos[key].docs.push(doc);
+    });
+    if(doc.entidad&&!rads.length){
+      const key='ent_'+doc.entidad.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'_').substring(0,30);
+      if(!grupos[key]) grupos[key]={key,docs:[]};
+      if(!grupos[key].docs.find(d=>d.id==doc.id)) grupos[key].docs.push(doc);
+    }
+  });
+  const g=grupos[grupoKey];
+  if(!g||g.docs.length<2) return;
+  // Vincular todos entre sí
+  let vinculados=0;
+  g.docs.forEach((d1,i)=>{
+    g.docs.forEach((d2,j)=>{
+      if(i>=j) return;
+      const idx1=db.docs.findIndex(d=>d.id==d1.id);
+      const idx2=db.docs.findIndex(d=>d.id==d2.id);
+      if(idx1>=0){if(!db.docs[idx1].relacionados)db.docs[idx1].relacionados=[];if(!db.docs[idx1].relacionados.includes(d2.id)){db.docs[idx1].relacionados.push(d2.id);vinculados++;}}
+      if(idx2>=0){if(!db.docs[idx2].relacionados)db.docs[idx2].relacionados=[];if(!db.docs[idx2].relacionados.includes(d1.id)){db.docs[idx2].relacionados.push(d1.id);}}
+    });
+  });
+  await saveData();
+  status.style.cssText='display:block;padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:16px;background:var(--successbg);color:var(--successtext);border:0.5px solid var(--successborder)';
+  status.textContent=`✅ ${g.docs.length} documentos vinculados entre sí (${vinculados} vínculos nuevos).`;
+}
+
 // ===== MÓDULO ANÁLISIS LEGAL =====
 let anDocSeleccionado=null;
 let anArchivos={1:null,2:null,3:null};
@@ -2649,6 +2874,7 @@ function renderView(id){
     case 'usuarios':renderUsuarios();break;
     case 'redaccion':setTimeout(()=>{renderTiposDoc();renderRdHistorial();},50);break;
     case 'analisis':limpiarAnalisis();break;
+    case 'relaciones':document.getElementById('hilosContainer').innerHTML='<div style="text-align:center;padding:48px;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px">🔗</div><div style="font-size:14px;font-weight:500;margin-bottom:6px">Haz clic en "Analizar y agrupar documentos"</div><div style="font-size:13px">La app agrupará tus '+db.docs.length+' documentos por proceso automáticamente.</div></div>';break;
   }
 }
 function navigate(id){
