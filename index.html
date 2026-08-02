@@ -1878,11 +1878,17 @@ function imprimirDocumentos(){
     if(st&&d.status!==st)return false;
     if(qn){
       const haystack=normStr([d.nombre,d.resumen,d.entidad,d.radicado,d.notas,d.cat,d.status].join(' '));
-      // Si la búsqueda es una sola frase, intentar match exacto primero
-      // Si no coincide, verificar que todas las palabras estén presentes
+      // Match exacto — prioridad máxima
       const matchExacto=haystack.includes(qn);
-      const matchPalabras=qWords.length>0&&qWords.every(w=>haystack.includes(w));
-      if(!matchExacto&&!matchPalabras)return false;
+      if(matchExacto) return true;
+      // Match por palabras: si hay varias palabras, basta con que coincida
+      // el 40% de las palabras significativas (mínimo 2)
+      if(qWords.length>0){
+        const coinciden=qWords.filter(w=>haystack.includes(w));
+        const umbral=qWords.length===1?1:Math.max(2,Math.floor(qWords.length*0.4));
+        if(coinciden.length>=umbral) return true;
+      }
+      return false;
     }
     return true;
   }).sort((a,b)=>{
