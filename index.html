@@ -344,8 +344,9 @@ tr:hover td{background:var(--bg2)}
       <button class="nav-item" id="nav-calendario" onclick="navigate('calendario')"><span class="icon">📅</span>Calendario</button>
       <div class="nav-section">Gestión</div>
       <button class="nav-item" id="nav-pendientes" onclick="navigate('pendientes')"><span class="icon">✅</span>Pendientes <span class="nav-badge warn" id="nbPend"></span></button>
-      <button class="nav-item" id="nav-fallos" onclick="navigate('fallos')"><span class="icon">⚖️</span>Fallos / Resoluciones</button>
-      <button class="nav-item" id="nav-procesos" onclick="navigate('procesos')"><span class="icon">🗂️</span>Procesos activos</button>
+      <button class="nav-item" onclick="navigate('panel')"><span class="icon">🎯</span>Panel del caso</button>
+      <button class="nav-item" id="nav-fallos" onclick="navigate('fallos')" style="display:none"><span class="icon">⚖️</span>Fallos / Resoluciones</button>
+      <button class="nav-item" id="nav-procesos" onclick="navigate('procesos')" style="display:none"><span class="icon">🗂️</span>Procesos activos</button>
       <div class="nav-section" id="adminSection" style="display:none">Administración</div>
       <button class="nav-item" id="nav-usuarios" onclick="navigate('usuarios')" style="display:none"><span class="icon">👥</span>Usuarios</button>
       <div class="nav-section">Herramientas IA</div>
@@ -479,6 +480,15 @@ tr:hover td{background:var(--bg2)}
         </div>
         <div id="pendingContent"></div>
       </div>
+    </div>
+
+    <!-- PANEL DEL CASO -->
+    <div id="view-panel" class="section">
+      <div class="page-header">
+        <div><div class="page-title">🎯 Panel de control del caso</div><div class="page-sub">Estado en tiempo real de cada proceso — alimentado automáticamente por tus documentos</div></div>
+        <button class="btn primary" onclick="renderPanel()">🔄 Actualizar</button>
+      </div>
+      <div class="page-content" id="panelContent"></div>
     </div>
 
     <!-- FALLOS -->
@@ -1805,6 +1815,181 @@ async function fileToBase64(file){
   });
 }
 
+// ===== PANEL DE CONTROL DEL CASO =====
+function renderPanel(){
+  const el=document.getElementById('panelContent');
+  if(!el) return;
+
+  // Procesos conocidos del caso — base fija + detectados de documentos
+  const PROCESOS_BASE=[
+    {id:'vif',label:'Violencia Intrafamiliar',icon:'🛡️',radicados:['002-15088-26','15088'],entidades:['Comisaría','comisaria'],audiencia:'2026-08-13',color:'#dc2626'},
+    {id:'alimentos_ejec',label:'Proceso Ejecutivo Alimentos',icon:'🍽️',radicados:['26195'],entidades:['juzgado familia','juzgado de familia'],color:'#d97706'},
+    {id:'alimentos_inas',label:'Inasistencia Alimentaria',icon:'⚖️',radicados:[],entidades:['fiscalia','fiscalía'],cats:['Actuaciones penales'],color:'#7c3aed'},
+    {id:'disciplinario',label:'Proceso Disciplinario',icon:'📌',radicados:[],entidades:['procuraduria','procuraduría','personeria'],cats:['Trámites disciplinarios'],color:'#0891b2'},
+    {id:'patrimonial',label:'Sociedad Patrimonial / Inmueble',icon:'🏠',radicados:[],cats:['Documentos patrimoniales'],color:'#059669'},
+    {id:'custodia',label:'Custodia y Visitas',icon:'👦',radicados:[],entidades:['comisaria','comisaría'],cats:['Actas y conciliaciones'],color:'#2563eb'},
+    {id:'tutelas',label:'Tutelas',icon:'🏛️',radicados:[],cats:['Tutelas'],color:'#dc2626'},
+    {id:'comunicaciones',label:'Comunicaciones y Peticiones',icon:'📧',radicados:[],cats:['Comunicaciones','Derecho de petición'],color:'#64748b'},
+  ];
+
+  const hoy=new Date();
+  const normStr=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+
+  // Asignar cada documento a un proceso
+  const docsXProceso={};
+  PROCESOS_BASE.forEach(p=>docsXProceso[p.id]=[]);
+  const sinAsignar=[];
+
+  db.docs.forEach(doc=>{
+    const rad=normStr(doc.radicado||'');
+    const ent=normStr(doc.entidad||'');
+    const cat=doc.cat||'';
+    let asignado=false;
+
+    for(const p of PROCESOS_BASE){
+      // Por radicado
+      if(p.radicados&&p.radicados.some(r=>rad.includes(normStr(r)))){
+        docsXProceso[p.id].push(doc); asignado=true; break;
+      }
+      // Por entidad
+      if(p.entidades&&p.entidades.some(e=>ent.includes(normStr(e)))){
+        docsXProceso[p.id].push(doc); asignado=true; break;
+      }
+      // Por categoría (solo si no tiene radicado específico)
+      if(p.cats&&p.cats.includes(cat)&&!p.radicados?.length&&!p.entidades?.length){
+        docsXProceso[p.id].push(doc); asignado=true; break;
+      }
+    }
+    if(!asignado) sinAsignar.push(doc);
+  });
+
+  // Generar tarjetas
+  const tarjetas=PROCESOS_BASE.map(p=>{
+    const docs=docsXProceso[p.id];
+    if(docs.length===0) return null;
+
+    // Stats
+    const pendientes=db.pending.filter(pe=>!pe.done&&docs.some(d=>d.nombre&&pe.related&&pe.related.includes(d.nombre.substring(0,20)))).length;
+    const alertas=db.alerts.filter(a=>docs.some(d=>d.id==a.docId)).length;
+    const vencidos=docs.filter(d=>d.status==='Vencido'||d.status==='No respondido').length;
+    const pendResp=docs.filter(d=>d.status==='Pendiente respuesta').length;
+
+    // Próximo vencimiento
+    const conVence=docs.filter(d=>d.vence).sort((a,b)=>a.vence.localeCompare(b.vence));
+    const proximoVence=conVence[0];
+    let venceInfo='';
+    if(proximoVence){
+      const dias=Math.ceil((new Date(proximoVence.vence)-hoy)/(1000*60*60*24));
+      venceInfo=dias<0?`<span style="color:#dc2626;font-weight:600">⚠️ Vencido hace ${Math.abs(dias)} día(s)</span>`:
+        dias===0?`<span style="color:#dc2626;font-weight:600">🔴 Vence HOY</span>`:
+        dias<=5?`<span style="color:#dc2626">⚠️ Vence en ${dias} día(s)</span>`:
+        dias<=15?`<span style="color:#d97706">⏰ Vence en ${dias} día(s)</span>`:
+        `<span style="color:var(--text3)">📅 Próximo vence: ${fmt(proximoVence.vence)}</span>`;
+    }
+
+    // Audiencia especial
+    let audienciaInfo='';
+    if(p.audiencia){
+      const diasAud=Math.ceil((new Date(p.audiencia)-hoy)/(1000*60*60*24));
+      audienciaInfo=diasAud>=0?
+        `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:6px 10px;margin-top:8px;font-size:12px">
+          🏛️ <strong>Audiencia fallo: ${fmt(p.audiencia)}</strong> — ${diasAud===0?'HOY':diasAud<0?'PASADA':'en '+diasAud+' días'}
+        </div>`:'';
+    }
+
+    // Semáforo
+    const semaforo=vencidos>0||alertas>0?'#dc2626':pendResp>0?'#d97706':'#16a34a';
+
+    // Último documento
+    const sorted=[...docs].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+    const ultimo=sorted[0];
+
+    return `<div style="border:1.5px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden">
+      <!-- Cabecera -->
+      <div style="background:linear-gradient(135deg,${p.color}15,${p.color}08);border-bottom:1px solid ${p.color}30;padding:14px 16px;display:flex;align-items:center;gap:12px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${semaforo};flex-shrink:0;box-shadow:0 0 6px ${semaforo}80"></div>
+        <div style="font-size:20px">${p.icon}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${p.label}</div>
+          ${docs.some(d=>d.radicado)?`<div style="font-size:11px;color:var(--text3);margin-top:2px;font-family:monospace">${[...new Set(docs.filter(d=>d.radicado).map(d=>d.radicado).slice(0,2))].join(' · ')}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn sm" onclick="filtrarDocsPorProceso('${p.id}')" style="font-size:11px">📄 Ver docs</button>
+          <button class="btn sm" onclick="navigate('analisis')" style="font-size:11px">🔍 Analizar</button>
+        </div>
+      </div>
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--border)">
+        ${[
+          ['📄','Documentos',docs.length,'var(--text)'],
+          ['⏳','Pendientes resp.',pendResp,pendResp>0?'#d97706':'var(--text3)'],
+          ['🔴','Vencidos',vencidos,vencidos>0?'#dc2626':'var(--text3)'],
+          ['✅','Tareas pend.',pendientes,pendientes>0?'#d97706':'var(--text3)'],
+        ].map(([ic,lb,val,col])=>`
+          <div style="padding:10px;text-align:center;border-right:1px solid var(--border)">
+            <div style="font-size:18px;font-weight:700;color:${col}">${val}</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">${ic} ${lb}</div>
+          </div>
+        `).join('')}
+      </div>
+      <!-- Info adicional -->
+      <div style="padding:12px 16px">
+        ${venceInfo}
+        ${audienciaInfo}
+        ${ultimo?`<div style="font-size:12px;color:var(--text3);margin-top:8px">📋 Último movimiento: <strong style="color:var(--text)">${ultimo.nombre.substring(0,60)}${ultimo.nombre.length>60?'...':''}</strong> · ${fmt(ultimo.fecha)}</div>`:''}
+        <!-- Documentos recientes -->
+        <div style="margin-top:10px">
+          ${sorted.slice(0,3).map(d=>`
+            <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)">
+              <span class="badge ${STATUS_BADGE[d.status]||'neutral'}" style="font-size:10px;flex-shrink:0">${d.status}</span>
+              <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</span>
+              <span style="font-size:10px;color:var(--text3);flex-shrink:0">${fmt(d.fecha)}</span>
+              <button class="btn sm" onclick="viewDoc(${d.id})" style="font-size:10px;padding:2px 6px;flex-shrink:0">Ver</button>
+            </div>
+          `).join('')}
+          ${docs.length>3?`<div style="font-size:11px;color:var(--accent);margin-top:6px;cursor:pointer" onclick="filtrarDocsPorProceso('${p.id}')">+ ${docs.length-3} documentos más →</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).filter(Boolean);
+
+  el.innerHTML=tarjetas.join('')+
+  (sinAsignar.length>0?`
+    <div style="border:1px dashed var(--border);border-radius:12px;padding:14px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;color:var(--text3);margin-bottom:8px">📁 Sin proceso asignado (${sinAsignar.length} documentos)</div>
+      <div style="font-size:12px;color:var(--text3)">Estos documentos no pudieron asignarse automáticamente. Puedes asignarlos editando su radicado o entidad.</div>
+      <button class="btn sm" style="margin-top:8px" onclick="mostrarSinAsignar()">Ver documentos sin asignar</button>
+    </div>
+  `:'');
+}
+
+function filtrarDocsPorProceso(procesoId){
+  navigate('documentos');
+  // Limpiar filtros y buscar por el proceso
+  setTimeout(()=>{
+    const PROCESOS_BASE_RAD={
+      vif:'002-15088',alimentos_ejec:'26195',
+    };
+    const rad=PROCESOS_BASE_RAD[procesoId];
+    if(rad){
+      document.getElementById('docSearch').value=rad;
+    }else{
+      document.getElementById('docSearch').value='';
+    }
+    renderDocs();
+  },100);
+}
+
+function mostrarSinAsignar(){
+  navigate('documentos');
+  setTimeout(()=>{
+    document.getElementById('docSearch').value='';
+    document.getElementById('docCat').value='';
+    document.getElementById('docStatus').value='';
+    renderDocs();
+  },100);
+}
+
 // ===== MÓDULO HILOS DE PROCESO =====
 async function analizarHilos(){
   const status=document.getElementById('hilosStatus');
@@ -2873,6 +3058,7 @@ function renderView(id){
     case 'procesos':renderProcesos();break;
     case 'usuarios':renderUsuarios();break;
     case 'redaccion':setTimeout(()=>{renderTiposDoc();renderRdHistorial();},50);break;
+    case 'panel':renderPanel();break;
     case 'analisis':limpiarAnalisis();break;
     case 'relaciones':document.getElementById('hilosContainer').innerHTML='<div style="text-align:center;padding:48px;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px">🔗</div><div style="font-size:14px;font-weight:500;margin-bottom:6px">Haz clic en "Analizar y agrupar documentos"</div><div style="font-size:13px">La app agrupará tus '+db.docs.length+' documentos por proceso automáticamente.</div></div>';break;
   }
