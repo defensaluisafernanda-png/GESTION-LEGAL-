@@ -1826,11 +1826,20 @@ function imprimirDocumentos(){
   const sort=document.getElementById('docSort')?.value||'fecha_desc';
   const normStr=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
   const qn=normStr(q);
+  // Dividir la búsqueda en palabras significativas (3+ letras)
+  const qWords=qn.split(' ').filter(w=>w.length>=3);
 
   let docs=[...db.docs].filter(d=>{
     if(cat&&d.cat!==cat)return false;
     if(st&&d.status!==st)return false;
-    if(qn){const h=normStr([d.nombre,d.resumen,d.entidad,d.radicado,d.notas,d.cat,d.status].join(' '));if(!h.includes(qn))return false;}
+    if(qn){
+      const haystack=normStr([d.nombre,d.resumen,d.entidad,d.radicado,d.notas,d.cat,d.status].join(' '));
+      // Si la búsqueda es una sola frase, intentar match exacto primero
+      // Si no coincide, verificar que todas las palabras estén presentes
+      const matchExacto=haystack.includes(qn);
+      const matchPalabras=qWords.length>0&&qWords.every(w=>haystack.includes(w));
+      if(!matchExacto&&!matchPalabras)return false;
+    }
     return true;
   }).sort((a,b)=>{
     const fa=a.fecha||'',fb=b.fecha||'',na=(a.nombre||'').toLowerCase(),nb=(b.nombre||'').toLowerCase();
