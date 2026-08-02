@@ -2796,7 +2796,14 @@ function copiarDocumento(){
 
 // ===== DOCUMENTOS RELACIONADOS =====
 let _relTimer=null;
+// Set persistente para seleccionados entre búsquedas
+let _relManualSeleccionados=new Set();
+
 function abrirBuscadorRelacionados(){
+  _relManualSeleccionados=new Set();
+  document.querySelectorAll('[id^="rprev_"]').forEach(cb=>{
+    if(cb.checked) _relManualSeleccionados.add(parseInt(cb.id.replace('rprev_','')));
+  });
   document.getElementById('buscadorRelSearch').value='';
   renderBuscadorRel();
   openModal('buscadorRelModal');
@@ -2806,60 +2813,48 @@ function renderBuscadorRel(){
   const q=(document.getElementById('buscadorRelSearch')?.value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').trim();
   const lista=document.getElementById('buscadorRelLista');
   if(!lista) return;
-  // Obtener IDs ya seleccionados en la lista actual
-  const yaSeleccionados=new Set();
-  document.querySelectorAll('[id^="rprev_"]').forEach(cb=>{
-    if(cb.checked) yaSeleccionados.add(parseInt(cb.id.replace('rprev_','')));
-  });
+  const qWords=q.split(' ').filter(w=>w.length>=3);
   let docs=[...db.docs].filter(d=>{
     if(!q) return true;
-    const hay=(d.nombre+' '+(d.entidad||'')+' '+(d.radicado||'')+' '+(d.cat||'')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    return hay.includes(q);
-  }).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,30);
+    const hay=(d.nombre+' '+(d.entidad||'')+' '+(d.radicado||'')+' '+(d.cat||'')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ');
+    if(hay.includes(q)) return true;
+    if(qWords.length>0){const coinciden=qWords.filter(w=>hay.includes(w));return coinciden.length>=Math.max(1,Math.floor(qWords.length*0.4));}
+    return false;
+  }).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,40);
+  const totalSel=_relManualSeleccionados.size;
+  const contadorHtml=totalSel>0?`<div id="relSelCounter" style="padding:8px 12px;background:var(--accentbg);border-bottom:1px solid var(--accent);font-size:12px;color:var(--accent);font-weight:600">✓ ${totalSel} seleccionado(s) — sigue buscando para agregar más</div>`:'<div id="relSelCounter" style="display:none"></div>';
+  lista.innerHTML=contadorHtml+(docs.length===0?'<div style="padding:16px;text-align:center;color:var(--text3)">No se encontraron documentos.</div>':
+  docs.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:0.5px solid var(--border);background:${_relManualSeleccionados.has(d.id)?'var(--accentbg)':''}">
+    <input type="checkbox" id="brel_${d.id}" ${_relManualSeleccionados.has(d.id)?'checked':''} onchange="toggleRelManual(${d.id},this.checked)" style="flex-shrink:0;width:15px;height:15px;cursor:pointer">
+    <label for="brel_${d.id}" style="flex:1;cursor:pointer;min-width:0">
+      <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_relManualSeleccionados.has(d.id)?'✓ ':''} ${d.nombre}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span> · ${fmt(d.fecha)} ${d.entidad?'· '+d.entidad:''}</div>
+    </label>
+  </div>`).join(''));
+}
 
-  lista.innerHTML=docs.length===0?'<div style="padding:16px;text-align:center;color:var(--text3)">No se encontraron documentos.</div>':
-  docs.map(d=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:0.5px solid var(--border)">
-      <input type="checkbox" id="brel_${d.id}" ${yaSeleccionados.has(d.id)?'checked':''} style="flex-shrink:0;width:15px;height:15px;cursor:pointer">
-      <label for="brel_${d.id}" style="flex:1;cursor:pointer;min-width:0">
-        <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">
-          <span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>
-          · ${fmt(d.fecha)} ${d.entidad?'· '+d.entidad:''}
-        </div>
-      </label>
-    </div>
-  `).join('');
+function toggleRelManual(id,checked){
+  if(checked) _relManualSeleccionados.add(id);
+  else _relManualSeleccionados.delete(id);
+  const totalSel=_relManualSeleccionados.size;
+  const c=document.getElementById('relSelCounter');
+  if(c){c.style.display=totalSel>0?'block':'none';c.textContent=`✓ ${totalSel} seleccionado(s) — sigue buscando para agregar más`;}
 }
 
 function confirmarRelManual(){
-  // Recoger los seleccionados del modal manual
-  const checks=document.querySelectorAll('[id^="brel_"]');
-  const seleccionados=[];
-  checks.forEach(cb=>{
-    if(cb.checked){
-      const id=parseInt(cb.id.replace('brel_',''));
-      if(!isNaN(id)) seleccionados.push(id);
-    }
-  });
-  if(seleccionados.length===0){alert('Selecciona al menos un documento.');return;}
-
-  // Mostrarlos en la lista de relacionados del formulario
+  if(_relManualSeleccionados.size===0){alert('Selecciona al menos un documento.');return;}
+  const seleccionados=[..._relManualSeleccionados];
   const lista=document.getElementById('relacionadosList');
   if(!lista) return;
   lista.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">✅ ${seleccionados.length} documento(s) seleccionado(s) para vincular:</div>`+
   seleccionados.map(id=>{
-    const d=db.docs.find(x=>x.id==id);
-    if(!d) return '';
+    const d=db.docs.find(x=>x.id==id);if(!d) return '';
     return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border)">
       <input type="checkbox" id="rprev_${d.id}" checked style="flex-shrink:0;width:14px;height:14px">
-      <label for="rprev_${d.id}" style="flex:1;font-size:12px;cursor:pointer">
-        <strong>${d.nombre}</strong><br>
-        <span style="color:var(--text3);font-size:11px">${d.cat} · ${fmt(d.fecha)}</span>
-      </label>
+      <label for="rprev_${d.id}" style="flex:1;font-size:12px;cursor:pointer"><strong>${d.nombre}</strong><br>
+      <span style="color:var(--text3);font-size:11px">${d.cat} · ${fmt(d.fecha)}</span></label>
     </div>`;
-  }).join('')+
-  `<div style="font-size:11px;color:var(--accent);margin-top:6px">✓ Se vincularán automáticamente al guardar.</div>`;
+  }).join('')+`<div style="font-size:11px;color:var(--accent);margin-top:6px">✓ Se vincularán automáticamente al guardar.</div>`;
   closeModal('buscadorRelModal');
 }
 
