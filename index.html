@@ -381,6 +381,11 @@ tr:hover td{background:var(--bg2)}
           <div><div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Próximos vencimientos</div><div id="dashDeadlines"></div></div>
           <div><div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Tareas urgentes</div><div id="dashUrgent"></div></div>
         </div>
+        <!-- Últimos documentos registrados -->
+        <div style="margin-top:16px">
+          <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">🕐 Últimos documentos registrados</div>
+          <div id="dashUltimos"></div>
+        </div>
       </div>
     </div>
 
@@ -3348,6 +3353,23 @@ function renderDashboard(){
   `;
   const deadlines=db.docs.filter(d=>d.vence&&!estadosRespondidos.has(d.status)).sort((a,b)=>a.vence.localeCompare(b.vence)).slice(0,5);
   document.getElementById('dashDeadlines').innerHTML=deadlines.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">🎉</span>Sin vencimientos próximos</div>':deadlines.map(d=>`<div class="card" style="margin-bottom:8px;padding:10px 14px;display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div><div style="display:flex;align-items:center;gap:6px;margin-top:5px"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>${deadlineBadge(d.vence)}</div>${d.entidad?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${d.entidad}</div>`:''}</div><button class="btn sm" onclick="navigate('documentos');setTimeout(()=>viewDoc(${d.id}),100)">📄 Ver</button></div>`).join('');
+  // Últimos 5 documentos registrados
+  const ultimos=[...db.docs].sort((a,b)=>b.id-a.id).slice(0,5);
+  const dashUltimos=document.getElementById('dashUltimos');
+  if(dashUltimos){
+    dashUltimos.innerHTML=ultimos.length===0?'<div class="empty" style="padding:12px">Sin documentos</div>':
+    ultimos.map(d=>`<div class="card" style="margin-bottom:8px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
+          <span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>
+          <span class="badge ${STATUS_BADGE[d.status]||'neutral'}" style="font-size:10px">${d.status}</span>
+          <span style="font-size:11px;color:var(--text3)">📅 ${fmt(d.fecha)}</span>
+        </div>
+      </div>
+      <button class="btn sm" onclick="navigate('documentos');setTimeout(()=>viewDoc(${d.id}),100)">📄 Ver</button>
+    </div>`).join('');
+  }
   const urgent=db.pending.filter(p=>!p.done&&p.priority==='Urgente').slice(0,5);
   document.getElementById('dashUrgent').innerHTML=urgent.length===0?'<div class="empty" style="padding:20px"><span class="empty-icon">✅</span>Sin tareas urgentes</div>':urgent.map(p=>`<div class="card" style="border-left:3px solid var(--danger);margin-bottom:8px;padding:10px 14px"><div style="font-size:13px;font-weight:500">${p.title}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${p.type}${p.due?' · Límite: '+fmt(p.due):''}${p.related?' · '+p.related:''}</div></div>`).join('');
 }
@@ -3763,10 +3785,10 @@ function viewDoc(id){
 
     ${(d.relacionados&&d.relacionados.length>0)?`
     <div style="margin-top:14px">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px">📎 Documentos relacionados</div>
-      ${d.relacionados.map(rid=>{
-        const rel=db.docs.find(x=>x.id==rid);
-        if(!rel) return '';
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px">📎 Documentos relacionados (${d.relacionados.length})</div>
+      ${[...new Set(d.relacionados)].map(rid=>{
+        const rel=db.docs.find(x=>String(x.id)===String(rid));
+        if(!rel) return `<div style="padding:6px 10px;font-size:11px;color:var(--text3);background:var(--bg2);border-radius:var(--radius);margin-bottom:6px">⚠️ Documento ID ${rid} no encontrado (puede haber sido eliminado)</div>`;
         return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:var(--radius);margin-bottom:6px">
           <span class="badge ${CAT_BADGE[rel.cat]||'neutral'}" style="font-size:10px;flex-shrink:0">${rel.cat}</span>
           <div style="flex:1;min-width:0">
