@@ -502,7 +502,10 @@ tr:hover td{background:var(--bg2)}
     <div id="view-panel" class="section">
       <div class="page-header">
         <div><div class="page-title">🎯 Panel de control del caso</div><div class="page-sub">Estado en tiempo real de cada proceso — alimentado automáticamente por tus documentos</div></div>
-        <button class="btn primary" onclick="renderPanel()">🔄 Actualizar</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn sm" id="btnAsignarCarpetas" onclick="asignarCarpetasAutomatico()">🗂️ Asignar carpetas automáticamente</button>
+          <button class="btn primary" onclick="renderPanel()">🔄 Actualizar</button>
+        </div>
       </div>
       <div class="page-content" id="panelContent"></div>
     </div>
@@ -705,6 +708,20 @@ tr:hover td{background:var(--bg2)}
       <div class="form-row"><label>Fecha radicación / envío</label><input type="date" id="d_fechaRad"></div>
     </div>
     <div class="form-row"><label>Nombre del documento <span class="req">*</span></label><input type="text" id="d_nombre" placeholder="Ej: Derecho de petición — Fiscalía 011" oninput="buscarRelacionadosPrevio()"></div>
+    <div class="form-row"><label>📁 Carpeta del expediente</label>
+      <select id="d_carpeta">
+        <option value="">— Sin asignar —</option>
+        <option value="01">📁 01. Patrimonio – Inmueble Refugio Verde</option>
+        <option value="02">📁 02. Proceso Penal</option>
+        <option value="03">📁 03. Comisaría de Familia y Medidas de Protección</option>
+        <option value="04">📁 04. Tomás – Custodia y Bienestar</option>
+        <option value="05">📁 05. Asunto Financiero – Banca de Negocios</option>
+        <option value="06">📁 06. Otros Embargos y Cobros</option>
+        <option value="07">📁 07. Protección de Entornos (Laboral y Escolar)</option>
+        <option value="08">📁 08. Derechos de Petición – Control de Vencimientos</option>
+        <option value="09">📁 09. Cronología General</option>
+      </select>
+    </div>
     <div class="form-grid">
       <div class="form-row"><label>Categoría</label>
         <select id="d_cat"><option>Fallos</option><option>Tutelas</option><option>Medidas de protección</option><option>Derecho de petición</option><option>Actuaciones penales</option><option>Documentos patrimoniales</option><option>Clínico/pericial</option><option>Actas y conciliaciones</option><option>Comunicaciones</option><option>Trámites disciplinarios</option><option>Otro</option></select>
@@ -1656,7 +1673,7 @@ async function extractDocData(){
     }
 
     if(filled.length>0){
-      status.textContent=`✅ ${filled.length} campos llenados: ${filled.join(', ')}. Revisa y corrige si es necesario.`;
+      status.textContent=''+filled.length+' campos llenados: '+filled.join(', ')+'. Revisa y corrige si es necesario.';
       // Buscar documentos relacionados automáticamente
       buscarRelacionadosPrevio();
       result.style.display='block';
@@ -1867,6 +1884,99 @@ async function fileToBase64(file){
   });
 }
 
+// ===== ASIGNACIÓN AUTOMÁTICA DE CARPETAS =====
+const CARPETAS=[
+  {id:'01',label:'📁 01. Patrimonio – Inmueble Refugio Verde',
+   radicados:['2020-0047','conalbos','fv57','1145277','1145132','1145197','refugio','inmueble','aecsa','fomevi','poblado'],
+   entidades:['poblado y asociados','notaria','registro','catastro','juzgado 17','juzgado 019','gobernacion antioquia'],
+   cats:['Documentos patrimoniales','Actas y conciliaciones'],
+   keywords:['escritura','hipoteca','promesa compraventa','otrosí','arriendo','canon','remanente','embargo','inmueble']},
+  {id:'02',label:'📁 02. Proceso Penal',
+   radicados:['052666','05266600','5977701','110016','76065','2026203102818431','2026203102786291','natalia','paniagua'],
+   entidades:['fiscalia','fiscalía','juzgado penal','juzgado municipal penal'],
+   cats:['Actuaciones penales'],
+   keywords:['spoa','penal','procesada','victima','inasistencia alimentaria','principio de oportunidad','carpeta investigacion','poder']},
+  {id:'03',label:'📁 03. Comisaría de Familia y Medidas de Protección',
+   radicados:['002-15088','15088','26195','002-26195','25671','1083','1217','1510','029','202630336614','937429','937052'],
+   entidades:['comisaria','comisaría','juzgado 7','juzgado septimo','policia nacional','policía'],
+   cats:['Medidas de protección','Fallos','Tutelas'],
+   keywords:['medida de proteccion','comisaria','vif','violencia intrafamiliar','reincidencia','multa','desacato','hechos sobrevinientes','citacion','audiencia fallo']},
+  {id:'04',label:'📁 04. Tomás – Custodia y Bienestar',
+   radicados:['tomas','icbf','1027663'],
+   entidades:['icbf','ser school','colegio','hontanares'],
+   cats:['Clínico/pericial'],
+   keywords:['tomas','tomás','menor','custodia','visitas','bienestar','psicolog','escolar','vacunacion','registro civil','tarjeta identidad']},
+  {id:'05',label:'📁 05. Asunto Financiero – Banca de Negocios',
+   radicados:['negociemos','rebancarizacion','superintendencia financiera'],
+   entidades:['banca de negocios','negociemos','superfinanciera','superintendencia financiera'],
+   cats:[],
+   keywords:['rebancarizacion','rebancarización','financiero','credito financiero','grabacion','contrato financiero']},
+  {id:'06',label:'📁 06. Otros Embargos y Cobros',
+   radicados:['2026018438957','2026018438961','lua530','jamar'],
+   entidades:['gobernacion','gobernación','jamar','secretaria hacienda'],
+   cats:[],
+   keywords:['embargo cuenta','cobro coactivo','lua530','jamar','vehiculo','vehículo']},
+  {id:'07',label:'📁 07. Protección de Entornos (Laboral y Escolar)',
+   radicados:['hospital la maria','ser school'],
+   entidades:['hospital la maria','hospital la maría','ser school'],
+   cats:[],
+   keywords:['hospital la maria','hospital la maría','escolar','laboral','parqueadero institucional','proteccion laboral']},
+  {id:'08',label:'📁 08. Derechos de Petición – Control de Vencimientos',
+   radicados:[],
+   entidades:[],
+   cats:['Derecho de petición','Comunicaciones'],
+   keywords:['derecho de peticion','derecho de petición','pqrs','respuesta parcial','solicitud informacion']},
+];
+
+const CARPETAS_LABELS={
+  '01':'📁 01. Patrimonio','02':'📁 02. Proceso Penal','03':'📁 03. Comisaría',
+  '04':'📁 04. Tomás','05':'📁 05. Financiero','06':'📁 06. Embargos',
+  '07':'📁 07. Entornos','08':'📁 08. Derechos Petición','09':'📁 09. Cronología','':"Sin asignar"
+};
+
+function detectarCarpeta(doc){
+  const normStr=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const rad=normStr(doc.radicado||'');
+  const ent=normStr(doc.entidad||'');
+  const nom=normStr(doc.nombre||'');
+  const res=normStr(doc.resumen||'');
+  const texto=nom+' '+res+' '+rad+' '+ent;
+
+  let mejorScore=0;
+  let mejorCarpeta='';
+
+  for(const c of CARPETAS){
+    let score=0;
+    if(c.radicados.some(r=>rad.includes(normStr(r))||nom.includes(normStr(r)))) score+=10;
+    if(c.entidades.some(e=>ent.includes(normStr(e)))) score+=8;
+    if(c.cats.includes(doc.cat)) score+=5;
+    if(c.keywords.some(k=>texto.includes(normStr(k)))) score+=3;
+    if(score>mejorScore){mejorScore=score;mejorCarpeta=c.id;}
+  }
+  return mejorScore>=3?mejorCarpeta:'';
+}
+
+async function asignarCarpetasAutomatico(){
+  const btn=document.getElementById('btnAsignarCarpetas');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Asignando...';}
+
+  let asignados=0;
+  let sinAsignar=0;
+
+  db.docs.forEach(doc=>{
+    if(!doc.carpeta){
+      const carpeta=detectarCarpeta(doc);
+      if(carpeta){doc.carpeta=carpeta;asignados++;}
+      else sinAsignar++;
+    }
+  });
+
+  await saveData();
+  if(btn){btn.disabled=false;btn.textContent='🗂️ Asignar carpetas automáticamente';}
+  alert('Asignación completada:\n✓ '+asignados+' documentos asignados automáticamente\n⚠️ '+sinAsignar+' documentos sin carpeta (asígnalos manualmente editando cada uno)\n\nRevisa el Panel del caso para ver la organización.');
+  renderPanel();
+}
+
 // ===== PANEL DE CONTROL DEL CASO =====
 function imprimirDocumentos(){
   const q=(document.getElementById('docSearch')?.value||'').trim();
@@ -1975,6 +2085,107 @@ function imprimirDocumentos(){
 function renderPanel(){
   const el=document.getElementById('panelContent');
   if(!el) return;
+
+  const hoy=new Date();
+  const estadosRespondidos=new Set(['Respondido','Ejecutoriado','Archivado','No aplica']);
+
+  // Agrupar por carpeta
+  const porCarpeta={};
+  CARPETAS.forEach(c=>porCarpeta[c.id]=[]);
+  porCarpeta['']=[];
+  db.docs.forEach(doc=>{
+    const carp=doc.carpeta||'';
+    if(porCarpeta[carp]!==undefined) porCarpeta[carp].push(doc);
+    else porCarpeta[''].push(doc);
+  });
+
+  const tarjetas=CARPETAS.map(c=>{
+    const docs=porCarpeta[c.id]||[];
+    if(docs.length===0) return null;
+
+    const pendResp=docs.filter(d=>['Pendiente respuesta','No respondido'].includes(d.status)).length;
+    const vencidos=docs.filter(d=>d.status==='Vencido').length;
+    const conVence=docs.filter(d=>d.vence&&!estadosRespondidos.has(d.status)).sort((a,b)=>a.vence.localeCompare(b.vence));
+    const proximoVence=conVence[0];
+
+    let venceInfo='';
+    if(proximoVence){
+      const dias=Math.ceil((new Date(proximoVence.vence)-hoy)/(1000*60*60*24));
+      venceInfo=dias<0?`<span style="color:#dc2626;font-weight:600">⚠️ VENCIDO hace ${Math.abs(dias)}d</span>`:
+        dias===0?`<span style="color:#dc2626;font-weight:600">🔴 Vence HOY</span>`:
+        dias<=5?`<span style="color:#dc2626">⚠️ Vence en ${dias}d — ${proximoVence.nombre.substring(0,40)}</span>`:
+        dias<=15?`<span style="color:#d97706">⏰ Vence en ${dias}d — ${proximoVence.nombre.substring(0,40)}</span>`:
+        `<span style="color:var(--text3)">📅 Próx. vence: ${fmt(proximoVence.vence)}</span>`;
+    }
+
+    // Audiencias especiales
+    const conDilig=docs.filter(d=>d.diligFecha).sort((a,b)=>a.diligFecha.localeCompare(b.diligFecha));
+    let audienciaInfo='';
+    if(conDilig.length>0){
+      const prox=conDilig[0];
+      const dias=Math.ceil((new Date(prox.diligFecha)-hoy)/(1000*60*60*24));
+      if(dias>=0&&dias<=60){
+        audienciaInfo=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:6px 10px;margin-top:6px;font-size:12px">
+          🏛️ <strong>${prox.nombre.substring(0,50)}</strong> — ${fmt(prox.diligFecha)} ${prox.diligHora?'a las '+prox.diligHora:''} ${dias===0?'(HOY)':dias<0?'(PASADA)':'(en '+dias+' días)'}
+        </div>`;
+      }
+    }
+
+    const semaforo=vencidos>0?'#dc2626':pendResp>0?'#d97706':'#16a34a';
+    const sorted=[...docs].sort((a,b)=>(b.id||0)-(a.id||0));
+
+    return `<div style="border:1.5px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden">
+      <div style="background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${semaforo};flex-shrink:0"></div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700">${c.label}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${docs.length} documentos · ${pendResp} pendientes respuesta · ${vencidos} vencidos</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn sm" onclick="filtrarPorCarpeta('${c.id}')" style="font-size:11px">📄 Ver todos</button>
+        </div>
+      </div>
+      <div style="padding:10px 16px">
+        ${venceInfo?`<div style="margin-bottom:8px;font-size:12px">${venceInfo}</div>`:''}
+        ${audienciaInfo}
+        ${sorted.slice(0,4).map(d=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)">
+            <span class="badge ${STATUS_BADGE[d.status]||'neutral'}" style="font-size:10px;flex-shrink:0">${d.status}</span>
+            <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</span>
+            <span style="font-size:10px;color:var(--text3);flex-shrink:0">${fmt(d.fecha)}</span>
+            <button class="btn sm" onclick="viewDoc(${d.id})" style="font-size:10px;padding:2px 6px;flex-shrink:0">Ver</button>
+          </div>
+        `).join('')}
+        ${docs.length>4?`<div style="font-size:11px;color:var(--accent);margin-top:6px;cursor:pointer" onclick="filtrarPorCarpeta('${c.id}')">+ ${docs.length-4} documentos más →</div>`:''}
+      </div>
+    </div>`;
+  }).filter(Boolean);
+
+  const sinAsignar=porCarpeta['']||[];
+  el.innerHTML=`<div style="background:var(--infobg);border:0.5px solid var(--infoborder);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--infotext)">
+    ℹ️ <strong>${db.docs.length} documentos totales.</strong> ${sinAsignar.length>0?`<strong>${sinAsignar.length} sin carpeta asignada.</strong> Haz clic en "🗂️ Asignar carpetas automáticamente" para organizarlos.`:' Todos los documentos están organizados en carpetas. ✅'}
+  </div>`+
+  tarjetas.join('')+
+  (sinAsignar.length>0?`<div style="border:1px dashed var(--border);border-radius:12px;padding:14px;margin-bottom:16px">
+    <div style="font-size:13px;font-weight:600;color:var(--text3);margin-bottom:8px">📄 Sin carpeta asignada (${sinAsignar.length})</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Haz clic en "🗂️ Asignar carpetas automáticamente" o edita cada documento para asignarlo.</div>
+    ${sinAsignar.slice(0,5).map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)">
+      <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</span>
+      <button class="btn sm" onclick="openDocModal(${d.id})" style="font-size:10px;padding:2px 6px;flex-shrink:0">✏️ Asignar</button>
+    </div>`).join('')}
+    ${sinAsignar.length>5?`<div style="font-size:11px;color:var(--text3);margin-top:6px">...y ${sinAsignar.length-5} más</div>`:''}
+  </div>`:'');
+}
+
+function filtrarPorCarpeta(carpetaId){
+  navigate('documentos');
+  setTimeout(()=>{
+    document.getElementById('docSearch').value='';
+    document.getElementById('docCat').value='';
+    document.getElementById('docStatus').value='';
+    renderDocs(carpetaId);
+  },100);
+}
 
   // Procesos conocidos del caso — base fija + detectados de documentos
   const PROCESOS_BASE=[
@@ -2103,21 +2314,18 @@ function renderPanel(){
               <button class="btn sm" onclick="viewDoc(${d.id})" style="font-size:10px;padding:2px 6px;flex-shrink:0">Ver</button>
             </div>
           `).join('')}
-          ${docs.length>3?`<div style="font-size:11px;color:var(--accent);margin-top:6px;cursor:pointer" onclick="filtrarDocsPorProceso('${p.id}')">+ ${docs.length-3} documentos más →</div>`:''}
+          ${docs.length>3?`<div style="font-size:11px;color:var(--accent);margin-top:6px;cursor:pointer" onclick="filtrarDocsPorProceso('${p.id}')">+ ${docs.length-3} documentos mas</div>`:''}
         </div>
       </div>
-    </div>`;
-  }).filter(Boolean);
+    `}).filter(Boolean);
 
   el.innerHTML=tarjetas.join('')+
-  (sinAsignar.length>0?`
-    <div style="border:1px dashed var(--border);border-radius:12px;padding:14px;margin-bottom:16px">
-      <div style="font-size:13px;font-weight:600;color:var(--text3);margin-bottom:8px">📁 Sin proceso asignado (${sinAsignar.length} documentos)</div>
-      <div style="font-size:12px;color:var(--text3)">Estos documentos no pudieron asignarse automáticamente. Puedes asignarlos editando su radicado o entidad.</div>
-      <button class="btn sm" style="margin-top:8px" onclick="mostrarSinAsignar()">Ver documentos sin asignar</button>
-    </div>
-  `:'');
-}
+  (sinAsignar.length>0?`<div style="border:1px dashed var(--border);border-radius:12px;padding:14px;margin-bottom:16px">
+    <div style="font-size:13px;font-weight:600;color:var(--text3);margin-bottom:8px">Sin carpeta asignada (${sinAsignar.length})</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Haz clic en "Asignar carpetas automaticamente" para organizarlos.</div>
+    ${sinAsignar.slice(0,5).map(d=>'<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)"><span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+d.nombre+'</span><button class="btn sm" onclick="openDocModal('+d.id+')" style="font-size:10px;padding:2px 6px">Asignar</button></div>').join('')}
+    ${sinAsignar.length>5?`<div style="font-size:11px;color:var(--text3);margin-top:6px">...y ${sinAsignar.length-5} mas</div>`:''}
+  </div>`:'');
 
 function filtrarDocsPorProceso(procesoId){
   navigate('documentos');
@@ -2208,7 +2416,7 @@ async function analizarHilos(){
     });
   });
 
-  status.textContent=`✅ Se identificaron ${gruposValidos.length} procesos/hilos con ${db.docs.length-sinGrupo.length} documentos agrupados. ${sinGrupo.length>0?sinGrupo.length+' documentos sin proceso identificado.':''}`;
+  status.textContent='Se identificaron '+gruposValidos.length+' hilos con '+(db.docs.length-sinGrupo.length)+' documentos. '+(sinGrupo.length>0?sinGrupo.length+' sin proceso.':'');
   status.style.background='var(--successbg)';
   status.style.color='var(--successtext)';
   status.style.borderColor='var(--successborder)';
@@ -2218,66 +2426,54 @@ async function analizarHilos(){
 
 function renderHilos(grupos, sinGrupo){
   const container=document.getElementById('hilosContainer');
-
-  container.innerHTML=grupos.map(g=>`
-    <div style="border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden">
-      <!-- Cabecera del hilo -->
-      <div style="background:var(--bg2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${g.tipo==='radicado'?'📁':'🏛️'} ${g.label}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">${g.docs.length} documento(s) · ${g.tipo==='radicado'?'Radicado':'Entidad'}: ${g.entidad||g.label}</div>
-        </div>
-        <button class="btn sm" onclick="vincularHiloCompleto('${g.key}')">🔗 Vincular todos</button>
-      </div>
-      <!-- Documentos del hilo en orden cronológico -->
-      <div style="padding:12px 16px">
-        ${g.docs.map((d,i)=>`
-          <div style="display:flex;gap:12px;margin-bottom:${i<g.docs.length-1?'0':'0'}">
-            <!-- Línea de tiempo -->
-            <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:24px">
-              <div style="width:12px;height:12px;border-radius:50%;background:${d._esRespuesta?'var(--success)':STATUS_BADGE[d.status]==='danger'?'var(--danger)':STATUS_BADGE[d.status]==='warning'?'var(--warning)':'var(--accent)'};border:2px solid var(--bg);margin-top:8px;flex-shrink:0"></div>
-              ${i<g.docs.length-1?'<div style="width:2px;flex:1;background:var(--border);margin-top:2px;min-height:20px"></div>':''}
-            </div>
-            <!-- Contenido del documento -->
-            <div style="flex:1;padding:8px 10px;background:${d._esRespuesta?'var(--successbg)':'var(--bg)'};border:0.5px solid ${d._esRespuesta?'var(--successborder)':'var(--border)'};border-radius:var(--radius);margin-bottom:8px">
-              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-                <div style="flex:1;min-width:0">
-                  <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d._esRespuesta?'↩️ ':''} ${d.nombre}</div>
-                  <div style="font-size:11px;color:var(--text3);margin-top:3px;display:flex;flex-wrap:wrap;gap:4px">
-                    <span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span>
-                    <span class="badge ${STATUS_BADGE[d.status]||'neutral'}" style="font-size:10px">${d.status}</span>
-                    <span style="font-size:10px">📅 ${fmt(d.fecha)}</span>
-                    ${d.vence?`<span style="font-size:10px;color:var(--danger)">⏰ Vence: ${fmt(d.vence)}</span>`:''}
-                  </div>
-                  ${d.resumen?`<div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">${d.resumen.substring(0,120)}${d.resumen.length>120?'...':''}</div>`:''}
-                </div>
-                <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-                  <button class="btn sm" onclick="closeModal('');viewDoc(${d.id})" style="font-size:10px;padding:3px 8px">📄 Ficha</button>
-                  ${d.filePath?`<button class="btn sm primary" onclick="verPdfEnHilo(${d.id})" style="font-size:10px;padding:3px 8px">📂 Ver PDF</button>`:''}
-                  ${i>0?`<button class="btn sm" onclick="marcarComoRespuesta(${d.id},${g.docs[i-1].id})" style="font-size:10px;padding:3px 8px;background:var(--successbg);color:var(--successtext);border-color:var(--successborder)" title="Marcar como respuesta del documento anterior">↩️ Es respuesta</button>`:''}
-                </div>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `).join('')+
-  (sinGrupo.length>0?`
-    <div style="border:1px dashed var(--border);border-radius:var(--radius);padding:14px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:600;color:var(--text3);margin-bottom:10px">📄 Documentos sin proceso identificado (${sinGrupo.length})</div>
-      ${sinGrupo.map(d=>`
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)">
-          <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</div>
-            <div style="font-size:11px;color:var(--text3)"><span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span> · ${fmt(d.fecha)}</div>
-          </div>
-          ${d.filePath?`<button class="btn sm" onclick="verPdfEnHilo(${d.id})" style="font-size:10px">📂 PDF</button>`:''}
-          <button class="btn sm" onclick="viewDoc(${d.id})" style="font-size:10px">📄 Ver</button>
-        </div>
-      `).join('')}
-    </div>
-  `:'');
+  let html='';
+  grupos.forEach(g=>{
+    let docsHtml='';
+    g.docs.forEach((d,i)=>{
+      const dot=d._esRespuesta?'var(--success)':STATUS_BADGE[d.status]==='danger'?'var(--danger)':STATUS_BADGE[d.status]==='warning'?'var(--warning)':'var(--accent)';
+      const bg=d._esRespuesta?'var(--successbg)':'var(--bg)';
+      const border=d._esRespuesta?'var(--successborder)':'var(--border)';
+      const prefix=d._esRespuesta?'<span style="font-size:10px">&#x21A9;&#xFE0F;</span> ':'';
+      const line2=i<g.docs.length-1?'<div style="width:2px;flex:1;background:var(--border);margin-top:2px;min-height:20px"></div>':'';
+      const vence=d.vence?'<span style="font-size:10px;color:var(--danger)">Vence: '+fmt(d.vence)+'</span>':'';
+      const resumen=d.resumen?'<div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">'+d.resumen.substring(0,120)+(d.resumen.length>120?'..':'')+'</div>':'';
+      const btnPdf=d.filePath?'<button class="btn sm primary" onclick="verPdfEnHilo('+d.id+')" style="font-size:10px;padding:3px 8px">PDF</button>':'';
+      const btnResp=i>0?'<button class="btn sm" onclick="marcarComoRespuesta('+d.id+','+g.docs[i-1].id+')" style="font-size:10px;padding:3px 8px;background:var(--successbg);color:var(--successtext);border-color:var(--successborder)">Es respuesta</button>':'';
+      docsHtml+='<div style="display:flex;gap:12px;margin-bottom:0">'+
+        '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:24px">'+
+        '<div style="width:12px;height:12px;border-radius:50%;background:'+dot+';border:2px solid var(--bg);margin-top:8px;flex-shrink:0"></div>'+line2+'</div>'+
+        '<div style="flex:1;padding:8px 10px;background:'+bg+';border:0.5px solid '+border+';border-radius:var(--radius);margin-bottom:8px">'+
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'+
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+prefix+d.nombre+'</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:3px;display:flex;flex-wrap:wrap;gap:4px">'+
+        '<span class="badge '+(CAT_BADGE[d.cat]||'neutral')+'" style="font-size:10px">'+d.cat+'</span>'+
+        '<span class="badge '+(STATUS_BADGE[d.status]||'neutral')+'" style="font-size:10px">'+d.status+'</span>'+
+        '<span style="font-size:10px">'+fmt(d.fecha)+'</span>'+vence+'</div>'+resumen+'</div>'+
+        '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">'+
+        '<button class="btn sm" onclick="closeModal(\'\');viewDoc('+d.id+')" style="font-size:10px;padding:3px 8px">Ficha</button>'+
+        btnPdf+btnResp+'</div></div></div></div>';
+    });
+    const tipo=g.tipo==='radicado'?'Radicado':'Entidad';
+    html+='<div style="border:1.5px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden">'+
+      '<div style="background:var(--bg2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">'+
+      '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">'+g.label+'</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+g.docs.length+' documento(s) &middot; '+tipo+': '+g.entidad+'</div></div>'+
+      '<button class="btn sm" onclick="vincularHiloCompleto(\''+g.key+'\')">Vincular todos</button></div>'+
+      '<div style="padding:12px 16px">'+docsHtml+'</div></div>';
+  });
+  if(sinGrupo.length>0){
+    let sgHtml='';
+    sinGrupo.forEach(d=>{
+      const pdf=d.filePath?'<button class="btn sm" onclick="verPdfEnHilo('+d.id+')" style="font-size:10px">PDF</button>':'';
+      sgHtml+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)">'+
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+d.nombre+'</div>'+
+        '<div style="font-size:11px;color:var(--text3)"><span class="badge '+(CAT_BADGE[d.cat]||'neutral')+'" style="font-size:10px">'+d.cat+'</span> &middot; '+fmt(d.fecha)+'</div></div>'+
+        pdf+'<button class="btn sm" onclick="viewDoc('+d.id+')" style="font-size:10px">Ver</button></div>';
+    });
+    html+='<div style="border:1px dashed var(--border);border-radius:var(--radius);padding:14px;margin-bottom:20px">'+
+      '<div style="font-size:13px;font-weight:600;color:var(--text3);margin-bottom:10px">Sin proceso identificado ('+sinGrupo.length+')</div>'+sgHtml+'</div>';
+  }
+  container.innerHTML=html;
 }
 
 async function verPdfEnHilo(docId){
@@ -2294,7 +2490,7 @@ async function marcarComoRespuesta(respId, origenId){
   const docResp=db.docs.find(d=>d.id==respId);
   const docOrigen=db.docs.find(d=>d.id==origenId);
   if(!docResp||!docOrigen) return;
-  if(!confirm(`¿Marcar "${docResp.nombre}" como respuesta de "${docOrigen.nombre}"?\n\nEsto cambiará el estado del documento original a "Respondido" y los vinculará.`)) return;
+  if(!confirm('¿Marcar "'+docResp.nombre+'" como respuesta de "'+docOrigen.nombre+'"?\n\nEsto cambiará el estado a Respondido y los vinculará.')) return;
 
   // Cambiar estado del original
   const idxO=db.docs.findIndex(d=>d.id==origenId);
@@ -2344,7 +2540,7 @@ async function vincularHiloCompleto(grupoKey){
   });
   await saveData();
   status.style.cssText='display:block;padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:16px;background:var(--successbg);color:var(--successtext);border:0.5px solid var(--successborder)';
-  status.textContent=`✅ ${g.docs.length} documentos vinculados entre sí (${vinculados} vínculos nuevos).`;
+  status.textContent=g.docs.length+' documentos vinculados ('+vinculados+' vinculos nuevos).';
 }
 
 // ===== MÓDULO ANÁLISIS LEGAL =====
@@ -2361,14 +2557,7 @@ function renderAnBusqueda(){
     return hay.includes(q);
   }).slice(0,8);
   if(docs.length===0){res.innerHTML='<div style="padding:10px;font-size:12px;color:var(--text3)">No se encontraron documentos.</div>';return;}
-  res.innerHTML=docs.map(d=>`
-    <div onclick="seleccionarDocAnalisis(${d.id})" style="padding:10px 12px;cursor:pointer;border-bottom:0.5px solid var(--border)" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
-      <div style="font-size:12px;font-weight:500">${d.nombre}</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:2px">
-        <span class="badge ${CAT_BADGE[d.cat]||'neutral'}" style="font-size:10px">${d.cat}</span> · ${fmt(d.fecha)} ${d.entidad?'· '+d.entidad:''}
-      </div>
-    </div>
-  `).join('');
+  res.innerHTML=docs.map(d=>'<div onclick="seleccionarDocAnalisis('+d.id+')" style="padding:10px 12px;cursor:pointer;border-bottom:0.5px solid var(--border)" onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'\'">'+'<div style="font-size:12px;font-weight:500">'+d.nombre+'</div>'+'<div style="font-size:11px;color:var(--text3);margin-top:2px"><span class="badge '+(CAT_BADGE[d.cat]||'neutral')+'" style="font-size:10px">'+d.cat+'</span> &middot; '+fmt(d.fecha)+' '+(d.entidad?'&middot; '+d.entidad:'')+'</div></div>').join('');
 }
 
 function seleccionarDocAnalisis(id){
@@ -2379,7 +2568,7 @@ function seleccionarDocAnalisis(id){
   document.getElementById('an_buscar').value='';
   document.getElementById('an_seleccionado').style.display='block';
   document.getElementById('an_sel_nombre').textContent=d.nombre;
-  document.getElementById('an_sel_info').textContent=`${d.cat} · ${d.status} · ${fmt(d.fecha)}${d.entidad?' · '+d.entidad:''}`;
+  document.getElementById('an_sel_info').textContent=''+d.cat+' · '+d.status+' · '+fmt(d.fecha)+''+d.entidad?' · '+d.entidad:''+'';
 }
 
 function limpiarAnalisis(){
@@ -2403,7 +2592,7 @@ async function handleAnFile(input,num){
   if(!file) return;
   anArchivos[num]=file;
   const preview=document.getElementById('an_file'+num+'_preview');
-  preview.innerHTML=`<div style="font-size:12px;color:var(--successtext);background:var(--successbg);padding:6px 10px;border-radius:var(--radius);margin-top:4px">✓ ${file.name} (${(file.size/1024).toFixed(0)}KB)</div>`;
+  preview.innerHTML='<div style="font-size:12px;color:var(--successtext);background:var(--successbg);padding:6px 10px;border-radius:var(--radius);margin-top:4px">'+file.name+' ('+(file.size/1024).toFixed(0)+'KB)</div>';
 }
 
 async function ejecutarAnalisis(){
@@ -2428,14 +2617,14 @@ async function ejecutarAnalisis(){
     const relacionados=(d.relacionados||[]).map(rid=>{
       const r=db.docs.find(x=>x.id==rid);
       if(!r) return '';
-      return `- "${r.nombre}" [${r.cat}/${r.status}] Fecha: ${r.fecha}${r.entidad?' | Entidad: '+r.entidad:''} | Radicado: ${r.radicado||'N/A'}\n  Resumen: ${r.resumen||'Sin resumen'}\n  Notas: ${r.notas||'Sin notas'}`;
+      return '- "'+r.nombre+'" ['+r.cat+'/'+r.status+'] Fecha: '+r.fecha+(r.entidad?' | Entidad: '+r.entidad:'')+' | Rad: '+(r.radicado||'N/A')+'\n  Resumen: '+(r.resumen||'Sin resumen')+'\n  Notas: '+(r.notas||'Sin notas');
     }).filter(Boolean).join('\n\n');
 
     // Contexto completo del expediente (todos los docs relevantes)
     const todosRelacionados=db.docs.filter(dx=>dx.id!==d.id&&(
       (d.radicado&&dx.radicado&&d.radicado.split(/[;,]/).some(r=>dx.radicado.includes(r.trim())))||
       (d.entidad&&dx.entidad&&dx.entidad===d.entidad)
-    )).slice(0,8).map(dx=>`- "${dx.nombre}" [${dx.cat}/${dx.status}] ${fmt(dx.fecha)} | ${dx.resumen||''}`.substring(0,200)).join('\n');
+    )).slice(0,8).map(dx=>('- "'+dx.nombre+'" ['+dx.cat+'/'+dx.status+'] '+fmt(dx.fecha)+' | '+(dx.resumen||'')).substring(0,200)).join('\n');
 
     const hoy=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
     const enfoque=document.getElementById('an_enfoque').value.trim();
@@ -2446,18 +2635,18 @@ async function ejecutarAnalisis(){
       const file=anArchivos[num];
       if(!file) continue;
       const ext=file.name.split('.').pop().toLowerCase();
-      status.textContent=`Leyendo ${file.name}...`;
+      status.textContent='Leyendo '+file.name+'...';
       try{
         if(['jpg','jpeg','png','heic','webp'].includes(ext)){
-          contenidoArchivos+=`\n[Archivo ${num}: ${file.name} — imagen adjunta para análisis visual]`;
+          contenidoArchivos+='\n[Archivo '+num+': '+file.name+' - imagen adjunta para analisis visual]';
         }else if(ext==='pdf'){
           let txt='';
           try{ txt=await extractPdfText(file); }catch(e){}
-          if(txt.length>100) contenidoArchivos+=`\n\n[Contenido del archivo ${num}: ${file.name}]\n${txt.substring(0,3000)}`;
-          else contenidoArchivos+=`\n[Archivo ${num}: ${file.name} — PDF escaneado, análisis por imagen]`;
+          if(txt.length>100) contenidoArchivos+='\n\n[Contenido del archivo '+num+': '+file.name+']\n'+txt.substring(0,3000);
+          else contenidoArchivos+='\n[Archivo '+num+': '+file.name+' - PDF escaneado]';
         }else{
           const txt=await file.text().catch(()=>'');
-          if(txt.length>50) contenidoArchivos+=`\n\n[Contenido del archivo ${num}: ${file.name}]\n${txt.substring(0,2000)}`;
+          if(txt.length>50) contenidoArchivos+='\n\n[Contenido del archivo '+num+': '+file.name+']\n'+txt.substring(0,2000);
         }
       }catch(e){ console.warn('Error leyendo archivo',num,e); }
     }
@@ -2843,7 +3032,7 @@ function toggleRelManual(id,checked){
   else _relManualSeleccionados.delete(id);
   const totalSel=_relManualSeleccionados.size;
   const c=document.getElementById('relSelCounter');
-  if(c){c.style.display=totalSel>0?'block':'none';c.textContent=`✓ ${totalSel} seleccionado(s) — sigue buscando para agregar más`;}
+  if(c){c.style.display=totalSel>0?'block':'none';c.textContent='✓ '+totalSel+' seleccionado(s) — sigue buscando para agregar más';}
 }
 
 function confirmarRelManual(){
@@ -3013,6 +3202,7 @@ function openDocModal(editId=null){
   if(fileWarn) fileWarn.style.display='none';
   document.getElementById('d_diligencia_fecha').value='';
   document.getElementById('d_diligencia_hora').value='';
+  document.getElementById('d_carpeta').value='';
 
   if(isEdit){
     const doc=db.docs.find(d=>d.id===editId);
@@ -3029,6 +3219,7 @@ function openDocModal(editId=null){
     document.getElementById('d_vence').value=doc.vence||'';
     document.getElementById('d_diligencia_fecha').value=doc.diligFecha||'';
     document.getElementById('d_diligencia_hora').value=doc.diligHora||'';
+    document.getElementById('d_carpeta').value=doc.carpeta||'';
     document.getElementById('d_notas').value=doc.notas||'';
     document.getElementById('d_plazo').value='';
     // Mostrar archivo existente si tiene
@@ -3038,7 +3229,7 @@ function openDocModal(editId=null){
       existInfo.innerHTML=`📎 Archivo actual: <strong>${doc.fileName}</strong> — <button class="btn sm" onclick="openFile('${doc.filePath}')">Ver</button> <span style="color:var(--text3)">(Si subes uno nuevo, reemplazará al actual)</span>`;
     }else{existInfo.style.display='none';}
   }else{
-    ['d_fecha','d_fechaRad','d_nombre','d_entidad','d_radicado','d_resumen','d_ubicacion','d_vence','d_notas'].forEach(id=>document.getElementById(id).value='');
+    ['d_fecha','d_fechaRad','d_nombre','d_entidad','d_radicado','d_resumen','d_ubicacion','d_vence','d_notas','d_carpeta'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('d_cat').value='Pruebas';
     document.getElementById('d_status').value='Vigente';
     document.getElementById('d_plazo').value='';
@@ -3121,6 +3312,7 @@ async function saveDoc(){
           relacionados:existing.relacionados||[],
           diligFecha:document.getElementById('d_diligencia_fecha').value,
           diligHora:document.getElementById('d_diligencia_hora').value,
+          carpeta:document.getElementById('d_carpeta').value,
           ...(filePath?{filePath,fileName}:{})
         };
         // Actualizar evento de diligencia si cambió
@@ -3141,7 +3333,7 @@ async function saveDoc(){
       const relSeleccionados=getRelacionadosSeleccionados();
       const diligFecha=document.getElementById('d_diligencia_fecha').value;
       const diligHora=document.getElementById('d_diligencia_hora').value;
-      const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),relacionados:relSeleccionados,diligFecha,diligHora,filePath,fileName,fileSize,fileHash};
+      const doc={id:docId,fecha:f,fechaRad:document.getElementById('d_fechaRad').value,nombre:n,cat:document.getElementById('d_cat').value,status:document.getElementById('d_status').value,entidad:document.getElementById('d_entidad').value.trim(),radicado:document.getElementById('d_radicado').value.trim(),resumen:document.getElementById('d_resumen').value.trim(),ubicacion:document.getElementById('d_ubicacion').value.trim(),vence:vence,notas:document.getElementById('d_notas').value.trim(),relacionados:relSeleccionados,diligFecha,diligHora,carpeta:document.getElementById('d_carpeta').value,filePath,fileName,fileSize,fileHash};
       db.docs.push(doc);
       // Vincular en ambas direcciones
       relSeleccionados.forEach(id=>{
@@ -3512,7 +3704,7 @@ async function marcarNoEsDuplicado(id){
   });
   // Actualizar contador de excluidos
   const exclEl=document.getElementById('dupExcluidosInfo');
-  if(exclEl) exclEl.textContent=`ℹ️ ${db.noEsDuplicado.length} documento(s) excluido(s) del escáner.`;
+  if(exclEl) exclEl.textContent='ℹ️ '+db.noEsDuplicado.length+' documento(s) excluido(s) del escáner.';
 }
 
 async function delItemDup(id){
@@ -3533,7 +3725,7 @@ function limpiarFiltros(){
   renderDocs();
 }
 
-function renderDocs(){
+function renderDocs(carpetaFiltro){
   const rawQ=(document.getElementById('docSearch')?.value||'').trim();
   const cat=document.getElementById('docCat')?.value||'';
   const st=document.getElementById('docStatus')?.value||'';
@@ -3542,6 +3734,7 @@ function renderDocs(){
   let docs=[...db.docs].filter(d=>{
     if(cat&&d.cat!==cat)return false;
     if(st&&d.status!==st)return false;
+    if(carpetaFiltro!==undefined&&d.carpeta!==carpetaFiltro)return false;
     if(q){
       const haystack=normStr([d.nombre,d.resumen,d.entidad,d.radicado,d.notas,d.ubicacion,d.cat,d.status].join(' '));
       if(!haystack.includes(q))return false;
@@ -3568,10 +3761,10 @@ function renderDocs(){
     const total=db.docs.length;
     const filtrado=docs.length;
     if(rawQ||cat||st){
-      count.textContent=`${filtrado} de ${total} documento(s)`;
+      count.textContent=''+filtrado+' de '+total+' documento(s)';
       count.style.color=filtrado===0?'var(--danger)':'var(--text3)';
     }else{
-      count.textContent=`${total} documento(s)`;
+      count.textContent=''+total+' documento(s)';
       count.style.color='var(--text3)';
     }
   }
@@ -3672,7 +3865,7 @@ async function confirmarVinculo(docOrigenId, respuestaId){
   await saveData();
   closeModal('vincularRespModal');
   renderDocs();
-  alert(`✅ Vinculados correctamente.\n\n"${docOrigen.nombre}" ahora está en estado Respondido y vinculado a la respuesta.`);
+  alert('Vinculados correctamente.\n\n"'+docOrigen.nombre+'" ahora está en estado Respondido y vinculado a la respuesta.');
 }
 
 async function registrarRespuesta(){
@@ -3892,7 +4085,7 @@ function renderAlerts(){
 function renderCalendar(){
   const first=new Date(calYear,calMonth,1);
   const last=new Date(calYear,calMonth+1,0);
-  document.getElementById('calTitle').textContent=`${MONTHS[calMonth]} ${calYear}`;
+  document.getElementById('calTitle').textContent=''+MONTHS[calMonth]+' '+calYear+'';
   const today=new Date();today.setHours(0,0,0,0);
   const grid=document.getElementById('calGrid');if(!grid)return;
   const startDay=first.getDay();
