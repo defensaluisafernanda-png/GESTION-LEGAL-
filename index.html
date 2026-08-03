@@ -3487,7 +3487,7 @@ function renderView(id){
     case 'redaccion':setTimeout(()=>{renderTiposDoc();renderRdHistorial();},50);break;
     case 'panel':renderPanel();break;
     case 'analisis':limpiarAnalisis();break;
-    case 'relaciones':document.getElementById('hilosContainer').innerHTML='<div style="text-align:center;padding:48px;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px">🔗</div><div style="font-size:14px;font-weight:500;margin-bottom:6px">Haz clic en "Analizar y agrupar documentos"</div><div style="font-size:13px">La app agrupará tus '+db.docs.length+' documentos por proceso automáticamente.</div></div>';break;
+    case 'relaciones':analizarHilos();break;
   }
 }
 function navigate(id){
