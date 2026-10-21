@@ -1088,13 +1088,31 @@ function detectarCaso(doc){
   return bs>=1?best:'';
 }
 
+function detectarCasos(doc){
+  const t=_cn([doc.nombre,doc.resumen,doc.radicado,doc.entidad,doc.notas].join(' '));
+  const pts=CASOS.map(c=>{let s=0;c.kw.forEach(k=>{ if(t.includes(_cn(k))) s+=/\d/.test(k)?5:1; });return {id:c.id,s};}).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+  const principal=pts.length?pts[0].id:'';
+  const extras=pts.slice(1).filter(x=>x.s>=3).map(x=>x.id);
+  return {principal,extras};
+}
+function casosDe(d){
+  const s=[];
+  [d.caso].concat(d.casos||[]).forEach(x=>{ if(x&&!s.includes(x)) s.push(x); });
+  return s;
+}
+function extrasMarcados(){
+  return CASOS.filter(c=>{const cb=document.getElementById('dce_'+c.id);return cb&&cb.checked;}).map(c=>c.id);
+}
+
 // Campo Caso en el formulario y filtro en Documentos
 (function(){
   const car=document.getElementById('d_carpeta');
   if(car&&!document.getElementById('d_caso')){
     car.closest('.form-row').insertAdjacentHTML('beforebegin',
-      '<div class="form-row"><label>🎯 Caso</label><select id="d_caso"><option value="">— Sin asignar (se detecta al guardar) —</option>'+
-      CASOS.map(c=>'<option value="'+c.id+'">'+c.icon+' '+c.label+'</option>').join('')+'</select></div>');
+      '<div class="form-row"><label>🎯 Caso principal</label><select id="d_caso"><option value="">— Sin asignar (se detecta al guardar) —</option>'+
+      CASOS.map(c=>'<option value="'+c.id+'">'+c.icon+' '+c.label+'</option>').join('')+'</select></div>'+
+      '<div class="form-row"><label>➕ También pertenece a (otros casos)</label><div style="display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px">'+
+      CASOS.map(c=>'<label style="display:flex;align-items:center;gap:4px;font-weight:400;cursor:pointer"><input type="checkbox" id="dce_'+c.id+'"> '+c.icon+' '+c.label+'</label>').join('')+'</div></div>');
   }
   const st=document.getElementById('docStatus');
   if(st&&!document.getElementById('docCaso')){
@@ -1114,6 +1132,7 @@ openDocModal=function(editId=null){
   if(s){
     const d=(editId!==null&&editId!==undefined)?db.docs.find(x=>x.id===editId):null;
     s.value=(d&&d.caso)||'';
+    CASOS.forEach(c=>{const cb=document.getElementById('dce_'+c.id);if(cb)cb.checked=!!(d&&(d.casos||[]).includes(c.id));});
   }
   const c=document.getElementById('d_cat');
   if(c&&!c.value) c.value='Otro';
@@ -1124,14 +1143,15 @@ extractDocData=async function(){
   await _o_extractDocData();
   const s=document.getElementById('d_caso');
   if(s&&!s.value){
-    const c=detectarCaso({
+    const r=detectarCasos({
       nombre:document.getElementById('d_nombre').value,
       resumen:document.getElementById('d_resumen').value,
       radicado:document.getElementById('d_radicado').value,
       entidad:document.getElementById('d_entidad').value,
       notas:document.getElementById('d_notas').value
     });
-    if(c) s.value=c;
+    if(r.principal) s.value=r.principal;
+    r.extras.forEach(id=>{const cb=document.getElementById('dce_'+id);if(cb)cb.checked=true;});
   }
 };
 
@@ -1140,14 +1160,20 @@ saveDoc=async function(){
   const editId=document.getElementById('d_id').value;
   const antes=new Set(db.docs.map(d=>d.id));
   const casoSel=document.getElementById('d_caso')?document.getElementById('d_caso').value:'';
+  const extrasSel=extrasMarcados();
   await _o_saveDoc();
   let doc=null;
   if(editId) doc=db.docs.find(d=>String(d.id)===String(editId));
   else doc=db.docs.find(d=>!antes.has(d.id));
   if(!doc) return;
-  const nuevo=casoSel||doc.caso||detectarCaso(doc);
+  const det=detectarCasos(doc);
+  const nuevo=casoSel||doc.caso||det.principal;
   let cambio=false;
   if(nuevo&&doc.caso!==nuevo){ doc.caso=nuevo; cambio=true; }
+  let ex=extrasSel.slice();
+  if(!editId&&!casoSel&&ex.length===0) ex=det.extras.slice();
+  ex=ex.filter(id=>id!==doc.caso);
+  if(JSON.stringify(ex)!==JSON.stringify(doc.casos||[])){ doc.casos=ex; cambio=true; }
   if(editId&&doc.porRevisar){ doc.porRevisar=false; cambio=true; }
   if(cambio) await saveData();
 };
@@ -1163,10 +1189,10 @@ renderDocs=function(carpetaFiltro){
     if(st&&d.status!==st)return false;
     if(carpetaFiltro!==undefined&&d.carpeta!==carpetaFiltro)return false;
     if(_soloRevisar&&!d.porRevisar)return false;
-    if(caso==='__none'){ if(d.caso)return false; }
-    else if(caso&&d.caso!==caso)return false;
+    if(caso==='__none'){ if(casosDe(d).length)return false; }
+    else if(caso&&!casosDe(d).includes(caso))return false;
     if(words.length){
-      const h=_n2([d.nombre,d.resumen,d.entidad,d.radicado,d.notas,d.ubicacion,d.cat,d.status,casoLabel(d.caso)].join(' '));
+      const h=_n2([d.nombre,d.resumen,d.entidad,d.radicado,d.notas,d.ubicacion,d.cat,d.status,casosDe(d).map(casoLabel).join(' ')].join(' '));
       if(!words.every(w=>h.includes(w)))return false;
     }
     return true;
@@ -1200,7 +1226,7 @@ renderDocs=function(carpetaFiltro){
   const canEd=canEdit();const canDel=canDelete();
   tb.innerHTML=docs.length===0?`<tr><td colspan="9"><div class="empty"><span class="empty-icon">📄</span>Sin documentos</div></td></tr>`:docs.map(d=>`<tr style="cursor:pointer" onclick="viewDoc(${d.id})" title="Ver detalle">
     <td style="white-space:nowrap;font-size:12px;color:var(--text3)">${fmt(d.fecha)}</td>
-    <td style="max-width:220px"><div class="td-name">${d.nombre}</div><div class="td-sub">${(d.resumen||'').substring(0,70)}${(d.resumen||'').length>70?'…':''}</div>${d.caso?`<div style="margin-top:3px"><span class="badge neutral" style="font-size:10px">${casoLabel(d.caso)}</span></div>`:''}${d.porRevisar?`<div style="margin-top:3px"><span style="font-size:10px;background:var(--warningbg);color:var(--warningtext);border:0.5px solid var(--warningborder);border-radius:10px;padding:1px 7px">📥 Por revisar</span></div>`:''}</td>
+    <td style="max-width:220px"><div class="td-name">${d.nombre}</div><div class="td-sub">${(d.resumen||'').substring(0,70)}${(d.resumen||'').length>70?'…':''}</div>${casosDe(d).length?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">${casosDe(d).map((id,i)=>`<span class="badge neutral" style="font-size:10px">${casoLabel(id)}${i===0&&casosDe(d).length>1?' ★':''}</span>`).join('')}</div>`:''}${d.porRevisar?`<div style="margin-top:3px"><span style="font-size:10px;background:var(--warningbg);color:var(--warningtext);border:0.5px solid var(--warningborder);border-radius:10px;padding:1px 7px">📥 Por revisar</span></div>`:''}</td>
     <td><span class="badge ${CAT_BADGE[d.cat]||'neutral'}">${d.cat}</span></td>
     <td style="font-size:12px;max-width:110px;color:var(--text2)">${d.entidad||'—'}</td>
     <td style="font-size:11px;color:var(--text3);font-family:monospace;max-width:110px;overflow:hidden;text-overflow:ellipsis">${d.radicado||'—'}</td>
@@ -1232,15 +1258,19 @@ function filtrarPorCaso(id){
 }
 
 asignarCarpetasAutomatico=async function(){
-  let a=0,s=0;
+  let a=0,s=0,x=0;
   db.docs.forEach(d=>{
+    const r=detectarCasos(d);
     if(!d.caso){
-      const c=detectarCaso(d);
-      if(c){d.caso=c;a++;}else s++;
+      if(r.principal){d.caso=r.principal;a++;}else s++;
+    }
+    if(d.casos===undefined){
+      d.casos=r.extras.filter(id=>id!==d.caso);
+      if(d.casos.length) x++;
     }
   });
   await saveData();
-  alert('Asignación completada:\n✓ '+a+' documentos asignados\n⚠️ '+s+' sin caso (ábrelos con ✏️ y elige el caso)');
+  alert('Asignación completada:\n✓ '+a+' documentos con caso principal asignado\n➕ '+x+' documentos también vinculados a otros casos\n⚠️ '+s+' sin caso (ábrelos con ✏️ y elige el caso)\n\nLos casos que usted ya había asignado no se cambiaron.');
   renderPanel();
 };
 
@@ -1251,7 +1281,7 @@ renderPanel=function(){
   const cerrados=new Set(['Respondido','Ejecutoriado','Archivado','No aplica']);
   const grupos={'':[]};
   CASOS.forEach(c=>{grupos[c.id]=[];});
-  db.docs.forEach(d=>{(grupos[d.caso]||grupos['']).push(d);});
+  db.docs.forEach(d=>{const cs=casosDe(d).filter(id=>grupos[id]);if(!cs.length)grupos[''].push(d);else cs.forEach(id=>grupos[id].push(d));});
   const dias=f=>Math.round((new Date(f+'T00:00:00')-hoy)/86400000);
   const tarjetas=CASOS.map(c=>{
     const docs=grupos[c.id];
@@ -1417,7 +1447,9 @@ async function cargarMultiples(fileList){
         filePath,fileName:file.name,fileSize:file.size,fileHash:hash,
         porRevisar:true
       };
-      doc.caso=detectarCaso(doc)||'';
+      const det=detectarCasos(doc);
+      doc.caso=det.principal||'';
+      doc.casos=det.extras.filter(id=>id!==doc.caso);
       db.docs.push(doc);
       await saveData();
       ok++;
