@@ -1062,6 +1062,247 @@ tr:hover td{background:var(--bg2)}
 </div>
 
 <script>
+// ===== MÓDULO CASOS v1 =====
+var el={};
+const CASOS=[
+  {id:'vif',label:'Familia / Comisaría (VIF)',icon:'🛡️',kw:['002-15088','15088','26195','25671','1083','1217','1510','comisaria','medida de proteccion','violencia intrafamiliar','reincidencia','alejamiento']},
+  {id:'penal',label:'Penal (Fiscalía)',icon:'⚖️',kw:['05001609916620225977701','05266600020320225141400','5977701','5141400','fiscalia','juzgado penal','principio de oportunidad','spoa','denuncia']},
+  {id:'patrimonial',label:'Patrimonial y compraventa',icon:'🏠',kw:['compraventa','promesa','inmueble','apartamento','1145277','1145132','1145197','certificado de tradicion','embargo','arriendo','canon','sociedad patrimonial','frutos civiles']},
+  {id:'tomas',label:'Tomás: custodia, visitas y alimentos',icon:'👦',kw:['custodia','visitas','regimen de visitas','cuota alimentaria','alimentos','cumpleanos','vacaciones']},
+  {id:'pard',label:'Tomás: restablecimiento de derechos',icon:'🧒',kw:['restablecimiento de derechos','proceso administrativo de restablecimiento','defensoria de familia','icbf','ley 1098','ley 1878']},
+  {id:'laboral',label:'Laboral: Hospital La María',icon:'🏥',kw:['hospital la maria','beatriz','cuadro de turnos','turnos','coordinadora medica','jefe de personal','seccional de salud','provisionalidad','horas mensuales','nomina']},
+  {id:'prosalud',label:'ProSalud',icon:'🤝',kw:['prosalud','contrato sindical','sindicato']},
+  {id:'otros',label:'Otros',icon:'📁',kw:[]}
+];
+function _cn(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+function _n2(s){return _cn(s).replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
+function casoLabel(id){const c=CASOS.find(x=>x.id===id);return c?c.icon+' '+c.label:'Sin caso';}
+function detectarCaso(doc){
+  const t=_cn([doc.nombre,doc.resumen,doc.radicado,doc.entidad,doc.notas].join(' '));
+  let best='',bs=0;
+  CASOS.forEach(c=>{
+    let s=0;
+    c.kw.forEach(k=>{ if(t.includes(_cn(k))) s+=/\d/.test(k)?5:1; });
+    if(s>bs){bs=s;best=c.id;}
+  });
+  return bs>=1?best:'';
+}
+
+// Campo Caso en el formulario y filtro en Documentos
+(function(){
+  const car=document.getElementById('d_carpeta');
+  if(car&&!document.getElementById('d_caso')){
+    car.closest('.form-row').insertAdjacentHTML('beforebegin',
+      '<div class="form-row"><label>🎯 Caso</label><select id="d_caso"><option value="">— Sin asignar (se detecta al guardar) —</option>'+
+      CASOS.map(c=>'<option value="'+c.id+'">'+c.icon+' '+c.label+'</option>').join('')+'</select></div>');
+  }
+  const st=document.getElementById('docStatus');
+  if(st&&!document.getElementById('docCaso')){
+    st.insertAdjacentHTML('afterend',
+      '<select id="docCaso" onchange="renderDocs()" style="flex:1"><option value="">Todos los casos</option>'+
+      CASOS.map(c=>'<option value="'+c.id+'">'+c.icon+' '+c.label+'</option>').join('')+
+      '<option value="__none">Sin caso asignado</option></select>');
+  }
+  const b=document.getElementById('btnAsignarCarpetas');
+  if(b) b.textContent='🗂️ Asignar casos automáticamente';
+})();
+
+const _o_openDocModal=openDocModal;
+openDocModal=function(editId=null){
+  _o_openDocModal(editId);
+  const s=document.getElementById('d_caso');
+  if(s){
+    const d=(editId!==null&&editId!==undefined)?db.docs.find(x=>x.id===editId):null;
+    s.value=(d&&d.caso)||'';
+  }
+  const c=document.getElementById('d_cat');
+  if(c&&!c.value) c.value='Otro';
+};
+
+const _o_extractDocData=extractDocData;
+extractDocData=async function(){
+  await _o_extractDocData();
+  const s=document.getElementById('d_caso');
+  if(s&&!s.value){
+    const c=detectarCaso({
+      nombre:document.getElementById('d_nombre').value,
+      resumen:document.getElementById('d_resumen').value,
+      radicado:document.getElementById('d_radicado').value,
+      entidad:document.getElementById('d_entidad').value,
+      notas:document.getElementById('d_notas').value
+    });
+    if(c) s.value=c;
+  }
+};
+
+const _o_saveDoc=saveDoc;
+saveDoc=async function(){
+  const editId=document.getElementById('d_id').value;
+  const antes=new Set(db.docs.map(d=>d.id));
+  const casoSel=document.getElementById('d_caso')?document.getElementById('d_caso').value:'';
+  await _o_saveDoc();
+  let doc=null;
+  if(editId) doc=db.docs.find(d=>String(d.id)===String(editId));
+  else doc=db.docs.find(d=>!antes.has(d.id));
+  if(!doc) return;
+  const nuevo=casoSel||doc.caso||detectarCaso(doc);
+  if(nuevo&&doc.caso!==nuevo){ doc.caso=nuevo; await saveData(); }
+};
+
+renderDocs=function(carpetaFiltro){
+  const rawQ=(document.getElementById('docSearch')?.value||'').trim();
+  const cat=document.getElementById('docCat')?.value||'';
+  const st=document.getElementById('docStatus')?.value||'';
+  const caso=document.getElementById('docCaso')?.value||'';
+  const words=_n2(rawQ).split(' ').filter(w=>w.length>=2);
+  let docs=[...db.docs].filter(d=>{
+    if(cat&&d.cat!==cat)return false;
+    if(st&&d.status!==st)return false;
+    if(carpetaFiltro!==undefined&&d.carpeta!==carpetaFiltro)return false;
+    if(caso==='__none'){ if(d.caso)return false; }
+    else if(caso&&d.caso!==caso)return false;
+    if(words.length){
+      const h=_n2([d.nombre,d.resumen,d.entidad,d.radicado,d.notas,d.ubicacion,d.cat,d.status,casoLabel(d.caso)].join(' '));
+      if(!words.every(w=>h.includes(w)))return false;
+    }
+    return true;
+  }).sort((a,b)=>{
+    const sort=document.getElementById('docSort')?.value||'fecha_desc';
+    const fa=a.fecha||'',fb=b.fecha||'';
+    const na=(a.nombre||'').toLowerCase(),nb=(b.nombre||'').toLowerCase();
+    const va=a.vence||'9999-99-99',vb=b.vence||'9999-99-99';
+    switch(sort){
+      case 'fecha_asc':return fa.localeCompare(fb);
+      case 'nombre_asc':return na.localeCompare(nb);
+      case 'nombre_desc':return nb.localeCompare(na);
+      case 'vence_asc':return va.localeCompare(vb);
+      case 'cat_asc':return (a.cat||'').localeCompare(b.cat||'');
+      case 'estado_asc':return (a.status||'').localeCompare(b.status||'');
+      default:return fb.localeCompare(fa);
+    }
+  });
+  const count=document.getElementById('docsCount');
+  if(count){
+    const total=db.docs.length;
+    if(rawQ||cat||st||caso){
+      count.textContent=docs.length+' de '+total+' documento(s)';
+      count.style.color=docs.length===0?'var(--danger)':'var(--text3)';
+    }else{
+      count.textContent=total+' documento(s)';
+      count.style.color='var(--text3)';
+    }
+  }
+  const tb=document.getElementById('docsTable');if(!tb)return;
+  const canEd=canEdit();const canDel=canDelete();
+  tb.innerHTML=docs.length===0?`<tr><td colspan="9"><div class="empty"><span class="empty-icon">📄</span>Sin documentos</div></td></tr>`:docs.map(d=>`<tr style="cursor:pointer" onclick="viewDoc(${d.id})" title="Ver detalle">
+    <td style="white-space:nowrap;font-size:12px;color:var(--text3)">${fmt(d.fecha)}</td>
+    <td style="max-width:220px"><div class="td-name">${d.nombre}</div><div class="td-sub">${(d.resumen||'').substring(0,70)}${(d.resumen||'').length>70?'…':''}</div>${d.caso?`<div style="margin-top:3px"><span class="badge neutral" style="font-size:10px">${casoLabel(d.caso)}</span></div>`:''}</td>
+    <td><span class="badge ${CAT_BADGE[d.cat]||'neutral'}">${d.cat}</span></td>
+    <td style="font-size:12px;max-width:110px;color:var(--text2)">${d.entidad||'—'}</td>
+    <td style="font-size:11px;color:var(--text3);font-family:monospace;max-width:110px;overflow:hidden;text-overflow:ellipsis">${d.radicado||'—'}</td>
+    <td><span class="badge ${STATUS_BADGE[d.status]||'neutral'}">${d.status}</span></td>
+    <td>${deadlineBadge(d.vence)}</td>
+    <td>${d.filePath?`<button class="btn sm" onclick="event.stopPropagation();openFile('${d.filePath}')">📂 Ver</button>`:''}</td>
+    <td style="white-space:nowrap" onclick="event.stopPropagation()">
+      ${canEd?`<button class="btn sm" onclick="openDocModal(${d.id})" title="Editar">✏️</button>`:''}
+      ${canDel?`<button class="btn sm danger" onclick="delItem('docs',${d.id})" title="Eliminar">🗑</button>`:''}
+    </td>
+  </tr>`).join('');
+};
+
+const _o_limpiarFiltros=limpiarFiltros;
+limpiarFiltros=function(){
+  _o_limpiarFiltros();
+  const s=document.getElementById('docCaso');
+  if(s){s.value='';renderDocs();}
+};
+
+function filtrarPorCaso(id){
+  navigate('documentos');
+  document.getElementById('docSearch').value='';
+  document.getElementById('docCat').value='';
+  document.getElementById('docStatus').value='';
+  const s=document.getElementById('docCaso');
+  if(s) s.value=id;
+  renderDocs();
+}
+
+asignarCarpetasAutomatico=async function(){
+  let a=0,s=0;
+  db.docs.forEach(d=>{
+    if(!d.caso){
+      const c=detectarCaso(d);
+      if(c){d.caso=c;a++;}else s++;
+    }
+  });
+  await saveData();
+  alert('Asignación completada:\n✓ '+a+' documentos asignados\n⚠️ '+s+' sin caso (ábrelos con ✏️ y elige el caso)');
+  renderPanel();
+};
+
+renderPanel=function(){
+  const el=document.getElementById('panelContent');
+  if(!el)return;
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const cerrados=new Set(['Respondido','Ejecutoriado','Archivado','No aplica']);
+  const grupos={'':[]};
+  CASOS.forEach(c=>{grupos[c.id]=[];});
+  db.docs.forEach(d=>{(grupos[d.caso]||grupos['']).push(d);});
+  const dias=f=>Math.round((new Date(f+'T00:00:00')-hoy)/86400000);
+  const tarjetas=CASOS.map(c=>{
+    const docs=grupos[c.id];
+    if(docs.length===0){
+      return `<div style="border:1px dashed var(--border);border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px"><div style="flex:1;font-size:13px;color:var(--text3)">${c.icon} <strong>${c.label}</strong> — sin documentos aún</div><button class="btn sm" onclick="openDocModal()">+ Documento</button></div>`;
+    }
+    const abiertos=docs.filter(d=>!cerrados.has(d.status));
+    const pend=docs.filter(d=>['Pendiente respuesta','No respondido'].includes(d.status)).length;
+    const vencidos=docs.filter(d=>d.status==='Vencido'||(d.vence&&dias(d.vence)<0&&!cerrados.has(d.status))).length;
+    const conVence=abiertos.filter(d=>d.vence).sort((a,b)=>a.vence.localeCompare(b.vence));
+    let venceInfo='';
+    if(conVence.length){
+      const p=conVence[0],n=dias(p.vence);
+      const nom=p.nombre.substring(0,50);
+      venceInfo=n<0?`<span style="color:var(--danger);font-weight:600">⚠️ Plazo cumplido hace ${Math.abs(n)} día(s): ${nom}</span>`:
+        n===0?`<span style="color:var(--danger);font-weight:600">🔴 Vence HOY: ${nom}</span>`:
+        n<=15?`<span style="color:var(--warning)">⏰ Vence en ${n} día(s): ${nom}</span>`:
+        `<span style="color:var(--text3)">📅 Próximo vencimiento: ${fmt(p.vence)}</span>`;
+    }
+    const aud=docs.filter(d=>d.diligFecha&&dias(d.diligFecha)>=0).sort((a,b)=>a.diligFecha.localeCompare(b.diligFecha))[0];
+    const audInfo=aud?`<div style="background:var(--dangerbg);border:1px solid var(--dangerborder);color:var(--dangertext);border-radius:6px;padding:6px 10px;margin-top:6px;font-size:12px">🏛️ <strong>${aud.nombre.substring(0,50)}</strong> — ${fmt(aud.diligFecha)} ${aud.diligHora||''}</div>`:'';
+    const semaforo=vencidos>0?'var(--danger)':pend>0?'var(--warning)':'var(--success)';
+    const recientes=[...docs].sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,4);
+    return `<div style="border:1.5px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden">
+      <div style="background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${semaforo};flex-shrink:0"></div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:700">${c.icon} ${c.label}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${docs.length} documentos · ${pend} pendientes de respuesta · ${vencidos} con plazo cumplido</div></div>
+        <button class="btn sm" onclick="filtrarPorCaso('${c.id}')">📄 Ver todos</button>
+        <button class="btn sm" onclick="openDocModal()">+</button>
+      </div>
+      <div style="padding:10px 16px">
+        ${venceInfo?`<div style="margin-bottom:8px;font-size:12px">${venceInfo}</div>`:''}
+        ${audInfo}
+        ${recientes.map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)">
+          <span class="badge ${STATUS_BADGE[d.status]||'neutral'}" style="font-size:10px;flex-shrink:0">${d.status}</span>
+          <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</span>
+          <span style="font-size:10px;color:var(--text3);flex-shrink:0">${fmt(d.fecha)}</span>
+          <button class="btn sm" onclick="viewDoc(${d.id})" style="font-size:10px;padding:2px 6px;flex-shrink:0">Ver</button>
+        </div>`).join('')}
+        ${docs.length>4?`<div style="font-size:11px;color:var(--accent);margin-top:6px;cursor:pointer" onclick="filtrarPorCaso('${c.id}')">+ ${docs.length-4} documentos más →</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  const sinCaso=grupos[''];
+  el.innerHTML=`<div style="background:var(--infobg);border:0.5px solid var(--infoborder);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--infotext)">ℹ️ <strong>${db.docs.length} documentos.</strong> ${sinCaso.length>0?`<strong>${sinCaso.length} sin caso.</strong> Pulsa "Asignar casos automáticamente" o edítalos con ✏️.`:'Todos tienen caso asignado. ✅'}</div>`+
+  tarjetas+
+  (sinCaso.length>0?`<div style="border:1px dashed var(--border);border-radius:12px;padding:14px;margin-bottom:16px">
+    <div style="font-size:13px;font-weight:600;color:var(--text3);margin-bottom:8px">📄 Sin caso (${sinCaso.length})</div>
+    ${sinCaso.slice(0,5).map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)"><span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nombre}</span><button class="btn sm" onclick="openDocModal(${d.id})" style="font-size:10px;padding:2px 6px">✏️ Asignar</button></div>`).join('')}
+    ${sinCaso.length>5?`<div style="font-size:11px;color:var(--text3);margin-top:6px">...y ${sinCaso.length-5} más</div>`:''}
+  </div>`:'');
+};
+// ===== FIN MÓDULO CASOS v1 =====
+
 // ===== CONFIG =====
 const SUPA_URL='https://mxglrdkokdbpygczlcgo.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14Z2xyZGtva2RicHlnY3psY2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjA5NjgsImV4cCI6MjA5Nzk5Njk2OH0.0GIVFMzU4pBQMSXmVZ_mrnG-jhnjadaashBT5XcaScg';
