@@ -1146,7 +1146,10 @@ saveDoc=async function(){
   else doc=db.docs.find(d=>!antes.has(d.id));
   if(!doc) return;
   const nuevo=casoSel||doc.caso||detectarCaso(doc);
-  if(nuevo&&doc.caso!==nuevo){ doc.caso=nuevo; await saveData(); }
+  let cambio=false;
+  if(nuevo&&doc.caso!==nuevo){ doc.caso=nuevo; cambio=true; }
+  if(editId&&doc.porRevisar){ doc.porRevisar=false; cambio=true; }
+  if(cambio) await saveData();
 };
 
 renderDocs=function(carpetaFiltro){
@@ -1159,6 +1162,7 @@ renderDocs=function(carpetaFiltro){
     if(cat&&d.cat!==cat)return false;
     if(st&&d.status!==st)return false;
     if(carpetaFiltro!==undefined&&d.carpeta!==carpetaFiltro)return false;
+    if(_soloRevisar&&!d.porRevisar)return false;
     if(caso==='__none'){ if(d.caso)return false; }
     else if(caso&&d.caso!==caso)return false;
     if(words.length){
@@ -1196,7 +1200,7 @@ renderDocs=function(carpetaFiltro){
   const canEd=canEdit();const canDel=canDelete();
   tb.innerHTML=docs.length===0?`<tr><td colspan="9"><div class="empty"><span class="empty-icon">📄</span>Sin documentos</div></td></tr>`:docs.map(d=>`<tr style="cursor:pointer" onclick="viewDoc(${d.id})" title="Ver detalle">
     <td style="white-space:nowrap;font-size:12px;color:var(--text3)">${fmt(d.fecha)}</td>
-    <td style="max-width:220px"><div class="td-name">${d.nombre}</div><div class="td-sub">${(d.resumen||'').substring(0,70)}${(d.resumen||'').length>70?'…':''}</div>${d.caso?`<div style="margin-top:3px"><span class="badge neutral" style="font-size:10px">${casoLabel(d.caso)}</span></div>`:''}</td>
+    <td style="max-width:220px"><div class="td-name">${d.nombre}</div><div class="td-sub">${(d.resumen||'').substring(0,70)}${(d.resumen||'').length>70?'…':''}</div>${d.caso?`<div style="margin-top:3px"><span class="badge neutral" style="font-size:10px">${casoLabel(d.caso)}</span></div>`:''}${d.porRevisar?`<div style="margin-top:3px"><span style="font-size:10px;background:var(--warningbg);color:var(--warningtext);border:0.5px solid var(--warningborder);border-radius:10px;padding:1px 7px">📥 Por revisar</span></div>`:''}</td>
     <td><span class="badge ${CAT_BADGE[d.cat]||'neutral'}">${d.cat}</span></td>
     <td style="font-size:12px;max-width:110px;color:var(--text2)">${d.entidad||'—'}</td>
     <td style="font-size:11px;color:var(--text3);font-family:monospace;max-width:110px;overflow:hidden;text-overflow:ellipsis">${d.radicado||'—'}</td>
@@ -1302,6 +1306,134 @@ renderPanel=function(){
   </div>`:'');
 };
 // ===== FIN MÓDULO CASOS v1 =====
+
+// ===== MÓDULO CARGA MÚLTIPLE v1 =====
+let _soloRevisar=false;
+let _multiBusy=false;
+(function(){
+  if(!document.getElementById('multiModal')){
+    document.body.insertAdjacentHTML('beforeend',
+    '<div class="overlay" id="multiModal"><div class="modal">'+
+    '<div class="modal-title">📥 Subir varios documentos</div>'+
+    '<p style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.5">Seleccione todos los archivos de una vez. Cada uno se sube, se lee con IA (si hay API key), se asigna a un caso y queda en <strong>Por revisar</strong>. Los archivos que ya estén en el expediente se omiten. Nada se da por confirmado hasta que usted lo revise.</p>'+
+    '<div class="file-upload-area" onclick="document.getElementById(\'multi_file\').click()" ondragover="event.preventDefault();this.classList.add(\'drag\')" ondragleave="this.classList.remove(\'drag\')" ondrop="event.preventDefault();this.classList.remove(\'drag\');cargarMultiples(event.dataTransfer.files)">'+
+    '<div style="font-size:28px">📂</div><p style="font-size:13px;color:var(--text3);margin-top:6px">Arrastre aquí varios archivos o haga clic para seleccionarlos</p></div>'+
+    '<input type="file" id="multi_file" multiple style="display:none" onchange="cargarMultiples(this.files);this.value=\'\'">'+
+    '<div id="multiLog" style="margin-top:12px;max-height:300px;overflow:auto;font-size:12px"></div>'+
+    '<div class="modal-footer" style="margin-top:12px"><button class="btn" onclick="closeModal(\'multiModal\')">Cerrar</button><button class="btn primary" id="multiVerBtn" style="display:none" onclick="closeModal(\'multiModal\');verPorRevisar()">Ver por revisar</button></div>'+
+    '</div></div>');
+  }
+  const nb=document.getElementById('btnNewDoc2');
+  if(nb&&!document.getElementById('btnMulti')){
+    nb.insertAdjacentHTML('beforebegin','<button class="btn primary" id="btnMulti" onclick="abrirMultiples()">📥 Subir varios</button>');
+  }
+  const dc=document.getElementById('docsCount');
+  if(dc&&!document.getElementById('btnRevisar')){
+    dc.insertAdjacentHTML('beforebegin','<button class="btn sm" id="btnRevisar" onclick="verPorRevisar()" style="display:none">📥 Por revisar</button>');
+  }
+})();
+
+function abrirMultiples(){
+  if(!canEdit()){alert('No tienes permisos para agregar documentos.');return;}
+  document.getElementById('multiLog').innerHTML='';
+  document.getElementById('multiVerBtn').style.display='none';
+  openModal('multiModal');
+}
+function verPorRevisar(){
+  _soloRevisar=!_soloRevisar;
+  if(_soloRevisar) navigate('documentos');
+  renderDocs();
+}
+function actualizarBtnRevisar(){
+  const b=document.getElementById('btnRevisar');if(!b)return;
+  const n=db.docs.filter(d=>d.porRevisar).length;
+  b.style.display=(n>0||_soloRevisar)?'inline-flex':'none';
+  b.textContent=_soloRevisar?'✕ Salir de Por revisar':'📥 Por revisar ('+n+')';
+}
+const _o_renderDocs2=renderDocs;
+renderDocs=function(a){_o_renderDocs2(a);actualizarBtnRevisar();};
+const _o_limpiarFiltros2=limpiarFiltros;
+limpiarFiltros=function(){_soloRevisar=false;_o_limpiarFiltros2();};
+
+async function cargarMultiples(fileList){
+  const files=Array.from(fileList||[]);
+  if(!files.length)return;
+  if(_multiBusy){alert('Ya hay una carga en curso. Espere a que termine.');return;}
+  _multiBusy=true;
+  const log=document.getElementById('multiLog');
+  log.innerHTML='';
+  const fila=(f,i)=>{const d=document.createElement('div');d.id='mrow'+i;d.style.cssText='padding:6px 0;border-bottom:0.5px solid var(--border)';d.innerHTML='⏳ '+f.name+' — en cola';log.appendChild(d);return d;};
+  const rows=files.map(fila);
+  const CATS=['Fallos','Tutelas','Medidas de protección','Derecho de petición','Actuaciones penales','Documentos patrimoniales','Clínico/pericial','Actas y conciliaciones','Comunicaciones','Trámites disciplinarios','Otro'];
+  const STS=['Vigente','Documento probatorio','Pendiente respuesta','No respondido','Respondido','Respondido parcialmente','Ejecutoriado','Vencido','Archivado','No aplica'];
+  const hoy=new Date().toISOString().split('T')[0];
+  const hashesLote=new Set();
+  let ok=0,omit=0,fail=0;
+  if(!CLAUDE_KEY){ try{await loadClaudeKey();}catch(e){} }
+  for(let i=0;i<files.length;i++){
+    const file=files[i],row=rows[i];
+    const set=t=>row.innerHTML=t;
+    try{
+      set('⏳ '+file.name+' — verificando duplicado...');
+      if(file.size>500*1024*1024){set('⚠️ '+file.name+' — omitido: supera 500MB');omit++;continue;}
+      const hash=await calcFileHash(file);
+      const ex=db.docs.find(d=>d.fileHash&&d.fileHash===hash);
+      if(ex||hashesLote.has(hash)){set('↩️ '+file.name+' — omitido: ya existe'+(ex?' como "'+ex.nombre+'"':' en este mismo lote'));omit++;continue;}
+      hashesLote.add(hash);
+      set('⏳ '+file.name+' — subiendo...');
+      const filePath=await uploadFileToSupabase(file,'docs');
+      let ext=(file.name.split('.').pop()||'').toLowerCase(),x=null,iaNota='Sin lectura automática; completar datos manualmente.';
+      if(CLAUDE_KEY){
+        set('⏳ '+file.name+' — leyendo con IA...');
+        try{
+          if(['jpg','jpeg','png','webp'].includes(ext)) x=await extractWithClaudeImage(file);
+          else if(ext==='pdf'){
+            let t='';try{t=await extractPdfText(file);}catch(e){}
+            x=(t&&t.trim().length>100)?await extractWithClaudeText(t,file.name):await extractWithClaudePdfImage(file);
+          }else if(['txt','csv'].includes(ext)){
+            const t=await file.text().catch(()=>'');
+            if(t.length>10) x=await extractWithClaudeText(t.substring(0,4000),file.name);
+          }
+          if(x) iaNota='Datos sugeridos por IA; verificar contra el documento.';
+        }catch(e){x=null;iaNota='La lectura con IA falló ('+e.message+'); completar datos manualmente.';}
+      }
+      x=x||{};
+      const nombre=(x.nombre&&String(x.nombre).trim())||file.name.replace(/\.[^.]+$/,'');
+      const sug=[];
+      if(x.plazo&&x.plazo!=='Sin plazo') sug.push('Plazo sugerido: '+x.plazo+(x.vence?' (vence '+x.vence+')':'')+' — confirmar y llenar "Vence".');
+      if(x.diligFecha) sug.push('Diligencia sugerida: '+x.diligFecha+(x.diligHora?' '+x.diligHora:'')+' — confirmar.');
+      const doc={
+        id:Date.now()+i,
+        fecha:/^\d{4}-\d{2}-\d{2}$/.test(x.fecha||'')?x.fecha:hoy,
+        fechaRad:/^\d{4}-\d{2}-\d{2}$/.test(x.fechaRad||'')?x.fechaRad:'',
+        nombre,
+        cat:CATS.includes(x.cat)?x.cat:'Otro',
+        status:STS.includes(x.status)?x.status:'Vigente',
+        entidad:x.entidad||'',radicado:x.radicado||'',
+        resumen:x.resumen||'',ubicacion:x.ubicacion||'',
+        vence:'',
+        notas:('Cargado en lote el '+hoy+'. '+iaNota+' '+sug.join(' ')+(x.notas?' '+x.notas:'')).trim(),
+        relacionados:[],diligFecha:'',diligHora:'',carpeta:'',
+        filePath,fileName:file.name,fileSize:file.size,fileHash:hash,
+        porRevisar:true
+      };
+      doc.caso=detectarCaso(doc)||'';
+      db.docs.push(doc);
+      await saveData();
+      ok++;
+      set('✅ '+file.name+' — '+(doc.caso?casoLabel(doc.caso):'sin caso (asignar al revisar)'));
+      await new Promise(r=>setTimeout(r,400));
+    }catch(e){
+      fail++;
+      set('❌ '+file.name+' — error: '+e.message);
+    }
+  }
+  _multiBusy=false;
+  log.insertAdjacentHTML('beforeend','<div style="padding:10px 0;font-weight:600">Listo: '+ok+' cargados · '+omit+' omitidos · '+fail+' con error</div>');
+  if(ok>0) document.getElementById('multiVerBtn').style.display='inline-flex';
+  try{renderDocs();renderPanel();}catch(e){}
+}
+// ===== FIN MÓDULO CARGA MÚLTIPLE v1 =====
 
 // ===== CONFIG =====
 const SUPA_URL='https://mxglrdkokdbpygczlcgo.supabase.co';
