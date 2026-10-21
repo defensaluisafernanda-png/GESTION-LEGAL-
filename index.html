@@ -1161,6 +1161,7 @@ saveDoc=async function(){
   const antes=new Set(db.docs.map(d=>d.id));
   const casoSel=document.getElementById('d_caso')?document.getElementById('d_caso').value:'';
   const extrasSel=extrasMarcados();
+  const archivoSel=(document.getElementById('d_file')&&document.getElementById('d_file').files)?document.getElementById('d_file').files[0]:null;
   await _o_saveDoc();
   let doc=null;
   if(editId) doc=db.docs.find(d=>String(d.id)===String(editId));
@@ -1176,6 +1177,7 @@ saveDoc=async function(){
   if(JSON.stringify(ex)!==JSON.stringify(doc.casos||[])){ doc.casos=ex; cambio=true; }
   if(editId&&doc.porRevisar){ doc.porRevisar=false; cambio=true; }
   if(cambio) await saveData();
+  if(archivoSel&&doc.filePath){ try{ await indexarDoc(doc,archivoSel); }catch(e){ console.warn('No se indexó el contenido',e); } }
 };
 
 renderDocs=function(carpetaFiltro){
@@ -1452,6 +1454,7 @@ async function cargarMultiples(fileList){
       doc.casos=det.extras.filter(id=>id!==doc.caso);
       db.docs.push(doc);
       await saveData();
+      try{ await indexarDoc(doc,file); }catch(e){ console.warn('No se indexó el contenido',e); }
       ok++;
       set('✅ '+file.name+' — '+(doc.caso?casoLabel(doc.caso):'sin caso (asignar al revisar)'));
       await new Promise(r=>setTimeout(r,400));
@@ -1466,6 +1469,239 @@ async function cargarMultiples(fileList){
   try{renderDocs();renderPanel();}catch(e){}
 }
 // ===== FIN MÓDULO CARGA MÚLTIPLE v1 =====
+
+// ===== MÓDULO HOY + LÍNEA DE TIEMPO + BÚSQUEDA EN CONTENIDO v1 =====
+function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ---------- Inyección de menú, páginas y botón ----------
+(function(){
+  const navPanel=document.querySelector("button.nav-item[onclick=\"navigate('panel')\"]");
+  if(navPanel&&!document.getElementById('nav-hoy')){
+    navPanel.insertAdjacentHTML('beforebegin',
+      '<button class="nav-item" id="nav-hoy" onclick="navigate(\'hoy\')"><span class="icon">☀️</span>Qué hago hoy</button>'+
+      '<button class="nav-item" id="nav-linea" onclick="navigate(\'linea\')"><span class="icon">🕒</span>Línea de tiempo</button>');
+  }
+  const vp=document.getElementById('view-panel');
+  if(vp&&!document.getElementById('view-hoy')){
+    vp.insertAdjacentHTML('beforebegin',
+      '<div id="view-hoy" class="section"><div class="page-header"><div><div class="page-title">☀️ Qué hago hoy</div><div class="page-sub" id="hoyFecha"></div></div>'+
+      '<button class="btn primary" onclick="renderHoy()">🔄 Actualizar</button></div><div class="page-content" id="hoyContent"></div></div>'+
+      '<div id="view-linea" class="section"><div class="page-header"><div><div class="page-title">🕒 Línea de tiempo por caso</div><div class="page-sub">Documentos del caso en orden de fecha, según lo registrado en el expediente</div></div>'+
+      '<div style="display:flex;gap:8px"><button class="btn sm" onclick="copiarLinea()">📋 Copiar texto</button><button class="btn primary" onclick="imprimirLinea()">🖨️ Imprimir / PDF</button></div></div>'+
+      '<div class="page-content"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">'+
+      '<select id="lineaCaso" onchange="renderLinea()" style="flex:1;min-width:220px">'+CASOS.map(function(c){return '<option value="'+c.id+'">'+c.icon+' '+c.label+'</option>';}).join('')+'</select>'+
+      '<label style="display:flex;align-items:center;gap:5px;font-size:12px"><input type="checkbox" id="lineaRev" onchange="renderLinea()"> Incluir documentos sin revisar</label></div>'+
+      '<div id="lineaContent"></div></div></div>');
+  }
+  const dup=document.querySelector("button[onclick=\"escanearDuplicados()\"]");
+  if(dup&&!document.getElementById('btnContenido')){
+    dup.insertAdjacentHTML('afterend','<button class="btn sm" id="btnContenido" onclick="abrirContenido()">🔎 Buscar en contenido</button>');
+  }
+  if(!document.getElementById('contenidoModal')){
+    document.body.insertAdjacentHTML('beforeend',
+      '<div class="overlay" id="contenidoModal"><div class="modal" style="max-width:720px">'+
+      '<div class="modal-title">🔎 Buscar dentro del contenido de los documentos</div>'+
+      '<div style="display:flex;gap:8px;margin-bottom:8px"><input class="search" type="search" id="contenidoQ" placeholder="Palabras que estén dentro de los PDF (todas deben aparecer)" style="flex:1" onkeydown="if(event.key===\'Enter\')buscarContenido()"><button class="btn primary" onclick="buscarContenido()">Buscar</button></div>'+
+      '<div id="contenidoRes" style="max-height:320px;overflow:auto;font-size:12px;margin-bottom:10px"></div>'+
+      '<div style="border-top:0.5px solid var(--border);padding-top:10px"><div id="contenidoEstado" style="font-size:12px;color:var(--text3);margin-bottom:6px"></div>'+
+      '<button class="btn sm" id="btnIndexar" onclick="indexarExistentes()">📚 Leer los documentos ya cargados</button></div>'+
+      '<div class="modal-footer" style="margin-top:12px"><button class="btn" onclick="closeModal(\'contenidoModal\')">Cerrar</button></div></div></div>');
+  }
+})();
+
+const _o_renderView3=renderView;
+renderView=function(id){
+  if(id==='hoy'){renderHoy();return;}
+  if(id==='linea'){renderLinea();return;}
+  _o_renderView3(id);
+};
+
+// ---------- QUÉ HAGO HOY ----------
+function renderHoy(){
+  const el=document.getElementById('hoyContent');if(!el)return;
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const f=document.getElementById('hoyFecha');
+  if(f)f.textContent=hoy.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const dias=function(x){return Math.round((new Date(x+'T00:00:00')-hoy)/86400000);};
+  const cerrados=new Set(['Respondido','Ejecutoriado','Archivado','No aplica']);
+  const bad=function(d){return casosDe(d).map(function(id){return '<span class="badge neutral" style="font-size:10px;margin-right:3px">'+_esc(casoLabel(id))+'</span>';}).join('');};
+  const fila=function(d,txt,col){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)">'+
+      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_esc(d.nombre)+'</div>'+
+      '<div style="font-size:11px;margin-top:2px;color:'+(col||'var(--text3)')+'">'+txt+'</div>'+
+      '<div style="margin-top:3px">'+bad(d)+'</div></div>'+
+      '<button class="btn sm" onclick="viewDoc('+d.id+')">Ver</button></div>';
+  };
+  const bloque=function(titulo,items,vacio){
+    return '<div style="border:1.5px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden">'+
+      '<div style="background:var(--bg2);padding:10px 16px;font-size:13px;font-weight:700">'+titulo+' <span style="font-weight:400;color:var(--text3)">('+items.length+')</span></div>'+
+      '<div style="padding:4px 16px 8px">'+(items.length?items.join(''):'<div style="font-size:12px;color:var(--text3);padding:8px 0">'+vacio+'</div>')+'</div></div>';
+  };
+  const abiertos=db.docs.filter(function(d){return !cerrados.has(d.status);});
+  const venc=abiertos.filter(function(d){return d.vence&&dias(d.vence)<=0;}).sort(function(a,b){return a.vence.localeCompare(b.vence);});
+  const idsVenc=new Set(venc.map(function(d){return d.id;}));
+  const A=venc.map(function(d){const n=dias(d.vence);return fila(d,(n<0?'Fecha de vencimiento registrada: '+fmt(d.vence)+' — cumplida hace '+Math.abs(n)+' día(s)':'Vence HOY')+' · Estado: '+_esc(d.status),'var(--danger)');});
+  const aud=[];
+  db.docs.forEach(function(d){if(d.diligFecha&&dias(d.diligFecha)>=0&&dias(d.diligFecha)<=30)aud.push({f:d.diligFecha,h:fila(d,'🏛️ '+fmt(d.diligFecha)+' '+_esc(d.diligHora||'')+' · en '+dias(d.diligFecha)+' día(s)','var(--warning)')});});
+  (db.events||[]).forEach(function(e){if(e.type==='audiencia'&&!e.docId&&e.date&&dias(e.date)>=0&&dias(e.date)<=30)aud.push({f:e.date,h:'<div style="padding:8px 0;border-bottom:0.5px solid var(--border);font-size:13px">'+_esc(e.title)+' <span style="font-size:11px;color:var(--warning)">'+fmt(e.date)+' '+_esc(e.time||'')+'</span></div>'});});
+  aud.sort(function(a,b){return a.f.localeCompare(b.f);});
+  const B=aud.map(function(x){return x.h;});
+  const prox=abiertos.filter(function(d){return d.vence&&dias(d.vence)>0&&dias(d.vence)<=15;}).sort(function(a,b){return a.vence.localeCompare(b.vence);});
+  const C=prox.map(function(d){return fila(d,'⏰ Vence '+fmt(d.vence)+' · en '+dias(d.vence)+' día(s)','var(--warning)');});
+  const sin=db.docs.filter(function(d){return ['Pendiente respuesta','No respondido'].indexOf(d.status)>=0&&!idsVenc.has(d.id);}).sort(function(a,b){return (a.fechaRad||a.fecha||'').localeCompare(b.fechaRad||b.fecha||'');});
+  const D=sin.map(function(d){const b=d.fechaRad||d.fecha;return fila(d,'Radicado/enviado: '+fmt(b)+(b?' · hace '+Math.abs(dias(b))+' día(s)':'')+' · '+_esc(d.status));});
+  const pend=(db.pending||[]).filter(function(p){return !p.done&&((p.due&&dias(p.due)<=7)||p.priority==='Urgente'||p.priority==='Alta');}).sort(function(a,b){return (a.due||'9999').localeCompare(b.due||'9999');});
+  const E=pend.map(function(p){return '<div style="padding:8px 0;border-bottom:0.5px solid var(--border);font-size:13px">'+_esc(p.title)+'<div style="font-size:11px;color:var(--text3);margin-top:2px">'+_esc(p.priority||'')+(p.due?' · fecha '+fmt(p.due)+(dias(p.due)<0?' (pasada hace '+Math.abs(dias(p.due))+' día(s))':''):'')+'</div></div>';});
+  const nRev=db.docs.filter(function(d){return d.porRevisar;}).length;
+  const nSin=db.docs.filter(function(d){return !casosDe(d).length;}).length;
+  let aviso='';
+  if(nRev||nSin){
+    aviso='<div style="background:var(--infobg);border:0.5px solid var(--infoborder);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--infotext)">'+
+      (nRev?'📥 <strong>'+nRev+'</strong> documento(s) por revisar <button class="btn sm" onclick="navigate(\'documentos\');_soloRevisar=false;verPorRevisar()">Ver</button> ':'')+
+      (nSin?'· 📄 <strong>'+nSin+'</strong> sin caso asignado':'')+'</div>';
+  }
+  el.innerHTML=aviso+
+    bloque('🔴 Vencimientos cumplidos o que vencen hoy',A,'Ninguno registrado.')+
+    bloque('🏛️ Audiencias y diligencias — próximos 30 días',B,'Ninguna registrada.')+
+    bloque('⏰ Vencimientos — próximos 15 días',C,'Ninguno registrado.')+
+    bloque('⏳ Enviados sin respuesta registrada',D,'Ninguno.')+
+    bloque('✅ Tareas urgentes o con fecha próxima',E,'Ninguna.')+
+    '<div style="font-size:11px;color:var(--text3)">Esta pantalla muestra solo lo que está cargado en la app. Los plazos legales hay que confirmarlos contra el documento y con su abogado.</div>';
+}
+
+// ---------- LÍNEA DE TIEMPO ----------
+let _lineaRows=[];
+function renderLinea(){
+  const el=document.getElementById('lineaContent');if(!el)return;
+  const caso=document.getElementById('lineaCaso').value;
+  const inc=document.getElementById('lineaRev').checked;
+  const rows=[];
+  db.docs.forEach(function(d){
+    if(!casosDe(d).includes(caso))return;
+    if(d.porRevisar&&!inc)return;
+    rows.push({f:d.fecha||'',n:d.nombre,e:d.entidad||'',r:d.radicado||'',s:d.resumen||'',rev:!!d.porRevisar,id:d.id,tipo:''});
+    if(d.diligFecha)rows.push({f:d.diligFecha,n:'Audiencia/citación programada: '+d.nombre,e:d.entidad||'',r:d.radicado||'',s:'',rev:!!d.porRevisar,id:d.id,tipo:'dil'});
+  });
+  rows.sort(function(a,b){return (a.f||'9999').localeCompare(b.f||'9999');});
+  _lineaRows=rows;
+  if(!rows.length){el.innerHTML='<div class="empty"><span class="empty-icon">🕒</span>Sin documentos en este caso</div>';return;}
+  el.innerHTML='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'+rows.length+' registro(s). El resumen es el que consta en el registro de cada documento.</div>'+
+    '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="text-align:left;border-bottom:1px solid var(--border)"><th style="padding:6px;white-space:nowrap">Fecha</th><th style="padding:6px">Documento</th><th style="padding:6px">Entidad / radicado</th><th style="padding:6px">Resumen</th></tr></thead><tbody>'+
+    rows.map(function(x){return '<tr style="border-bottom:0.5px solid var(--border);vertical-align:top;cursor:pointer" onclick="viewDoc('+x.id+')"><td style="padding:6px;white-space:nowrap">'+fmt(x.f)+'</td><td style="padding:6px">'+_esc(x.n)+(x.rev?' <span style="font-size:10px;color:var(--warningtext)">(sin revisar)</span>':'')+'</td><td style="padding:6px;color:var(--text2)">'+_esc(x.e)+(x.r?'<br><span style="font-family:monospace;font-size:11px">'+_esc(x.r)+'</span>':'')+'</td><td style="padding:6px;color:var(--text2)">'+_esc(x.s)+'</td></tr>';}).join('')+
+    '</tbody></table></div>';
+}
+function _lineaTitulo(){var s=document.getElementById('lineaCaso');return s?s.options[s.selectedIndex].text:'';}
+function copiarLinea(){
+  if(!_lineaRows.length){alert('No hay registros para copiar.');return;}
+  const t=_lineaTitulo()+'\n\n'+_lineaRows.map(function(x){return fmt(x.f)+' — '+x.n+(x.e||x.r?' ('+[x.e,x.r?'Rad. '+x.r:''].filter(Boolean).join(', ')+')':'')+(x.s?'. '+x.s:'');}).join('\n');
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){alert('Texto copiado.');}).catch(function(){alert('No se pudo copiar automáticamente.');});
+}
+function imprimirLinea(){
+  if(!_lineaRows.length){alert('No hay registros para imprimir.');return;}
+  const w=window.open('','_blank');
+  if(!w){alert('El navegador bloqueó la ventana. Permita ventanas emergentes para este sitio e intente de nuevo.');return;}
+  const hoy=new Date().toLocaleDateString('es-CO');
+  w.document.write('<html><head><meta charset="utf-8"><title>Línea de tiempo</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #999;padding:5px;vertical-align:top;text-align:left}h2{font-size:16px}</style></head><body><h2>Línea de tiempo — '+_esc(_lineaTitulo())+'</h2><table><thead><tr><th>Fecha</th><th>Documento</th><th>Entidad / radicado</th><th>Resumen</th></tr></thead><tbody>'+
+    _lineaRows.map(function(x){return '<tr><td>'+fmt(x.f)+'</td><td>'+_esc(x.n)+(x.rev?' (sin revisar)':'')+'</td><td>'+_esc(x.e)+(x.r?'<br>'+_esc(x.r):'')+'</td><td>'+_esc(x.s)+'</td></tr>';}).join('')+
+    '</tbody></table><p style="margin-top:12px;font-size:10px">Generado el '+hoy+' desde Expediente Legal Digital. Los resúmenes corresponden a los registros del expediente; verificar contra los documentos originales.</p></body></html>');
+  w.document.close();w.focus();setTimeout(function(){w.print();},400);
+}
+
+// ---------- BÚSQUEDA EN CONTENIDO ----------
+let _idxIds=new Set();
+async function cargarIdx(){
+  const r=await sb.from('doc_textos').select('doc_id').range(0,9999);
+  if(r.error)throw r.error;
+  _idxIds=new Set((r.data||[]).map(function(x){return Number(x.doc_id);}));
+}
+async function abrirContenido(){
+  document.getElementById('contenidoRes').innerHTML='';
+  openModal('contenidoModal');
+  const est=document.getElementById('contenidoEstado');
+  est.textContent='Revisando...';
+  try{
+    await cargarIdx();
+    const conArchivo=db.docs.filter(function(d){return d.filePath;});
+    const ya=conArchivo.filter(function(d){return _idxIds.has(Number(d.id));}).length;
+    est.textContent=ya+' de '+conArchivo.length+' documentos con archivo ya están leídos para esta búsqueda. Los PDF escaneados (imagen sin texto) no se pueden leer así.';
+  }catch(e){
+    est.innerHTML='⚠️ Falta crear la tabla de búsqueda en Supabase (paso de una sola vez). Detalle: '+_esc(e.message||e);
+  }
+}
+async function textoDeArchivo(blob,nombre){
+  const ext=(nombre.split('.').pop()||'').toLowerCase();
+  let t='';
+  if(ext==='pdf'){
+    if(typeof pdfjsLib==='undefined')throw new Error('PDF.js no disponible');
+    const pdf=await pdfjsLib.getDocument({data:await blob.arrayBuffer()}).promise;
+    const n=Math.min(pdf.numPages,80);
+    for(let i=1;i<=n;i++){const p=await pdf.getPage(i);const c=await p.getTextContent();t+=c.items.map(function(x){return x.str;}).join(' ')+'\n';}
+  }else if(ext==='txt'||ext==='csv'){
+    t=await blob.text();
+  }else return '';
+  return t.replace(/\s+/g,' ').trim().substring(0,200000);
+}
+async function indexarDoc(doc,blob){
+  const t=await textoDeArchivo(blob,doc.fileName||doc.filePath||'');
+  if(t.length<30)return 0;
+  const r=await sb.from('doc_textos').upsert({doc_id:doc.id,texto:t,norm:_cn(t)},{onConflict:'doc_id'});
+  if(r.error)throw r.error;
+  _idxIds.add(Number(doc.id));
+  return t.length;
+}
+async function indexarExistentes(){
+  const btn=document.getElementById('btnIndexar'),est=document.getElementById('contenidoEstado');
+  btn.disabled=true;
+  try{
+    await cargarIdx();
+    const pend=db.docs.filter(function(d){return d.filePath&&!_idxIds.has(Number(d.id))&&(!d.fileSize||d.fileSize<30*1024*1024)&&/\.(pdf|txt|csv)$/i.test(d.fileName||d.filePath);});
+    let ok=0,vacio=0,fail=0;
+    for(let i=0;i<pend.length;i++){
+      const d=pend[i];
+      est.textContent='Leyendo '+(i+1)+' de '+pend.length+': '+(d.fileName||d.nombre);
+      try{
+        const r=await sb.storage.from('documentos').download(d.filePath);
+        if(r.error)throw r.error;
+        const n=await indexarDoc(d,r.data);
+        if(n)ok++;else vacio++;
+      }catch(e){fail++;console.warn('No se pudo leer',d.nombre,e);}
+    }
+    est.textContent='Listo: '+ok+' leídos · '+vacio+' sin texto (probablemente escaneados) · '+fail+' con error. '+(pend.length===0?'No había documentos pendientes de leer.':'');
+  }catch(e){
+    est.innerHTML='⚠️ '+_esc(e.message||e)+' — si dice que la tabla no existe, falta el paso de Supabase.';
+  }
+  btn.disabled=false;
+}
+async function buscarContenido(){
+  const q=_n2(document.getElementById('contenidoQ').value);
+  const res=document.getElementById('contenidoRes');
+  const words=q.split(' ').filter(function(w){return w.length>=2;});
+  if(!words.length){res.innerHTML='<div style="color:var(--text3)">Escriba al menos una palabra.</div>';return;}
+  res.innerHTML='Buscando...';
+  try{
+    let qb=sb.from('doc_textos').select('doc_id');
+    words.forEach(function(w){qb=qb.ilike('norm','%'+w+'%');});
+    const r=await qb.limit(100);
+    if(r.error)throw r.error;
+    const ids=(r.data||[]).map(function(x){return Number(x.doc_id);});
+    if(!ids.length){res.innerHTML='<div style="color:var(--text3)">Sin resultados. Solo se buscan los documentos ya leídos (botón de abajo) y no los PDF escaneados.</div>';return;}
+    const top=ids.slice(0,15);
+    const t=await sb.from('doc_textos').select('doc_id,texto,norm').in('doc_id',top);
+    const mapa={};(t.data||[]).forEach(function(x){mapa[Number(x.doc_id)]=x;});
+    res.innerHTML='<div style="margin-bottom:6px;color:var(--text3)">'+ids.length+' documento(s) contienen todas las palabras'+(ids.length>15?' (se muestran fragmentos de los primeros 15)':'')+'</div>'+
+      ids.map(function(id){
+        const d=db.docs.find(function(x){return Number(x.id)===id;});
+        if(!d)return '';
+        let frag='';
+        const m=mapa[id];
+        if(m){const i=m.norm.indexOf(words[0]);if(i>=0){const a=Math.max(0,i-80),b=Math.min(m.texto.length,i+words[0].length+120);frag='…'+_esc(m.texto.substring(a,b))+'…';}}
+        return '<div style="padding:8px 0;border-bottom:0.5px solid var(--border)"><div style="display:flex;gap:8px;align-items:center"><div style="flex:1;font-weight:500">'+_esc(d.nombre)+' <span style="color:var(--text3);font-weight:400">'+fmt(d.fecha)+'</span></div><button class="btn sm" onclick="closeModal(\'contenidoModal\');viewDoc('+d.id+')">Ver</button></div>'+(frag?'<div style="color:var(--text2);margin-top:3px">'+frag+'</div>':'')+'</div>';
+      }).join('');
+  }catch(e){
+    res.innerHTML='<div style="color:var(--danger)">Error: '+_esc(e.message||e)+'</div>';
+  }
+}
+// ===== FIN MÓDULO HOY + LÍNEA + CONTENIDO v1 =====
 
 // ===== CONFIG =====
 const SUPA_URL='https://mxglrdkokdbpygczlcgo.supabase.co';
