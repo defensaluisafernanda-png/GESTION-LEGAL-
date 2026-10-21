@@ -10,9 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Consulta mínima a Supabase
+        env:
+          SUPA_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14Z2xyZGtva2RicHlnY3psY2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjA5NjgsImV4cCI6MjA5Nzk5Njk2OH0.0GIVFMzU4pBQMSXmVZ_mrnG-jhnjadaashBT5XcaScg
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" \
             "https://mxglrdkokdbpygczlcgo.supabase.co/rest/v1/configuracion?select=id&limit=1" \
-            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14Z2xyZGtva2RicHlnY3psY2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjA5NjgsImV4cCI6MjA5Nzk5Njk2OH0.0GIVFMzU4pBQMSXmVZ_mrnG-jhnjadaashBT5XcaScg")
+            -H "apikey: $SUPA_KEY" \
+            -H "Authorization: Bearer $SUPA_KEY")
           echo "Respuesta: $code"
           test "$code" = "200"
