@@ -1470,6 +1470,263 @@ async function cargarMultiples(fileList){
 }
 // ===== FIN MÓDULO CARGA MÚLTIPLE v1 =====
 
+// ===== MÓDULO SUBIR CARPETA v1 =====
+// Sube una carpeta completa (con todas sus subcarpetas). El caso se toma del nombre de la carpeta,
+// se omiten videos, audios, mbox y comprimidos, y todo queda en "Por revisar".
+let _carpetaPlan=null;
+let _carpetaCancel=false;
+
+const CARPETA_ALIAS={
+  vif:['vif','violencia intrafamiliar','comisaria de familia','medida de proteccion','medidas de proteccion','medidas proteccion'],
+  penal:['penal','penales','actuaciones penales','fiscalia','denuncia','denuncias','inasistencia alimentaria'],
+  patrimonial:['patrimonial','patrimoniales','patrimonio','compraventa','inmueble','apartamento','sociedad patrimonial','embargo','embargos'],
+  tomas:['tomas','custodia','visitas','regimen de visitas','cuota alimentaria','civil de alimentos','alimentos'],
+  pard:['pard','restablecimiento de derechos','restablecimiento','icbf'],
+  laboral:['laboral','hospital','hospital la maria','la maria','turnos'],
+  prosalud:['prosalud','contrato sindical','sindicato'],
+  otros:['otros','otro']
+};
+const CARPETA_EXT={
+  video:['mp4','mov','avi','mkv','webm','wmv','flv','m4v','mpg','mpeg','3gp','3g2','mts','m2ts'],
+  audio:['mp3','m4a','wav','aac','ogg','oga','opus','flac','wma','amr','aiff','aif','mpga','m4b'],
+  mbox:['mbox','mbx'],
+  'zip/comprimido':['zip','rar','7z','tar','gz','tgz','bz2']
+};
+
+function carpetaMotivoOmitir(file){
+  const n=String(file&&file.name||'').toLowerCase();
+  const t=String(file&&file.type||'').toLowerCase();
+  if(n.charAt(0)==='.'||n==='thumbs.db'||n==='desktop.ini'||n.indexOf('~$')===0) return 'archivo del sistema';
+  const ext=n.indexOf('.')>=0?n.split('.').pop():'';
+  const cats=Object.keys(CARPETA_EXT);
+  for(let i=0;i<cats.length;i++){ if(CARPETA_EXT[cats[i]].indexOf(ext)>=0) return cats[i]; }
+  if(t.indexOf('video/')===0) return 'video';
+  if(t.indexOf('audio/')===0) return 'audio';
+  if(t==='application/zip'||t==='application/x-zip-compressed') return 'zip/comprimido';
+  return '';
+}
+
+function carpetaCasoDeSegmento(seg){
+  const t=' '+_n2(seg)+' ';
+  let best='',bl=0;
+  Object.keys(CARPETA_ALIAS).forEach(function(id){
+    CARPETA_ALIAS[id].forEach(function(a){
+      if(t.indexOf(' '+a+' ')>=0&&a.length>bl){bl=a.length;best=id;}
+    });
+  });
+  return CASOS.some(function(c){return c.id===best;})?best:'';
+}
+
+(function(){
+  const bm=document.getElementById('btnMulti');
+  if(!document.getElementById('btnCarpeta')){
+    const html='<button class="btn primary" id="btnCarpeta" onclick="abrirCarpeta()">📂 Subir carpeta</button>';
+    if(bm) bm.insertAdjacentHTML('afterend',html);
+    else{ const nb=document.getElementById('btnNewDoc2'); if(nb) nb.insertAdjacentHTML('beforebegin',html); }
+  }
+  if(!document.getElementById('carpetaModal')){
+    document.body.insertAdjacentHTML('beforeend',
+    '<div class="overlay" id="carpetaModal"><div class="modal" style="max-width:760px">'+
+    '<div class="modal-title">📂 Subir carpeta completa</div>'+
+    '<p style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.5">Seleccione una carpeta: se suben todos sus archivos y los de todas sus subcarpetas. El <strong>nombre de la carpeta</strong> (la más cercana al archivo que coincida con un caso) define el caso; antes de subir podrá cambiarlo por grupo. Se omiten videos, audios, mbox y zip/comprimidos. Todo queda en <strong>Por revisar</strong> y los archivos que ya estén en el expediente se omiten. Funciona en computador (Chrome, Edge o Safari de escritorio); en celular o iPad el navegador no permite elegir carpetas.</p>'+
+    '<div class="file-upload-area" onclick="document.getElementById(\'carpeta_input\').click()"><div style="font-size:28px">📂</div><p style="font-size:13px;color:var(--text3);margin-top:6px">Haga clic para elegir la carpeta</p></div>'+
+    '<input type="file" id="carpeta_input" webkitdirectory multiple style="display:none" onchange="prepararCarpeta(this.files)">'+
+    '<div id="carpetaPlan" style="margin-top:12px"></div>'+
+    '<div id="carpetaProg" style="margin-top:10px;font-size:12px;font-weight:600"></div>'+
+    '<div id="carpetaLog" style="margin-top:8px;max-height:300px;overflow:auto;font-size:12px"></div>'+
+    '<div class="modal-footer" style="margin-top:12px">'+
+    '<button class="btn" onclick="closeModal(\'carpetaModal\')">Cerrar</button>'+
+    '<button class="btn danger" id="carpetaStopBtn" style="display:none" onclick="detenerCarpeta()">⏹ Detener</button>'+
+    '<button class="btn primary" id="carpetaVerBtn" style="display:none" onclick="closeModal(\'carpetaModal\');_soloRevisar=false;verPorRevisar()">Ver por revisar</button>'+
+    '<button class="btn primary" id="carpetaIniciarBtn" style="display:none" onclick="iniciarCarpeta()">▶ Iniciar carga</button>'+
+    '</div></div></div>');
+  }
+})();
+
+function abrirCarpeta(){
+  if(!canEdit()){alert('No tienes permisos para agregar documentos.');return;}
+  _carpetaPlan=null;_carpetaCancel=false;
+  const inp=document.getElementById('carpeta_input'); if(inp) inp.value='';
+  document.getElementById('carpetaPlan').innerHTML='';
+  document.getElementById('carpetaProg').textContent='';
+  document.getElementById('carpetaLog').innerHTML='';
+  ['carpetaStopBtn','carpetaVerBtn','carpetaIniciarBtn'].forEach(function(id){document.getElementById(id).style.display='none';});
+  openModal('carpetaModal');
+}
+
+function prepararCarpeta(fileList){
+  const files=Array.from(fileList||[]);
+  const box=document.getElementById('carpetaPlan');
+  document.getElementById('carpetaLog').innerHTML='';
+  document.getElementById('carpetaProg').textContent='';
+  document.getElementById('carpetaVerBtn').style.display='none';
+  if(!files.length){box.innerHTML='<div style="color:var(--text3);font-size:13px">No se seleccionó ninguna carpeta.</div>';document.getElementById('carpetaIniciarBtn').style.display='none';return;}
+  const items=[],omit={};
+  let sinRuta=0;
+  files.forEach(function(f){
+    const rel=f.webkitRelativePath||'';
+    if(!rel) sinRuta++;
+    const motivo=carpetaMotivoOmitir(f);
+    if(motivo){omit[motivo]=(omit[motivo]||0)+1;return;}
+    const segs=rel?rel.split('/').slice(0,-1):[];
+    let caso='',gkey='';
+    for(let i=segs.length-1;i>=0;i--){
+      const c=carpetaCasoDeSegmento(segs[i]);
+      if(c){caso=c;gkey=segs.slice(0,i+1).join('/');break;}
+    }
+    if(!gkey) gkey=segs.length?segs.slice(0,Math.min(2,segs.length)).join('/'):'(sin carpeta)';
+    items.push({file:f,rel:rel||f.name,dir:segs.join('/'),gkey:gkey,caso:caso});
+  });
+  const groups={},keys=[];
+  items.forEach(function(it){
+    if(!groups[it.gkey]){groups[it.gkey]={caso:it.caso,n:0};keys.push(it.gkey);}
+    groups[it.gkey].n++;
+  });
+  const first=files[0].webkitRelativePath||'';
+  _carpetaPlan={items:items,groups:groups,keys:keys,omit:omit,sinRuta:sinRuta,root:first?first.split('/')[0]:'(archivos sueltos)'};
+  renderCarpetaPlan();
+}
+
+function carpetaSetCaso(i,valor){
+  if(!_carpetaPlan) return;
+  const k=_carpetaPlan.keys[i];
+  if(k&&_carpetaPlan.groups[k]) _carpetaPlan.groups[k].caso=valor;
+}
+
+function renderCarpetaPlan(){
+  const p=_carpetaPlan,box=document.getElementById('carpetaPlan');
+  if(!p||!box) return;
+  const omitTot=Object.keys(p.omit).reduce(function(a,k){return a+p.omit[k];},0);
+  const omitTxt=Object.keys(p.omit).map(function(k){return p.omit[k]+' '+k;}).join(' · ');
+  let h='<div style="font-size:13px;margin-bottom:8px"><strong>'+_esc(p.root)+'</strong>: '+p.items.length+' archivo(s) por subir'+(omitTot?' · <span style="color:var(--text3)">'+omitTot+' omitido(s): '+_esc(omitTxt)+'</span>':'')+'</div>';
+  if(p.sinRuta>0&&p.sinRuta===p.items.length+omitTot) h+='<div style="background:var(--warningbg);border:0.5px solid var(--warningborder);color:var(--warningtext);border-radius:var(--radius);padding:8px 12px;margin-bottom:8px;font-size:12px">⚠️ El navegador no entregó las rutas de las carpetas; los archivos se cargarán sin carpeta de origen y el caso se detectará por contenido.</div>';
+  if(!p.items.length){
+    h+='<div style="color:var(--text3);font-size:13px">No hay archivos para subir (todos fueron omitidos por tipo).</div>';
+    box.innerHTML=h;document.getElementById('carpetaIniciarBtn').style.display='none';return;
+  }
+  h+='<div style="overflow:auto;max-height:260px;border:0.5px solid var(--border);border-radius:var(--radius)"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="text-align:left;border-bottom:1px solid var(--border);background:var(--bg2)"><th style="padding:6px">Carpeta</th><th style="padding:6px">Archivos</th><th style="padding:6px">Caso</th></tr></thead><tbody>';
+  p.keys.forEach(function(k,i){
+    const g=p.groups[k];
+    h+='<tr style="border-bottom:0.5px solid var(--border);vertical-align:middle"><td style="padding:6px;word-break:break-all">'+_esc(k)+'</td><td style="padding:6px">'+g.n+'</td><td style="padding:6px"><select onchange="carpetaSetCaso('+i+',this.value)" style="min-width:210px"><option value="">— detectar por contenido —</option>'+
+      CASOS.map(function(c){return '<option value="'+c.id+'"'+(g.caso===c.id?' selected':'')+'>'+_esc(c.icon+' '+c.label)+'</option>';}).join('')+'</select></td></tr>';
+  });
+  h+='</tbody></table></div>';
+  h+='<label style="display:flex;align-items:flex-start;gap:6px;font-size:12px;margin-top:10px;font-weight:400;cursor:pointer"><input type="checkbox" id="carpetaIA" checked style="width:auto;margin-top:2px"> <span>Leer cada archivo con IA para sugerir fecha, entidad, radicado y resumen (usa su API key de Claude; en carpetas grandes demora y tiene costo). Si lo desmarca, se suben solo con el nombre del archivo.</span></label>';
+  box.innerHTML=h;
+  document.getElementById('carpetaIniciarBtn').style.display='inline-flex';
+}
+
+function detenerCarpeta(){
+  _carpetaCancel=true;
+  const b=document.getElementById('carpetaStopBtn'); if(b){b.disabled=true;b.textContent='Deteniendo...';}
+}
+
+async function iniciarCarpeta(){
+  if(!_carpetaPlan||!_carpetaPlan.items.length) return;
+  if(!canEdit()){alert('No tienes permisos para agregar documentos.');return;}
+  if(_multiBusy){alert('Ya hay una carga en curso. Espere a que termine.');return;}
+  _multiBusy=true;_carpetaCancel=false;
+  const plan=_carpetaPlan;
+  const iaChk=document.getElementById('carpetaIA');
+  const usarIA=!!(iaChk&&iaChk.checked);
+  const log=document.getElementById('carpetaLog');
+  const prog=document.getElementById('carpetaProg');
+  document.getElementById('carpetaPlan').innerHTML='<div style="font-size:12px;color:var(--text3)">Carga en curso: '+_esc(plan.root)+' — '+plan.items.length+' archivo(s). Puede dejar esta ventana abierta; no cierre la pestaña.</div>';
+  document.getElementById('carpetaIniciarBtn').style.display='none';
+  document.getElementById('carpetaVerBtn').style.display='none';
+  const stopBtn=document.getElementById('carpetaStopBtn');
+  stopBtn.disabled=false;stopBtn.textContent='⏹ Detener';stopBtn.style.display='inline-flex';
+  log.innerHTML='';
+  const rows=plan.items.map(function(it,i){
+    const d=document.createElement('div');d.style.cssText='padding:6px 0;border-bottom:0.5px solid var(--border)';
+    d.textContent='⏳ '+it.rel+' — en cola';log.appendChild(d);return d;
+  });
+  const CATS=['Fallos','Tutelas','Medidas de protección','Derecho de petición','Actuaciones penales','Documentos patrimoniales','Clínico/pericial','Actas y conciliaciones','Comunicaciones','Trámites disciplinarios','Otro'];
+  const STS=['Vigente','Documento probatorio','Pendiente respuesta','No respondido','Respondido','Respondido parcialmente','Ejecutoriado','Vencido','Archivado','No aplica'];
+  const hoy=new Date().toISOString().split('T')[0];
+  const hashesLote=new Set();
+  let ok=0,omit=0,fail=0,hechos=0,detenido=false;
+  if(usarIA&&!CLAUDE_KEY){ try{await loadClaudeKey();}catch(e){} }
+  for(let i=0;i<plan.items.length;i++){
+    if(_carpetaCancel){detenido=true;break;}
+    const it=plan.items[i],file=it.file,row=rows[i];
+    const set=function(t){row.textContent=t;};
+    prog.textContent='Procesando '+(i+1)+' de '+plan.items.length+' — '+ok+' cargados · '+omit+' omitidos · '+fail+' con error';
+    try{
+      if(file.size===0){set('↩️ '+it.rel+' — omitido: archivo vacío');omit++;continue;}
+      if(file.size>500*1024*1024){set('⚠️ '+it.rel+' — omitido: supera 500MB');omit++;continue;}
+      set('⏳ '+it.rel+' — verificando duplicado...');
+      const hash=await calcFileHash(file);
+      const ex=db.docs.find(function(d){return d.fileHash&&d.fileHash===hash;});
+      if(ex||hashesLote.has(hash)){set('↩️ '+it.rel+' — omitido: ya existe'+(ex?' como "'+ex.nombre+'"':' en esta misma carpeta'));omit++;continue;}
+      hashesLote.add(hash);
+      set('⏳ '+it.rel+' — subiendo...');
+      const filePath=await uploadFileToSupabase(file,'docs');
+      const ext=(file.name.split('.').pop()||'').toLowerCase();
+      let x=null,iaNota='Sin lectura automática; completar datos manualmente.';
+      if(usarIA&&CLAUDE_KEY){
+        set('⏳ '+it.rel+' — leyendo con IA...');
+        try{
+          if(['jpg','jpeg','png','webp'].indexOf(ext)>=0) x=await extractWithClaudeImage(file);
+          else if(ext==='pdf'){
+            let t='';try{t=await extractPdfText(file);}catch(e){}
+            x=(t&&t.trim().length>100)?await extractWithClaudeText(t,file.name):await extractWithClaudePdfImage(file);
+          }else if(['txt','csv'].indexOf(ext)>=0){
+            const t=await file.text().catch(function(){return '';});
+            if(t.length>10) x=await extractWithClaudeText(t.substring(0,4000),file.name);
+          }
+          if(x) iaNota='Datos sugeridos por IA; verificar contra el documento.';
+        }catch(e){x=null;iaNota='La lectura con IA falló ('+e.message+'); completar datos manualmente.';}
+      }
+      x=x||{};
+      const nombre=(x.nombre&&String(x.nombre).trim())||file.name.replace(/\.[^.]+$/,'');
+      const sug=[];
+      if(x.plazo&&x.plazo!=='Sin plazo') sug.push('Plazo sugerido: '+x.plazo+(x.vence?' (vence '+x.vence+')':'')+' — confirmar y llenar "Vence".');
+      if(x.diligFecha) sug.push('Diligencia sugerida: '+x.diligFecha+(x.diligHora?' '+x.diligHora:'')+' — confirmar.');
+      let nid=Date.now()+i;
+      while(db.docs.some(function(d){return d.id===nid;})) nid++;
+      const doc={
+        id:nid,
+        fecha:/^\d{4}-\d{2}-\d{2}$/.test(x.fecha||'')?x.fecha:hoy,
+        fechaRad:/^\d{4}-\d{2}-\d{2}$/.test(x.fechaRad||'')?x.fechaRad:'',
+        nombre:nombre,
+        cat:CATS.indexOf(x.cat)>=0?x.cat:'Otro',
+        status:STS.indexOf(x.status)>=0?x.status:'Vigente',
+        entidad:x.entidad||'',radicado:x.radicado||'',
+        resumen:x.resumen||'',ubicacion:x.ubicacion||'',
+        vence:'',
+        notas:('Cargado desde carpeta el '+hoy+(it.dir?' (carpeta: '+it.dir+')':'')+'. '+iaNota+' '+sug.join(' ')+(x.notas?' '+x.notas:'')).trim(),
+        relacionados:[],diligFecha:'',diligHora:'',carpeta:'',
+        filePath:filePath,fileName:file.name,fileSize:file.size,fileHash:hash,
+        porRevisar:true,carpetaOrigen:it.dir
+      };
+      const det=detectarCasos(doc);
+      const g=plan.groups[it.gkey];
+      let caso=(g&&g.caso)||'';
+      const porNombre=!!caso;
+      if(!caso) caso=det.principal||'';
+      doc.caso=caso;
+      doc.casos=det.extras.filter(function(id){return id!==doc.caso;});
+      db.docs.push(doc);
+      await saveData();
+      try{ await indexarDoc(doc,file); }catch(e){ console.warn('No se indexó el contenido',e); }
+      ok++;
+      set('✅ '+it.rel+' — '+(caso?casoLabel(caso)+(porNombre?' (por carpeta)':' (por contenido)'):'sin caso (asignar al revisar)'));
+      await new Promise(function(r){setTimeout(r,400);});
+    }catch(e){
+      fail++;
+      set('❌ '+it.rel+' — error: '+e.message);
+    }
+  }
+  _multiBusy=false;
+  hechos=ok+omit+fail;
+  prog.textContent=(detenido?'Detenido en '+hechos+' de '+plan.items.length+'. ':'Listo. ')+ok+' cargados · '+omit+' omitidos · '+fail+' con error'+(plan.items.length-hechos>0&&detenido?' · '+(plan.items.length-hechos)+' sin procesar':'');
+  stopBtn.style.display='none';
+  if(ok>0) document.getElementById('carpetaVerBtn').style.display='inline-flex';
+  try{renderDocs();renderPanel();}catch(e){}
+}
+// ===== FIN MÓDULO SUBIR CARPETA v1 =====
+
 // ===== MÓDULO HOY + LÍNEA DE TIEMPO + BÚSQUEDA EN CONTENIDO v1 =====
 function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
