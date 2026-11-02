@@ -2047,6 +2047,145 @@ renderCarpetaPlan=function(){
 };
 // ===== FIN MÓDULO PROCESOS NUEVOS v1 =====
 
+// ===== MÓDULO REORGANIZAR v1 =====
+// Revisa lo que ya está en la app y PROPONE cambios: (1) documentos sin proceso que ahora sí encajan en uno,
+// (2) duplicados. No cambia nada sin confirmación, no borra documentos y guarda un respaldo para deshacer.
+let _reorg={cambios:[],dups:[]};
+
+(function(){
+  const anchor=document.getElementById('btnProcesos')||document.getElementById('btnCarpeta');
+  if(anchor&&!document.getElementById('btnReorganizar')){
+    anchor.insertAdjacentHTML('afterend','<button class="btn" id="btnReorganizar" onclick="reorgAbrir()">🧹 Reorganizar</button>');
+  }
+  if(!document.getElementById('reorgModal')){
+    document.body.insertAdjacentHTML('beforeend',
+    '<div class="overlay" id="reorgModal"><div class="modal" style="max-width:780px">'+
+    '<div class="modal-title">🧹 Reorganizar lo que ya está en la app</div>'+
+    '<p style="font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:10px">Esto es solo una <strong>vista previa</strong>: no se cambia nada hasta que marque los documentos y pulse «Aplicar». No se borra ningún documento ni archivo; los duplicados solo se muestran.</p>'+
+    '<div id="reorgCambios" style="max-height:300px;overflow:auto;margin-bottom:12px"></div>'+
+    '<div id="reorgDups" style="max-height:260px;overflow:auto"></div>'+
+    '<div class="modal-footer" style="margin-top:12px">'+
+    '<button class="btn" onclick="closeModal(\'reorgModal\')">Cerrar</button>'+
+    '<button class="btn" id="reorgUndoBtn" style="display:none" onclick="reorgDeshacer()">↩️ Deshacer última reorganización</button>'+
+    '<button class="btn primary" id="reorgApplyBtn" onclick="reorgAplicar()">Aplicar los marcados</button>'+
+    '</div></div></div>');
+  }
+})();
+
+function reorgSugerirCaso(d){
+  if(d.carpetaOrigen){
+    const segs=String(d.carpetaOrigen).split('/');
+    for(let i=segs.length-1;i>=0;i--){
+      const c=carpetaCasoDeSegmento(segs[i]);
+      if(c) return {id:c,motivo:'por la carpeta de origen «'+segs[i]+'»'};
+    }
+  }
+  const det=detectarCasos(d);
+  if(det.principal) return {id:det.principal,motivo:'por palabras clave del documento'};
+  return null;
+}
+
+function reorgAnalizar(){
+  const ids=CASOS.map(function(c){return c.id;});
+  const cambios=[];
+  db.docs.forEach(function(d){
+    const sinCaso=!d.caso||d.caso==='otros'||ids.indexOf(d.caso)<0;
+    if(!sinCaso) return;
+    const s=reorgSugerirCaso(d);
+    if(s&&s.id&&s.id!=='otros'&&s.id!==d.caso) cambios.push({id:d.id,to:s.id,motivo:s.motivo});
+  });
+  const docs=db.docs,parent=docs.map(function(_,i){return i;});
+  const find=function(x){while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;};
+  const uni=function(a,b){a=find(a);b=find(b);if(a!==b)parent[b]=a;};
+  const byHash={},byName={};
+  docs.forEach(function(d,i){
+    if(d.fileHash){ if(byHash[d.fileHash]!==undefined) uni(byHash[d.fileHash],i); else byHash[d.fileHash]=i; }
+    if(d.fileName&&d.fileSize){ const k=d.fileName+'|'+d.fileSize; (byName[k]=byName[k]||[]).push(i); }
+  });
+  Object.keys(byName).forEach(function(k){
+    const l=byName[k];
+    for(let a=0;a<l.length;a++) for(let b=a+1;b<l.length;b++){
+      if(!docs[l[a]].fileHash||!docs[l[b]].fileHash) uni(l[a],l[b]);
+    }
+  });
+  const gr={};
+  docs.forEach(function(d,i){const r=find(i);(gr[r]=gr[r]||[]).push(d);});
+  const dups=Object.keys(gr).map(function(k){return gr[k];}).filter(function(g){return g.length>1;});
+  _reorg={cambios:cambios,dups:dups};
+}
+
+function reorgRender(){
+  const c=_reorg.cambios,box=document.getElementById('reorgCambios'),bd=document.getElementById('reorgDups');
+  let h='<div style="font-weight:600;font-size:13px;margin:4px 0 6px">1. Documentos que ahora sí encajan en un proceso ('+c.length+')</div>';
+  if(!c.length) h+='<div style="font-size:12px;color:var(--text3)">No encontré documentos sin proceso (o en «Otros») que encajen en alguno.</div>';
+  else{
+    h+='<label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400;cursor:pointer;margin-bottom:4px"><input type="checkbox" style="width:auto" onchange="reorgMarcarTodos(this.checked)"> Marcar todos</label>';
+    c.forEach(function(x,i){
+      const d=db.docs.find(function(y){return y.id===x.id;}); if(!d) return;
+      h+='<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px;font-weight:400;cursor:pointer"><input type="checkbox" class="reorgChk" data-i="'+i+'" style="width:auto;margin-top:2px"><span><strong>'+_esc(d.nombre)+'</strong><br><span style="color:var(--text3)">'+_esc(casoLabel(d.caso||''))+' → </span><strong>'+_esc(casoLabel(x.to))+'</strong> <span style="color:var(--text3)">('+_esc(x.motivo)+')</span></span></label>';
+    });
+  }
+  box.innerHTML=h;
+  let g='<div style="font-weight:600;font-size:13px;margin:4px 0 6px">2. Posibles duplicados dentro de la app ('+_reorg.dups.length+' grupo(s)) — solo informativo</div>';
+  if(!_reorg.dups.length) g+='<div style="font-size:12px;color:var(--text3)">No encontré documentos repetidos.</div>';
+  else _reorg.dups.forEach(function(grp){
+    g+='<div style="border:0.5px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-bottom:6px;font-size:12px">'+grp.map(function(d){
+      return '<div style="padding:2px 0">• <strong>'+_esc(d.nombre)+'</strong> <span style="color:var(--text3)">· '+_esc(d.fileName||'')+' · '+_esc(d.fecha||'sin fecha')+' · '+_esc(casoLabel(d.caso||''))+(d.porRevisar?' · por revisar':'')+'</span></div>';
+    }).join('')+'<div style="color:var(--text3);margin-top:3px">Mismo contenido o mismo nombre y tamaño. Decida cuál conservar y elimine el otro desde Documentos.</div></div>';
+  });
+  bd.innerHTML=g;
+  document.getElementById('reorgApplyBtn').style.display=c.length?'inline-flex':'none';
+  document.getElementById('reorgUndoBtn').style.display=(db.reorgUndo&&db.reorgUndo.cambios&&db.reorgUndo.cambios.length)?'inline-flex':'none';
+}
+
+function reorgAbrir(){
+  if(!canEdit()){alert('No tienes permisos para reorganizar.');return;}
+  reorgAnalizar();
+  reorgRender();
+  openModal('reorgModal');
+}
+
+function reorgMarcarTodos(v){
+  document.querySelectorAll('.reorgChk').forEach(function(cb){cb.checked=!!v;});
+}
+
+async function reorgAplicar(){
+  const marcados=Array.from(document.querySelectorAll('.reorgChk:checked')).map(function(el){return _reorg.cambios[+el.getAttribute('data-i')];}).filter(Boolean);
+  if(!marcados.length){alert('Marque al menos un documento.');return;}
+  if(!confirm('Se cambiará el proceso de '+marcados.length+' documento(s). Podrá deshacerlo con «Deshacer última reorganización». ¿Continuar?')) return;
+  const snap=[];
+  marcados.forEach(function(x){
+    const d=db.docs.find(function(y){return y.id===x.id;}); if(!d) return;
+    snap.push({id:d.id,caso:d.caso||'',casos:(d.casos||[]).slice()});
+    d.caso=x.to;
+    d.casos=(d.casos||[]).filter(function(z){return z!==x.to;});
+  });
+  db.reorgUndo={fecha:new Date().toISOString(),cambios:snap};
+  await saveData();
+  try{renderDocs();renderPanel();}catch(e){}
+  reorgAnalizar();
+  reorgRender();
+  alert('Listo: '+snap.length+' documento(s) reasignados.');
+}
+
+async function reorgDeshacer(){
+  const u=db.reorgUndo;
+  if(!u||!u.cambios||!u.cambios.length){alert('No hay nada que deshacer.');return;}
+  if(!confirm('Se devolverán '+u.cambios.length+' documento(s) al proceso que tenían antes. ¿Continuar?')) return;
+  let n=0;
+  u.cambios.forEach(function(s){
+    const d=db.docs.find(function(y){return y.id===s.id;}); if(!d) return;
+    d.caso=s.caso;d.casos=(s.casos||[]).slice();n++;
+  });
+  db.reorgUndo=null;
+  await saveData();
+  try{renderDocs();renderPanel();}catch(e){}
+  reorgAnalizar();
+  reorgRender();
+  alert('Deshecho: '+n+' documento(s) restaurados.');
+}
+// ===== FIN MÓDULO REORGANIZAR v1 =====
+
 // ===== MÓDULO HOY + LÍNEA DE TIEMPO + BÚSQUEDA EN CONTENIDO v1 =====
 function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
