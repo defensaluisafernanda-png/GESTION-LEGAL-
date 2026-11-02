@@ -1657,7 +1657,11 @@ async function iniciarCarpeta(){
       if(file.size>500*1024*1024){set('⚠️ '+it.rel+' — omitido: supera 500MB');omit++;continue;}
       set('⏳ '+it.rel+' — verificando duplicado...');
       const hash=await calcFileHash(file);
-      const ex=db.docs.find(function(d){return d.fileHash&&d.fileHash===hash;});
+      // Duplicado: mismo contenido (hash) o, en documentos viejos sin hash, mismo nombre de archivo y tamaño
+      const ex=db.docs.find(function(d){
+        if(d.fileHash) return d.fileHash===hash;
+        return d.fileName&&d.fileName===file.name&&d.fileSize===file.size;
+      });
       if(ex||hashesLote.has(hash)){set('↩️ '+it.rel+' — omitido: ya existe'+(ex?' como "'+ex.nombre+'"':' en esta misma carpeta'));omit++;continue;}
       hashesLote.add(hash);
       set('⏳ '+it.rel+' — subiendo...');
@@ -1726,6 +1730,322 @@ async function iniciarCarpeta(){
   try{renderDocs();renderPanel();}catch(e){}
 }
 // ===== FIN MÓDULO SUBIR CARPETA v1 =====
+
+// ===== MÓDULO PROCESOS NUEVOS v1 =====
+// Permite crear procesos nuevos (además de los 8 originales) cuando una carpeta no encaja en ninguno.
+// Los procesos nuevos se guardan en db.casosExtra (Supabase) y se suman a CASOS al cargar.
+const CASOS_BASE_IDS=CASOS.map(function(c){return c.id;});
+let _pn={gkey:'',editId:''};
+
+function procesoNormKw(txt){
+  const out=[];
+  String(txt||'').split(/[,;\n]+/).forEach(function(k){
+    const v=_n2(k);
+    if(v.length>=3&&out.indexOf(v)<0) out.push(v);
+  });
+  return out;
+}
+
+function procesoTitulo(s){
+  return String(s||'').replace(/[_\-]+/g,' ').replace(/\s+/g,' ').trim().toLowerCase().replace(/(^|\s)([a-záéíóúñ])/g,function(m,a,b){return a+b.toUpperCase();});
+}
+
+function casosExtraAplicar(){
+  try{
+    if(!db) return;
+    if(!Array.isArray(db.casosExtra)) db.casosExtra=[];
+    const ids=db.casosExtra.map(function(c){return c.id;});
+    for(let i=CASOS.length-1;i>=0;i--){
+      if(CASOS_BASE_IDS.indexOf(CASOS[i].id)<0&&ids.indexOf(CASOS[i].id)<0) CASOS.splice(i,1);
+    }
+    db.casosExtra.forEach(function(e){
+      if(!e||!e.id||CASOS_BASE_IDS.indexOf(e.id)>=0) return;
+      const cur=CASOS.find(function(c){return c.id===e.id;});
+      if(cur){cur.label=e.label;cur.icon=e.icon||'📌';cur.kw=e.kw||[];}
+      else{
+        const item={id:e.id,label:e.label,icon:e.icon||'📌',kw:e.kw||[]};
+        const oi=CASOS.findIndex(function(c){return c.id==='otros';});
+        if(oi>=0) CASOS.splice(oi,0,item); else CASOS.push(item);
+      }
+    });
+  }catch(e){ console.warn('casosExtraAplicar',e); }
+}
+
+function casosRefrescarUI(){
+  const opt=function(c){return '<option value="'+c.id+'">'+_esc(c.icon+' '+c.label)+'</option>';};
+  const rb=function(id,head,tail){
+    const s=document.getElementById(id); if(!s) return;
+    const v=s.value;
+    s.innerHTML=head+CASOS.map(opt).join('')+tail;
+    s.value=v;
+  };
+  rb('d_caso','<option value="">— Sin asignar (se detecta al guardar) —</option>','');
+  rb('docCaso','<option value="">Todos los casos</option>','<option value="__none">Sin caso asignado</option>');
+  rb('lineaCaso','','');
+  const first=document.querySelector('input[id^="dce_"]');
+  if(first&&first.closest('label')){
+    const box=first.closest('label').parentElement;
+    const chk={};
+    box.querySelectorAll('input[id^="dce_"]').forEach(function(cb){chk[cb.id]=cb.checked;});
+    box.innerHTML=CASOS.map(function(c){
+      return '<label style="display:flex;align-items:center;gap:4px;font-weight:400;cursor:pointer"><input type="checkbox" id="dce_'+c.id+'"'+(chk['dce_'+c.id]?' checked':'')+'> '+_esc(c.icon+' '+c.label)+'</label>';
+    }).join('');
+  }
+}
+
+async function procesosAplicarYGuardar(){
+  casosExtraAplicar();
+  casosRefrescarUI();
+  await saveData();
+  try{renderDocs();renderPanel();}catch(e){}
+}
+
+// Al cargar los datos desde Supabase, sumar los procesos nuevos guardados
+const _o_loadData_pn=loadData;
+loadData=async function(){
+  const r=await _o_loadData_pn.apply(this,arguments);
+  casosExtraAplicar();
+  casosRefrescarUI();
+  return r;
+};
+
+// En "Subir carpeta": reconocer por nombre de carpeta también los procesos nuevos
+const _o_carpetaCasoDeSegmento=carpetaCasoDeSegmento;
+carpetaCasoDeSegmento=function(seg){
+  const base=_o_carpetaCasoDeSegmento(seg);
+  if(base) return base;
+  const t=' '+_n2(seg)+' ';
+  let best='',bl=0;
+  CASOS.forEach(function(c){
+    if(CASOS_BASE_IDS.indexOf(c.id)>=0) return;
+    [c.label].concat(c.kw||[]).forEach(function(a){
+      const k=_n2(a);
+      // inicio de palabra (así «multa» reconoce «multas»)
+      if(k.length>=4&&t.indexOf(' '+k)>=0&&k.length>bl){bl=k.length;best=c.id;}
+    });
+  });
+  return best;
+};
+
+(function(){
+  const bc=document.getElementById('btnCarpeta');
+  if(bc&&!document.getElementById('btnProcesos')){
+    bc.insertAdjacentHTML('afterend','<button class="btn" id="btnProcesos" onclick="procesosAbrirGest()">⚙️ Gestionar procesos</button>');
+  }
+  if(!document.getElementById('procesoNuevoModal')){
+    document.body.insertAdjacentHTML('beforeend',
+    '<div class="overlay" id="procesoNuevoModal"><div class="modal" style="max-width:560px">'+
+    '<div class="modal-title" id="pnTitle">➕ Proceso nuevo</div>'+
+    '<div id="pn_why" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:12px;line-height:1.5;margin-bottom:10px"></div>'+
+    '<div class="form-row"><label>Nombre del proceso</label><input type="text" id="pn_nombre" placeholder="Ej.: Multas de tránsito"></div>'+
+    '<div class="form-row"><label>Ícono (un emoji)</label><input type="text" id="pn_icono" placeholder="📌" style="max-width:90px"></div>'+
+    '<div class="form-row"><label>Palabras clave (separadas por coma) — con ellas la app reconoce los próximos documentos de este proceso</label><textarea id="pn_kw" rows="3" placeholder="multa, comparendo, secretaria de movilidad"></textarea></div>'+
+    '<div class="modal-footer" style="margin-top:12px">'+
+    '<button class="btn" onclick="closeModal(\'procesoNuevoModal\')">Cancelar</button>'+
+    '<button class="btn" id="pn_iaBtn" style="display:none" onclick="procesoNuevoIA()">🤖 Sugerir con IA</button>'+
+    '<button class="btn" id="pn_usarBtn" style="display:none" onclick="procesoUsarSugerido()">Usar el existente</button>'+
+    '<button class="btn primary" onclick="procesoNuevoGuardar()">Guardar proceso</button>'+
+    '</div></div></div>');
+  }
+  if(!document.getElementById('procesosGestModal')){
+    document.body.insertAdjacentHTML('beforeend',
+    '<div class="overlay" id="procesosGestModal"><div class="modal" style="max-width:640px">'+
+    '<div class="modal-title">⚙️ Gestionar procesos</div>'+
+    '<p style="font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:10px">Los 8 procesos originales no se editan aquí. Los que usted cree aparecen abajo: puede cambiarles el nombre, las palabras clave o eliminarlos (al eliminar, sus documentos pasan a «Otros»; no se borra ningún documento).</p>'+
+    '<div id="procesosGestLista"></div>'+
+    '<div class="modal-footer" style="margin-top:12px"><button class="btn" onclick="closeModal(\'procesosGestModal\')">Cerrar</button><button class="btn primary" onclick="procesoNuevoAbrir(\'\',\'\')">➕ Crear proceso</button></div>'+
+    '</div></div>');
+  }
+})();
+
+function procesosAbrirGest(){
+  procesosRenderGest();
+  openModal('procesosGestModal');
+}
+
+function procesosRenderGest(){
+  const box=document.getElementById('procesosGestLista'); if(!box) return;
+  const ex=(typeof db!=='undefined'&&db&&Array.isArray(db.casosExtra))?db.casosExtra:[];
+  if(!ex.length){box.innerHTML='<div style="font-size:13px;color:var(--text3)">Todavía no ha creado procesos nuevos.</div>';return;}
+  box.innerHTML=ex.map(function(e){
+    const n=db.docs.filter(function(d){return d.caso===e.id||(d.casos||[]).indexOf(e.id)>=0;}).length;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border)"><div style="flex:1;font-size:13px"><strong>'+_esc((e.icon||'📌')+' '+e.label)+'</strong><div style="font-size:11px;color:var(--text3)">'+n+' documento(s) · palabras clave: '+_esc((e.kw||[]).join(', '))+'</div></div>'+
+      '<button class="btn sm" onclick="procesoNuevoAbrir(\'\',\''+e.id+'\')">Editar</button>'+
+      '<button class="btn sm danger" onclick="procesoEliminar(\''+e.id+'\')">Eliminar</button></div>';
+  }).join('');
+}
+
+function procesoNuevoDesdeGrupo(i){
+  if(!_carpetaPlan) return;
+  procesoNuevoAbrir(_carpetaPlan.keys[i],'');
+}
+
+function procesoNuevoAbrir(gkey,editId){
+  if(!canEdit()){alert('No tienes permisos para crear procesos.');return;}
+  _pn={gkey:gkey||'',editId:editId||''};
+  const n=document.getElementById('pn_nombre'),ic=document.getElementById('pn_icono'),kw=document.getElementById('pn_kw'),why=document.getElementById('pn_why');
+  document.getElementById('pn_usarBtn').style.display='none';
+  document.getElementById('pn_iaBtn').style.display=(gkey&&_carpetaPlan)?'inline-flex':'none';
+  if(editId){
+    const c=CASOS.find(function(x){return x.id===editId;});
+    if(!c){alert('No se encontró el proceso.');return;}
+    document.getElementById('pnTitle').textContent='✏️ Editar proceso';
+    n.value=c.label;ic.value=c.icon;kw.value=(c.kw||[]).join(', ');
+    why.innerHTML='Editando «'+_esc(c.label)+'». Los cambios aplican a todos sus documentos.';
+  }else if(gkey&&_carpetaPlan){
+    document.getElementById('pnTitle').textContent='➕ Proceso nuevo desde carpeta';
+    const seg=gkey.split('/').pop();
+    n.value=procesoTitulo(seg);ic.value='📌';
+    kw.value=procesoNormKw(seg+','+_n2(seg).split(' ').filter(function(w){return w.length>=4;}).join(',')).join(', ');
+    const its=_carpetaPlan.items.filter(function(it){return it.gkey===gkey;});
+    const ej=its.slice(0,5).map(function(it){return it.file.name;}).join(', ');
+    why.innerHTML='<strong>Cómo lo encontré:</strong> la carpeta <strong>'+_esc(gkey)+'</strong> tiene '+its.length+' archivo(s) (ej.: '+_esc(ej)+') y su nombre no coincide con ninguno de sus procesos ('+_esc(CASOS.filter(function(c){return c.id!=='otros';}).map(function(c){return c.label;}).join('; '))+'). Si es un proceso aparte, póngale nombre y guárdelo; si prefiere que la IA lo lea y sugiera, pulse «Sugerir con IA».';
+  }else{
+    document.getElementById('pnTitle').textContent='➕ Proceso nuevo';
+    n.value='';ic.value='📌';kw.value='';
+    why.innerHTML='Proceso creado manualmente.';
+  }
+  openModal('procesoNuevoModal');
+}
+
+async function procesoNuevoIA(){
+  const gkey=_pn.gkey;
+  if(!gkey||!_carpetaPlan) return;
+  const why=document.getElementById('pn_why'),btn=document.getElementById('pn_iaBtn');
+  if(!CLAUDE_KEY){ try{await loadClaudeKey();}catch(e){} }
+  if(!CLAUDE_KEY){ why.insertAdjacentHTML('beforeend','<div style="color:var(--danger,#b00);margin-top:6px">No hay API key de Claude configurada.</div>'); return; }
+  btn.disabled=true;btn.textContent='Leyendo...';
+  try{
+    const its=_carpetaPlan.items.filter(function(it){return it.gkey===gkey;});
+    const muestras=[];
+    for(let i=0;i<its.length&&muestras.length<3;i++){
+      const f=its[i].file,ext=(f.name.split('.').pop()||'').toLowerCase();
+      let t='';
+      try{ if(ext==='pdf') t=await extractPdfText(f); else if(ext==='txt'||ext==='csv') t=await f.text(); }catch(e){}
+      if(t&&t.trim().length>80) muestras.push('['+f.name+'] '+t.trim().substring(0,1200));
+    }
+    const lista=CASOS.map(function(c){return c.id+': '+c.label;}).join('\n');
+    const nombres=its.slice(0,25).map(function(it){return it.rel;}).join('\n');
+    const prompt='Eres asistente de un expediente legal en Colombia. Procesos que ya existen:\n'+lista+'\n\nUn grupo de archivos de la carpeta «'+gkey+'» no coincidió con ninguno por palabras clave.\nArchivos:\n'+nombres+'\n\nExtractos:\n'+(muestras.join('\n---\n')||'(sin texto legible; guíate por los nombres)')+'\n\nDecide si el grupo encaja en un proceso existente o es un proceso nuevo. Responde SOLO un JSON: {"encaja":"id de un proceso existente o null","nombre":"nombre corto del proceso nuevo","emoji":"un emoji","palabras":["6 a 10 palabras clave en minúsculas y sin tildes"],"motivo":"una frase que explique por qué"}';
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:600,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok) throw new Error('Error API: '+res.status);
+    const data=await res.json();
+    const r=parseClaudeJSON(data.content[0].text);
+    const motivo=_esc(r.motivo||'');
+    const ex=r.encaja&&r.encaja!=='otros'&&CASOS.find(function(c){return c.id===r.encaja;});
+    if(ex){
+      _pn.sug=ex.id;
+      const u=document.getElementById('pn_usarBtn');
+      u.textContent='Usar «'+ex.label+'»';u.style.display='inline-flex';
+      why.insertAdjacentHTML('beforeend','<div style="margin-top:6px"><strong>🤖 Sugerencia de la IA:</strong> parece encajar en el proceso existente «'+_esc(ex.label)+'». '+motivo+' Verifíquelo; puede usar ese o crear uno nuevo.</div>');
+    }else{
+      if(r.nombre) document.getElementById('pn_nombre').value=String(r.nombre).substring(0,80);
+      if(r.emoji) document.getElementById('pn_icono').value=Array.from(String(r.emoji)).slice(0,2).join('');
+      if(Array.isArray(r.palabras)&&r.palabras.length) document.getElementById('pn_kw').value=procesoNormKw(r.palabras.join(',')).join(', ');
+      why.insertAdjacentHTML('beforeend','<div style="margin-top:6px"><strong>🤖 Sugerencia de la IA:</strong> proceso nuevo. '+motivo+' Revise el nombre y las palabras antes de guardar.</div>');
+    }
+  }catch(e){
+    why.insertAdjacentHTML('beforeend','<div style="margin-top:6px;color:var(--danger,#b00)">La IA no pudo sugerir ('+_esc(e.message)+'). Puede llenar los datos a mano.</div>');
+  }
+  btn.disabled=false;btn.textContent='🤖 Sugerir con IA';
+}
+
+function procesoUsarSugerido(){
+  const id=_pn.sug;
+  if(!id) return;
+  if(_pn.gkey&&_carpetaPlan&&_carpetaPlan.groups[_pn.gkey]){
+    _carpetaPlan.groups[_pn.gkey].caso=id;
+    renderCarpetaPlan();
+  }
+  closeModal('procesoNuevoModal');
+}
+
+async function procesoNuevoGuardar(){
+  const nombre=document.getElementById('pn_nombre').value.trim();
+  if(!nombre){alert('Escriba un nombre para el proceso.');return;}
+  const icono=Array.from(document.getElementById('pn_icono').value.trim()||'📌').slice(0,2).join('');
+  let kw=procesoNormKw(document.getElementById('pn_kw').value);
+  if(!kw.length) kw=procesoNormKw(nombre);
+  if(!Array.isArray(db.casosExtra)) db.casosExtra=[];
+  let id=_pn.editId;
+  if(id){
+    const e=db.casosExtra.find(function(x){return x.id===id;});
+    if(!e){alert('Los procesos originales no se editan desde aquí.');return;}
+    if(CASOS.some(function(c){return c.id!==id&&_n2(c.label)===_n2(nombre);})){alert('Ya existe un proceso con ese nombre.');return;}
+    e.label=nombre;e.icon=icono;e.kw=kw;
+  }else{
+    if(CASOS.some(function(c){return _n2(c.label)===_n2(nombre);})){alert('Ya existe un proceso con ese nombre. Elíjalo de la lista en vez de crear otro.');return;}
+    const base='pn_'+(_n2(nombre).replace(/\s+/g,'_').substring(0,24)||'proceso');
+    id=base;let n=2;
+    while(CASOS.some(function(c){return c.id===id;})){id=base+'_'+n;n++;}
+    db.casosExtra.push({id:id,label:nombre,icon:icono,kw:kw,creado:new Date().toISOString().split('T')[0]});
+  }
+  await procesosAplicarYGuardar();
+  closeModal('procesoNuevoModal');
+  const eraEdicion=!!_pn.editId;
+  if(_pn.gkey&&_carpetaPlan&&_carpetaPlan.groups[_pn.gkey]){
+    _carpetaPlan.groups[_pn.gkey].caso=id;
+    renderCarpetaPlan();
+  }
+  if(document.getElementById('procesosGestModal')&&document.getElementById('procesosGestModal').classList.contains('open')) procesosRenderGest();
+  if(!eraEdicion) await procesoReclasificarSugerir(id);
+}
+
+// Documentos ya subidos sin proceso (o en «Otros») que coinciden con el proceso recién creado: se pregunta antes de moverlos
+async function procesoReclasificarSugerir(id){
+  const c=CASOS.find(function(x){return x.id===id;});
+  if(!c) return;
+  const cand=db.docs.filter(function(d){
+    if(d.caso&&d.caso!=='otros') return false;
+    const t=_cn([d.nombre,d.resumen,d.radicado,d.entidad,d.notas].join(' '));
+    return (c.kw||[]).some(function(k){return t.indexOf(_cn(k))>=0;});
+  });
+  if(!cand.length) return;
+  const ej=cand.slice(0,8).map(function(d){return '• '+d.nombre;}).join('\n');
+  if(confirm('Ya hay '+cand.length+' documento(s) en el expediente sin proceso (o en «Otros») que parecen de «'+c.label+'»:\n\n'+ej+(cand.length>8?'\n…':'')+'\n\n¿Los paso a este proceso?')){
+    cand.forEach(function(d){d.caso=id;});
+    await saveData();
+    try{renderDocs();renderPanel();}catch(e){}
+  }
+}
+
+async function procesoEliminar(id){
+  const c=CASOS.find(function(x){return x.id===id;});
+  if(!c||CASOS_BASE_IDS.indexOf(id)>=0) return;
+  const usados=db.docs.filter(function(d){return d.caso===id||(d.casos||[]).indexOf(id)>=0;});
+  if(!confirm('¿Eliminar el proceso «'+c.label+'»?'+(usados.length?'\n\n'+usados.length+' documento(s) pasarán a «Otros». No se borra ningún documento.':''))) return;
+  usados.forEach(function(d){
+    if(d.caso===id) d.caso='otros';
+    d.casos=(d.casos||[]).filter(function(x){return x!==id;});
+  });
+  db.casosExtra=(db.casosExtra||[]).filter(function(e){return e.id!==id;});
+  await procesosAplicarYGuardar();
+  procesosRenderGest();
+}
+
+// En la tabla de "Subir carpeta": botón «Proceso nuevo» en las carpetas que no encajan en ningún proceso
+const _o_renderCarpetaPlan=renderCarpetaPlan;
+renderCarpetaPlan=function(){
+  _o_renderCarpetaPlan();
+  try{
+    if(!_carpetaPlan) return;
+    const rows=document.querySelectorAll('#carpetaPlan tbody tr');
+    let sin=0;
+    rows.forEach(function(tr,i){
+      const g=_carpetaPlan.groups[_carpetaPlan.keys[i]];
+      if(!g||g.caso||!tr.lastElementChild) return;
+      sin++;
+      tr.lastElementChild.insertAdjacentHTML('beforeend',' <button class="btn sm" type="button" onclick="procesoNuevoDesdeGrupo('+i+')">➕ Proceso nuevo</button>');
+    });
+    const wrap=document.querySelector('#carpetaPlan table');
+    if(wrap&&sin) wrap.parentElement.insertAdjacentHTML('beforebegin','<div style="background:var(--warningbg);border:0.5px solid var(--warningborder);color:var(--warningtext);border-radius:var(--radius);padding:8px 12px;margin-bottom:8px;font-size:12px;line-height:1.5">'+sin+' carpeta(s) no coinciden por nombre con ninguno de sus procesos. Si alguna es un proceso aparte (por ejemplo, multas), pulse «➕ Proceso nuevo» en su fila: le sugiero nombre y palabras clave y le explico cómo la encontré. Si no, se detectan por contenido al subir y, si tampoco coinciden, quedan sin caso en «Por revisar».</div>');
+  }catch(e){ console.warn('decorar plan',e); }
+};
+// ===== FIN MÓDULO PROCESOS NUEVOS v1 =====
 
 // ===== MÓDULO HOY + LÍNEA DE TIEMPO + BÚSQUEDA EN CONTENIDO v1 =====
 function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
